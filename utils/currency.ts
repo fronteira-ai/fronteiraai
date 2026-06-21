@@ -27,3 +27,8 @@ export function formatBRL(value: number): string {
     currency: "BRL",
   }).format(value);
 }
+
+export function discountPercentage(original: number, current: number): number {
+  if (original <= current) return 0;
+  return Math.round(((original - current) / original) * 100);
+}

@@ -2,6 +2,7 @@ import { memo } from "react";
 import Link from "next/link";
 import { Product } from "@/types/product";
 import { formatUSD } from "@/utils/currency";
+import { animations } from "@/styles/animations";
 
 type Props = {
   product: Product;
@@ -12,7 +13,7 @@ function ProductCard({ product, lowestPriceUSD }: Props) {
   return (
     <Link
       href={`/product/${product.slug}`}
-      className="group overflow-hidden rounded-3xl border border-slate-800 bg-slate-900/60 transition-all duration-300 hover:-translate-y-2 hover:border-blue-500"
+      className={`group overflow-hidden rounded-3xl border border-slate-800 bg-slate-900/60 ${animations.cardHover}`}
     >
 
       <div className="flex aspect-square w-full items-center justify-center overflow-hidden bg-slate-950">

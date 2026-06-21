@@ -17,3 +17,18 @@ export interface ProductWithRelations extends Product {
   brand: Brand | null;
   category: Category | null;
 }
+
+// Forma resumida de produto + melhor oferta, usada em vitrines (ex: Home).
+// Hoje preenchida com dados de exemplo; no futuro deve ser o retorno de uma
+// consulta combinando products + offers, sem precisar alterar os componentes
+// que a consomem.
+export interface ProductHighlight {
+  id: string;
+  slug: string;
+  name: string;
+  imageUrl: string | null;
+  storeName: string;
+  priceUSD: number;
+  originalPriceUSD?: number;
+  inStock: boolean;
+}
