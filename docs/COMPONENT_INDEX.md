@@ -7,7 +7,7 @@
 | Componente | Tipo | Props | Status |
 |---|---|---|---|
 | `Hero` | Server | — | Implementado |
-| `SearchBar` | Client (`useState`, `useRouter`) | — | Implementado (navega para `/search?q=`, não pesquisa de fato) |
+| `SearchBar` | Client (via `useSearch`) | `defaultValue?: string` | Implementado (Sprint 3.3): delega estado/navegação a `hooks/useSearch.ts` |
 | `Categories` | Server | `categories: (Category & { productCount?: number })[]` | Implementado |
 | `Offers` | Server | `products: ProductHighlight[]` | Implementado |
 | `FeaturesStores` | Server | `stores: (Store & { productCount?: number })[]` | Implementado |
@@ -52,7 +52,8 @@
 
 | Componente | Tipo | Props | Status |
 |---|---|---|---|
-| `SearchResults` | Server | `title?: string` | Implementado como UI, mas estático — sempre renderiza "Nenhum resultado encontrado", não recebe nem busca dados reais |
+| `SearchResults` | Server | `results: SearchResponse` | Implementado (Sprint 3.3): agrupa por tipo (produtos/lojas/categorias/marcas), `EmptyState` para sem-query/zero-resultados |
+| `SearchResultsSkeleton` | Server | — | Implementado (Sprint 3.3): fallback de `<Suspense>`/`loading.tsx` |
 
 ## ui/
 
@@ -63,7 +64,7 @@
 | `Card` | — | — | **Vazio** (placeholder) |
 | `Chip` | Server/interativo via prop | `children`, `onClick?`, `className?` | Implementado |
 | `Container` | Server | `children`, `className?` | Implementado |
-| `EmptyState` | — | — | **Vazio** (placeholder) |
+| `EmptyState` (`memo`) | Server | `icon?`, `title`, `description?`, `action?` | Implementado (Sprint 3.3) |
 | `GlassCard` | Server | `children`, `className?`, `hover?` | Implementado |
 | `GradientCard` | Server | `children`, `className?` | Implementado |
 | `Input` | — | — | **Vazio** (placeholder) |
@@ -81,8 +82,8 @@
 
 ## Resumo
 
-- **Total de arquivos de componente**: 41
-- **Implementados**: 33
-- **Vazios (placeholder)**: 8 (`ProductGrid`, `StoreGrid`, `StoreDetails`, `Card`, `EmptyState`, `Input`, `Loading`, `SearchInput`)
-- **Client Components**: 6 (`SearchBar`, `Navbar`, `ProductGallery`, `FavoriteButton`, `ShareButton`, `Reveal`, `StatCard` — 7, ver detalhe acima)
+- **Total de arquivos de componente**: 42 (incluindo `SearchResultsSkeleton`, novo na Sprint 3.3)
+- **Implementados**: 35
+- **Vazios (placeholder)**: 7 (`ProductGrid`, `StoreGrid`, `StoreDetails`, `Card`, `Input`, `Loading`, `SearchInput`)
+- **Client Components**: 7 (`SearchBar`, `Navbar`, `ProductGallery`, `FavoriteButton`, `ShareButton`, `Reveal`, `StatCard`) + `app/search/error.tsx` (Client, fora de `components/`)
 - **Componentes duplicados/quase-duplicados**: `ProductCard` × `ProductHighlightCard` (ver `TECH_DEBT.md`)

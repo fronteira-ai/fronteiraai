@@ -1,9 +1,8 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { Search, Sparkles } from "lucide-react";
 import Chip from "@/components/ui/Chip";
+import { useSearch } from "@/hooks/useSearch";
 
 const suggestions = [
   "iPhone 17 Pro",
@@ -12,14 +11,12 @@ const suggestions = [
   "DJI Mini 4 Pro",
 ];
 
-export default function SearchBar() {
-  const [search, setSearch] = useState("");
-  const router = useRouter();
+type Props = {
+  defaultValue?: string;
+};
 
-  function handleSearch() {
-    if (!search.trim()) return;
-    router.push(`/search?q=${encodeURIComponent(search.trim())}`);
-  }
+export default function SearchBar({ defaultValue = "" }: Props) {
+  const { query, setQuery, submit } = useSearch(defaultValue);
 
   return (
     <div className="mt-12 w-full max-w-5xl">
@@ -30,15 +27,15 @@ export default function SearchBar() {
 
         <input
           type="text"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && submit()}
           placeholder="O que você deseja comprar hoje?"
           className="flex-1 bg-transparent px-5 py-6 text-lg text-white outline-none placeholder:text-slate-500"
         />
 
         <button
-          onClick={handleSearch}
+          onClick={submit}
           className="m-2 flex items-center justify-center gap-2 rounded-full bg-gradient-to-r from-blue-600 to-cyan-500 px-8 py-4 font-semibold text-white transition-all duration-300 hover:scale-[1.03] hover:shadow-lg hover:shadow-blue-500/30 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/60"
         >
           <Sparkles size={18} />
@@ -48,7 +45,7 @@ export default function SearchBar() {
 
       <div className="mt-6 flex flex-wrap justify-center gap-3">
         {suggestions.map((item) => (
-          <Chip key={item} onClick={() => setSearch(item)}>
+          <Chip key={item} onClick={() => setQuery(item)}>
             {item}
           </Chip>
         ))}

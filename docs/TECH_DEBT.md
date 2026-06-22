@@ -9,7 +9,8 @@ Itens identificados por leitura completa do código. Nenhum é bloqueante hoje (
 
 ## Hooks incompletos
 
-- `useStore`, `useSearch`, `useOffers` existem como arquivos vazios. Isso é ambíguo no Git/IDE: parecem implementados (aparecem no histórico, no autocomplete de import) até serem abertos. Risco real de alguém importar e só descobrir o problema em runtime/build.
+- `useStore`, `useOffers` existem como arquivos vazios. Isso é ambíguo no Git/IDE: parecem implementados (aparecem no histórico, no autocomplete de import) até serem abertos. Risco real de alguém importar e só descobrir o problema em runtime/build.
+- ~~`useSearch` vazio~~ — **resolvido na Sprint 3.3**: implementado, usado por `SearchBar`.
 - `useFavorites` funciona, mas não tem nenhuma forma de sincronizar entre abas/dispositivos nem de migrar para favoritos por usuário quando autenticação existir — vai precisar de um plano de migração de dados do `localStorage`.
 
 ## Tipagem
@@ -26,9 +27,15 @@ Itens identificados por leitura completa do código. Nenhum é bloqueante hoje (
 
 ## SEO
 
-- `app/layout.tsx` (root) ainda tem o `metadata` padrão do `create-next-app` (`title: "Create Next App"`) — nunca customizado. Toda página que não sobrescreve metadata (Home, Search) usa esse título genérico.
-- Apenas `/product/[slug]` tem `generateMetadata`/JSON-LD. Home não tem Open Graph nem canonical próprios.
+- ~~`app/layout.tsx` com metadata padrão do `create-next-app`~~ — **resolvido na Sprint 3.3**: título/descrição reais + JSON-LD `WebSite`/`SearchAction`.
+- ~~Só `/product/[slug]` tinha `generateMetadata`~~ — **resolvido parcialmente na Sprint 3.3**: `/search` ganhou `generateMetadata` (canonical/OG/robots). Home ainda não tem Open Graph nem canonical próprios.
 - Sem `sitemap.xml`/`robots.txt` (não existem em `app/`).
+
+## Busca (Sprint 3.3) — limitações conhecidas
+
+- Produtos retornados pela busca não exibem preço — `searchEverything` consulta só `products.name`, sem join com `offers` (preço pertence à oferta, não ao produto, ver `DOMAIN_MODEL.md`). Resolver exigiria uma query agregada (menor preço por produto) ou aceitar N+1 nos resultados.
+- `SearchResults`/`Categories.tsx` linkam para `/categories/${slug}`, rota que não existe ainda — mesmo padrão de link morto que `StoreCard`→`/store/[slug]` tem hoje (Domínio de Loja ainda pendente, ver `NEXT_STEPS.md`).
+- Sem filtro por tipo, paginação ou autocomplete — cada seção é limitada a 8 resultados (`RESULTS_PER_SECTION` em `search.service.ts`) sem forma de ver mais.
 
 ## Acessibilidade
 
@@ -37,8 +44,8 @@ Itens identificados por leitura completa do código. Nenhum é bloqueante hoje (
 
 ## Suspense / Streaming / Loading / Error Boundaries
 
-- Só `app/product/[slug]/` tem o conjunto completo (`loading.tsx`, `error.tsx`, `not-found.tsx`). `/` e `/search` não têm nenhum dos três — uma falha de fetch futura na Home (quando ela parar de usar mock) não terá tratamento de erro de página.
-- Nenhum uso de `<Suspense>` explícito em lugar nenhum do código — paralelizar UI parcial (ex.: mostrar a página enquanto ofertas carregam) ainda não é um padrão estabelecido no projeto.
+- `app/product/[slug]/` tem o conjunto completo (`loading.tsx`, `error.tsx`, `not-found.tsx`); `app/search/` ganhou `loading.tsx`/`error.tsx` na Sprint 3.3 (sem `not-found.tsx` — não se aplica, busca sem resultado não é 404). `/` (Home) ainda não tem nenhum dos três — uma falha de fetch futura (quando ela parar de usar mock) não terá tratamento de erro de página.
+- ~~Nenhum uso de `<Suspense>` explícito~~ — **parcialmente resolvido na Sprint 3.3**: `app/search/page.tsx` usa `<Suspense fallback={SearchResultsSkeleton}>` para a seção de resultados. Ainda não é um padrão usado em `/product/[slug]` ou na Home.
 
 ## Outras observações de organização
 

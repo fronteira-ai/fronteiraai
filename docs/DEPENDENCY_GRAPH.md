@@ -39,19 +39,22 @@ Dependências internas só entre tipos: `offer.ts` → `store.ts`; `product.ts` 
 - `product.service.ts` → `lib/supabase.ts`, `types/product.ts`
 - `offer.service.ts` → `lib/supabase.ts`, `types/offer.ts`
 - `store.service.ts` → `lib/supabase.ts`, `types/store.ts`
-- `search.service.ts` → `lib/supabase.ts` (sem tipos próprios — retorno não tipado, ver `API_CONTRACTS.md`)
+- `search.service.ts` → `lib/supabase.ts`, `types/search.ts`, `types/product.ts`, `types/store.ts`, `types/brand.ts`, `types/category.ts` (Sprint 3.3: ganhou tipo de retorno próprio)
 
 ### `hooks/*.ts`
 - `useProduct.ts` → `services/product.service.ts`, `services/offer.service.ts`, `types/product.ts`, `types/offer.ts`
 - `useFavorites.ts` → `types/favorite.ts` (não toca services/Supabase — única fonte é `localStorage`)
-- `useStore.ts`, `useSearch.ts`, `useOffers.ts` — vazios, sem dependências
+- `useSearch.ts` (Sprint 3.3) → `constants/routes.ts` (`searchPath`), `next/navigation` (`useRouter`) — não chama `search.service.ts` diretamente; a busca real acontece no Server Component da página
+- `useStore.ts`, `useOffers.ts` — vazios, sem dependências
 
 ### `components/*`
 Cada componente importa apenas de `types/`, `utils/`, `styles/`, `constants/`, outros `components/ui/`, e (só nos casos client) `hooks/`. Nenhum componente importa de `services/` ou `lib/` diretamente — regra respeitada integralmente.
 
 ### `app/*`
 - `app/page.tsx` → `components/home/*`, `components/layout/*`, `constants/categories.ts`, `types/store.ts`, `types/brand.ts`, `types/product.ts`
-- `app/search/page.tsx` → `components/layout/Navbar`, `components/home/SearchBar`, `components/search/SearchResults`
+- `app/search/page.tsx` (Sprint 3.3) → `services/search.service.ts` (Server Component falando direto com a camada de services, mesmo padrão de `app/product/[slug]/layout.tsx`), `components/layout/Navbar`/`Footer`, `components/home/SearchBar`, `components/search/SearchResults`/`SearchResultsSkeleton`, `constants/routes.ts` (`searchUrl`)
+- `app/search/error.tsx` (Sprint 3.3, Client) → `components/layout/Navbar`/`Footer`
+- `app/layout.tsx` (Sprint 3.3) → `constants/routes.ts` (`SITE_URL`, `searchUrl`)
 - `app/product/[slug]/layout.tsx` → `services/product.service.ts`, `services/offer.service.ts`, `utils/currency.ts`, `constants/routes.ts` (Server Component falando direto com a camada de services — padrão correto para Server Components, ver `CONVENTIONS.md`)
 - `app/product/[slug]/page.tsx` → `hooks/useProduct.ts`, `components/product/*`, `components/layout/*`
 
@@ -69,8 +72,8 @@ Verificação: `grep -rn "process\.env" --include="*.ts" --include="*.tsx" . --e
 
 ## Código morto identificado (sem consumidor em todo o grafo)
 
-- `services/search.service.ts` (`searchEverything`) — implementado, zero importadores.
-- `services/product.service.ts` → `searchProducts` — implementado, zero importadores.
+- ~~`services/search.service.ts` (`searchEverything`)~~ — **resolvido na Sprint 3.3**: consumido por `app/search/page.tsx`.
+- `services/product.service.ts` → `searchProducts` — implementado, zero importadores (distinto de `searchEverything`; busca só em `products`, não usado pela página de busca atual).
 - `services/store.service.ts` → `getStores`, `getStore` — implementados, zero importadores (Home usa mock, não estas funções).
 - `services/offer.service.ts` → `getOffers` — implementado, zero importadores.
 

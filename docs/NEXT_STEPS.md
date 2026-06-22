@@ -2,13 +2,19 @@
 
 Proposta de continuação, baseada no estado real do código (não no roadmap aspiracional original) e no roadmap pré-existente em `docs/ROADMAP.md`.
 
-## Sprint 3.2 (encerrada nesta auditoria)
+## Sprint 3.2 (encerrada)
 
 Consolidação de engenharia sem features novas: unificação de `process.env` em `lib/env.ts`, correção do `.gitignore`/`.env.example`, limpeza de `package.json`, e criação de 6 documentos permanentes (`DECISIONS`, `CONVENTIONS`, `API_CONTRACTS`, `DOMAIN_MODEL`, `COMPONENT_INDEX`, `DEPENDENCY_GRAPH`). Ver `docs/CHANGELOG.md` para o detalhe completo. `npm run lint`/`typecheck`/`build` confirmados limpos após as mudanças.
 
-## Sprint 3.3 (proposta)
+## Sprint 3.3 (encerrada nesta auditoria)
 
-**Objetivo**: fechar o Domínio de Loja (Release 0.3 do roadmap), que está pela metade desde antes desta auditoria — é o domínio mais próximo de "quase pronto" e replica um padrão já validado pelo Domínio de Produto.
+Diferente do que esta seção propunha anteriormente (fechar o Domínio de Loja), a sprint que efetivamente rodou implementou o **Domínio de Busca** (Release 0.4, parte 1 — equivalente à antiga "Sprint B" proposta abaixo): `app/search/page.tsx` lê `searchParams.q` e ganha `generateMetadata`; `hooks/useSearch.ts` e `services/search.service.ts` saem de placeholder/código morto; `SearchResults` renderiza resultados reais agrupados por tipo; `loading.tsx`/`error.tsx`/`SearchResultsSkeleton` espelham o padrão de `/product/[slug]`; `app/layout.tsx` ganhou metadata real + JSON-LD `WebSite`/`SearchAction`. Ver `docs/CHANGELOG.md` para o detalhe completo. Validado com `npm run lint`/`typecheck`/`build`.
+
+O **Domínio de Loja** (Release 0.3), que esta seção recomendava priorizar, continua pendente — vira a Sprint 3.4 proposta abaixo.
+
+## Sprint 3.4 (proposta)
+
+**Objetivo**: fechar o Domínio de Loja (Release 0.3 do roadmap), que está pela metade desde antes da Sprint 3.2 — é o domínio mais próximo de "quase pronto" e replica um padrão já validado pelos Domínios de Produto e (agora) Busca.
 
 **Escopo**: implementar `hooks/useStore.ts`, `components/store/StoreGrid.tsx`, `components/store/StoreDetails.tsx`, criar `app/store/[slug]/` (page + layout com metadata/JSON-LD + loading/error/not-found, espelhando `app/product/[slug]/`), decidir e implementar `getStoreBySlug` em `store.service.ts` (hoje só existe `getStore(id)`), adicionar `storePath()`/`storeUrl()` em `constants/routes.ts`.
 
@@ -21,46 +27,37 @@ Consolidação de engenharia sem features novas: unificação de `process.env` e
 6. Atualizar `Navbar`/`Footer`/`StoreCard` para usar `storePath()` em vez de string literal.
 7. Atualizar `docs/FEATURES.md`/`PROJECT_STATUS.md` movendo Loja de "em desenvolvimento" para "concluído".
 
-**Riscos**: 🟢 Baixo — o padrão de Produto já validou a abordagem; principal incerteza é se `getStore` deveria mudar de `id` para `slug` (decisão pequena, mas que afeta a assinatura de uma função já existente).
+**Riscos**: 🟢 Baixo — o padrão de Produto e Busca já validou a abordagem; principal incerteza é se `getStore` deveria mudar de `id` para `slug` (decisão pequena, mas que afeta a assinatura de uma função já existente).
 
 **Dependências**: nenhuma bloqueante — `services/store.service.ts` e `types/store.ts` já existem e funcionam; depende apenas de implementação, não de decisão de schema novo.
 
 **Estimativa**: 3–4 dias.
 
-**Impacto no produto**: fecha o segundo dos três domínios centrais da Home (Produto, Loja, Busca) com dados reais navegáveis, tornando os cards de loja da Home (`FeaturesStores`) finalmente clicáveis em vez de levarem a 404.
+**Impacto no produto**: fecha o terceiro dos três domínios centrais da Home (Produto, Busca, Loja) com dados reais navegáveis, tornando os cards de loja da Home (`FeaturesStores`) finalmente clicáveis em vez de levarem a 404.
 
 ## Sprint atual (avaliação)
 
-O repositório está no meio do que o roadmap chama de **Release 0.3 (Domínio de Loja)** com resíduos do **Release 0.4 (Busca)** já começados em paralelo, mas nenhum dos dois fechado. Release 0.2 (Produto) está concluído. Release 0.1/Sprint 0 (fundação) está concluído, apesar de `docs/PROJECT_STATUS.md` anterior dizer o contrário — esse documento estava desatualizado (substituído nesta auditoria).
+Release 0.2 (Produto) e Release 0.4 parte 1 (Busca) estão concluídos. Release 0.3 (Domínio de Loja) é o único domínio central da Home ainda pendente — `StoreCard` pronto, `StoreGrid`/`StoreDetails`/`useStore`/rota `/store/[slug]` faltando.
 
-**Sprint que acredito estarmos**: Sprint 3.x / Release 0.3 (Domínio de Loja), iniciado mas não finalizado — `StoreCard` pronto, `StoreGrid`/`StoreDetails`/`useStore`/rota `/store/[slug]` pendentes.
-
-**Próxima sprint recomendada**: fechar o Release 0.3 (Loja) antes de avançar para 0.4 (Busca), mesmo que a Busca já tenha UI parcial — evita ter três domínios "pela metade" simultaneamente.
+**Próxima sprint recomendada**: Sprint 3.4 — fechar o Release 0.3 (Loja), fechando os três domínios centrais da Home antes de avançar para filtros/paginação da Busca (fase 2) ou para releases posteriores.
 
 ---
 
 ## Roadmap proposto (próximos passos imediatos)
 
-### Sprint A — Fechar o Domínio de Loja (Release 0.3)
+### Sprint 3.4 — Fechar o Domínio de Loja (Release 0.3)
 - **Prioridade**: 🔴 Alta
-- **Risco**: Baixo (padrão já estabelecido pelo Domínio de Produto, é replicar a fórmula)
+- **Risco**: Baixo (padrão já estabelecido pelos Domínios de Produto e Busca, é replicar a fórmula)
 - **Complexidade**: Média
 - **Estimativa**: 3–4 dias
-- Tarefas: implementar `hooks/useStore.ts`, `components/store/StoreGrid.tsx`, `components/store/StoreDetails.tsx`, criar `app/store/[slug]/page.tsx` (+ `layout.tsx`/`loading.tsx`/`not-found.tsx` espelhando o de produto), decidir `getStore(id)` vs `getStoreBySlug(slug)` e ajustar `store.service.ts`, adicionar `storePath()`/`storeUrl()` em `constants/routes.ts`.
-
-### Sprint B — Ligar a Busca de ponta a ponta (Release 0.4, parte 1)
-- **Prioridade**: 🔴 Alta
-- **Risco**: Médio (decisões de UX de filtros/ranking ainda não tomadas)
-- **Complexidade**: Média
-- **Estimativa**: 3–5 dias
-- Tarefas: `app/search/page.tsx` ler `searchParams.q`, implementar `hooks/useSearch.ts` chamando `searchEverything`, `SearchResults` renderizar resultados reais agrupados por tipo (produtos/lojas/marcas), estado vazio/erro reais. Filtros, paginação, autocomplete ficam para uma segunda fase dentro do mesmo Release.
+- Tarefas: ver detalhamento da Sprint 3.4 acima.
 
 ### Sprint C — Eliminar dívidas técnicas críticas antes de crescer mais
 - **Prioridade**: 🟡 Média (mas crescente — quanto mais o código cresce, mais caro fica)
 - **Risco**: Baixo
 - **Complexidade**: Baixa–Média
 - **Estimativa**: 1–2 dias (reduzida — unificação de `lib/supabase.ts`/`lib/env.ts` já concluída na Sprint 3.2, ver `docs/CHANGELOG.md`)
-- Tarefas restantes: resolver o double-fetch de produto (mover fetch para o server, reduzir `app/product/[slug]/page.tsx` a ilhas client), trocar `<img>` por `next/image` nos 5 componentes apontados pelo lint, customizar `app/layout.tsx` (metadata real, não "Create Next App").
+- Tarefas restantes: resolver o double-fetch de produto (mover fetch para o server, reduzir `app/product/[slug]/page.tsx` a ilhas client), trocar `<img>` por `next/image` nos 5 componentes apontados pelo lint. (`app/layout.tsx` já ganhou metadata real na Sprint 3.3.)
 
 ### Sprint D — Listagem de produtos (`/products`) e categorias dinâmicas
 - **Prioridade**: 🟡 Média
@@ -79,13 +76,13 @@ O repositório está no meio do que o roadmap chama de **Release 0.3 (Domínio d
 | Critério | Nota | Justificativa |
 |---|---|---|
 | Arquitetura | ★★★★☆ | Camadas bem definidas e majoritariamente respeitadas; perde 1 ponto pelo double-fetch produto e pela página de produto ser 100% client. |
-| UX | ★★★☆☆ | Home e produto têm boa execução visual; mas navegação tem múltiplos links mortos (`/stores`, `/products`, `/compare`, etc.) e busca não funciona — frustra o fluxo principal do produto. |
-| SEO | ★★★☆☆ | Produto tem metadata+JSON-LD bem feitos; Home/raiz ainda com metadata padrão do template, sem sitemap/robots. |
+| UX | ★★★☆☆ | Home, produto e busca têm boa execução visual e funcionam de fato; mas navegação ainda tem múltiplos links mortos (`/stores`, `/products`, `/compare`, `/categories/[slug]`, etc.). |
+| SEO | ★★★★☆ | Produto e Busca têm metadata+JSON-LD bem feitos (incluindo `SearchAction` no root layout); falta só Home ganhar Open Graph/canonical próprios e sitemap/robots.txt. |
 | Performance | ★★★☆☆ | Sem otimizações graves visíveis, mas `<img>` em vez de `next/image` em 5 lugares, e fetch duplicado de produto a cada visita. |
 | Escalabilidade | ★★★★☆ | Modelagem de dados (price na offer, não no produto) e separação em camadas são boas bases; falta apenas amadurecer hooks/services que ainda faltam. |
 | Organização | ★★★★☆ | Estrutura de pastas clara e consistente; only ruído real é o volume de placeholders vazios sem marcação padronizada. |
 | Código | ★★★★☆ | TypeScript estrito, convenções de service consistentes, zero erros de lint/TS; perde ponto pelos `as Tipo[]` sem validação. |
 | Manutenibilidade | ★★★★☆ | Convenções claras e documentadas (`CLAUDE.md`), fácil para outro dev continuar; risco principal é justamente arquivo vazio parecendo implementado (causou o incidente de deploy desta sessão). |
-| Prontidão para Produção | ★★☆☆☆ | Build/lint/TS passam e o deploy na Vercel foi corrigido, mas a maioria das rotas do menu não existe, busca não funciona e dados da Home são mockados — não está pronto para usuários reais ainda. |
+| Prontidão para Produção | ★★☆☆☆ | Build/lint/TS passam e o deploy na Vercel foi corrigido, mas a maioria das rotas do menu não existe e dados da Home são mockados — não está pronto para usuários reais ainda. |
 
-**Média geral: ≈ 3,4/5** — fundação sólida, execução incompleta. Consistente com a estimativa de **30%** em `docs/PROJECT_STATUS.md`.
+**Média geral: ≈ 3,6/5** — fundação sólida, execução incompleta, mas com a Busca saindo do estado decorativo. Consistente com a estimativa de **35%** em `docs/PROJECT_STATUS.md`.

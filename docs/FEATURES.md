@@ -30,6 +30,15 @@ Inventário de funcionalidades por estado real (verificado lendo cada arquivo, n
 - **Componentes**: `Reveal`, `StatCard`, uso de `animations.cardHover`/`pulseSoft`/`glow`/`shimmer`/`gradientShift` em praticamente todos os componentes visuais.
 - **Dependências**: nenhuma externa (CSS + IntersectionObserver nativos).
 
+### Busca (Release 0.4 do roadmap) — Sprint 3.3
+- **Objetivo**: pesquisa global de produtos, lojas, marcas e categorias, com URL (`?q=`) como fonte de verdade e SEO básico.
+- **Arquivos**: `app/search/page.tsx` (Server Component, lê `searchParams.q`, `generateMetadata` com canonical/OG/robots), `app/search/loading.tsx`, `app/search/error.tsx` (Client, usa `unstable_retry` — API do Next 16.2 — e detecta estado offline via `navigator.onLine`)
+- **Componentes**: `SearchBar` (Client, via `useSearch`) · `SearchResults` (Server, agrupa por tipo: produtos/lojas/categorias/marcas, com estado vazio) · `SearchResultsSkeleton` (loading state) · `EmptyState` (genérico, reaproveitável)
+- **Dependências**: `hooks/useSearch.ts` (estado do input + navegação, mantém a URL como fonte de verdade), `services/search.service.ts` (`searchEverything`, agora também busca `categories`, escapa `%`/`_` do termo do usuário antes do `ilike`, limita a 8 resultados por seção, lança erro só se todas as 4 queries falharem), `types/search.ts` (`SearchResponse`), `constants/routes.ts` (`searchPath`/`searchUrl`)
+- **SEO**: JSON-LD `WebSite`/`SearchAction` adicionado em `app/layout.tsx` (root), habilitando potencial "sitelinks search box"; resultados de busca (`?q=`) marcados `robots: noindex` (conteúdo fino/duplicado), página de busca sem query é indexável.
+- **Limitação conhecida**: produtos retornados pela busca não exibem preço — `searchEverything` não faz join com `offers` (a busca consulta só `products.name`, sem preço, já que preço pertence à oferta, não ao produto). Ver `TECH_DEBT.md`.
+- **Performance**: fetch único por request — `generateMetadata` não dispara uma segunda consulta porque só lê `searchParams.q` (não chama `searchEverything`); a busca real ocorre dentro do `<Suspense>` via `getCachedSearch` (`React.cache`).
+
 ---
 
 ## Em desenvolvimento
@@ -40,13 +49,6 @@ Inventário de funcionalidades por estado real (verificado lendo cada arquivo, n
 - **Componentes**: `StoreCard` (pronto, usado na Home) · `StoreGrid` (arquivo vazio) · `StoreDetails` (arquivo vazio)
 - **Dependências**: `services/store.service.ts` (pronto: `getStores`, `getStore`) · `hooks/useStore.ts` (vazio) · `types/store.ts` (pronto)
 - **O que falta**: rota `app/store/[slug]/`, implementar `useStore`, implementar `StoreGrid`/`StoreDetails`, decidir se `getStore` busca por `id` ou deveria buscar por `slug` (hoje só aceita `id`, inconsistente com o padrão `getProductBySlug`).
-
-### Busca (Release 0.4 do roadmap)
-- **Objetivo**: pesquisa global de produtos, lojas, marcas e categorias.
-- **Arquivos**: `app/search/page.tsx` (não lê `searchParams`)
-- **Componentes**: `SearchBar` (funcional só para navegar, redireciona para `/search?q=...`) · `SearchResults` (estático, sempre "Nenhum resultado encontrado")
-- **Dependências**: `services/search.service.ts` (`searchEverything`, implementado mas não chamado por nada) · `hooks/useSearch.ts` (vazio) · `types/search.ts` (vazio)
-- **O que falta**: ler `?q=` na página, implementar `useSearch` chamando `searchEverything`, renderizar resultados reais em `SearchResults`, filtros/paginação/ordenação (todos citados no roadmap, nenhum começado).
 
 ### Listagem de produtos
 - **Objetivo**: grid de produtos (presumivelmente para `/products`, linkado no `Footer`/`Navbar`/`Offers`).
@@ -60,6 +62,8 @@ Inventário de funcionalidades por estado real (verificado lendo cada arquivo, n
 
 | Feature | Release no roadmap | Evidência de planejamento |
 |---|---|---|
+| Filtros/paginação/ordenação na Busca | 0.4 (parte 2) | `docs/NEXT_STEPS.md` — busca já lê `?q=` e renderiza resultados reais (Sprint 3.3), mas sem filtro por tipo/categoria, paginação ou autocomplete ainda |
+| Rota `/categories/[slug]` | — | `Categories.tsx`/`SearchResults.tsx` já linkam para `/categories/${slug}`, rota inexistente (mesmo padrão de link morto de `/store/[slug]` antes da Sprint de Loja) |
 | Comparação de produtos | 0.5 | `docs/ROADMAP.md`, link `/compare` no Navbar/Footer |
 | Assistente de IA (chat) | 0.6 | `services/ai.service.ts` vazio, `ai/` só `.gitkeep`, `AIShowcase` é só marketing estático |
 | Painel administrativo | 0.7 | `docs/ROADMAP.md` |

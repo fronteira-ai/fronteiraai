@@ -82,11 +82,20 @@ interface Favorite { productId: string; slug: string; name: string; imageUrl: st
 ```
 **Não é uma tabela do Supabase** — vive inteiramente no `localStorage` do navegador via `hooks/useFavorites.ts`. Estrutura achatada (não referencia `Product` por FK) porque precisa ser exibível sem nova consulta ao banco.
 
+### `SearchResponse` (`types/search.ts`) — Sprint 3.3
+```ts
+interface SearchResponse {
+  query: string;
+  products: Product[]; stores: Store[]; brands: Brand[]; categories: Category[];
+  total: number; durationMs: number;
+}
+```
+Não é uma tabela — é a forma de retorno agregado de `services/search.service.ts` (`searchEverything`), que consulta as 4 tabelas em paralelo. Como `Product` aqui não vem de um join com `offers`, os produtos retornados pela busca não têm preço (ver `TECH_DEBT.md`).
+
 ## Entidades planejadas (tipos vazios — sem forma definida ainda)
 
 - `User` (`types/user.ts`) — autenticação/conta, mencionado em `database/DATABASE.md` como tabela futura.
 - `Review` (`types/review.ts`) — avaliações de produto/loja, tabela futura.
-- `Search` (`types/search.ts`) — provavelmente forma de resultado/estado de busca; sem uso ainda.
 
 ## Relacionamentos
 

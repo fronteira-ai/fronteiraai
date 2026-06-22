@@ -11,18 +11,18 @@ Documentos relacionados, mais granulares: `docs/CONVENTIONS.md` (regras de estil
 ```
 app/                    rotas (App Router)
   page.tsx              Home — Server Component, dados estáticos
-  search/page.tsx       Server Component, sem lógica de busca
+  search/                page.tsx (Server, lê searchParams.q + generateMetadata), loading.tsx, error.tsx (Client, unstable_retry)
   product/[slug]/       layout.tsx (Server, fetch+metadata+JSON-LD) + page.tsx (Client, refetch via hook)
 components/
-  home/                 10 componentes, todos Server Components exceto SearchBar ("use client")
+  home/                 10 componentes, todos Server Components exceto SearchBar ("use client", via useSearch)
   layout/               Navbar ("use client", scroll listener), Footer (Server)
   product/              10 componentes, Server exceto FavoriteButton/ShareButton/ProductGallery ("use client")
   store/                 StoreCard (Server); StoreGrid/StoreDetails vazios
-  search/                SearchResults (Server, estático)
-  ui/                    kit compartilhado, 18 arquivos (13 implementados, 5 vazios)
-hooks/                  useProduct, useFavorites implementados; useStore/useSearch/useOffers vazios
-services/               product/offer/store/search implementados; brand/category/ai vazios
-types/                  Product/Offer/Store/Brand/Category/Favorite implementados; User/Review/Search vazios
+  search/                SearchResults (Server, resultados reais agrupados por tipo), SearchResultsSkeleton
+  ui/                    kit compartilhado, 18 arquivos (14 implementados, 4 vazios)
+hooks/                  useProduct, useFavorites, useSearch implementados; useStore/useOffers vazios
+services/               product/offer/store/search implementados (search em uso desde a Sprint 3.3); brand/category/ai vazios
+types/                  Product/Offer/Store/Brand/Category/Favorite/Search implementados; User/Review vazios
 lib/                    supabase.ts (cliente), env.ts (novo, não commitado, não usado)
 constants/              routes.ts/categories.ts implementados; demais (config/colors/navigation/currencies/countries/restrictedProducts) vazios
 utils/                  currency.ts implementado; format/search/slug/validators vazios
@@ -50,21 +50,26 @@ Na prática, **dois padrões coexistem**:
 1. **Produto** (o único fluxo "completo"): o **layout** (Server Component) chama `product.service`/`offer.service` diretamente via `cache()` do React para metadata + JSON-LD; a **page** (Client Component) chama os mesmos dados de novo através de `useProduct` (que internamente chama os mesmos services). Resultado: **a mesma query ao Supabase roda duas vezes por request** — uma no servidor (layout, para SEO) e uma no cliente (page, para render). Isso funciona, mas é redundante e gasta uma chamada extra a cada acesso à página de produto.
 2. **Home**: não há fluxo nenhum até o service — os componentes recebem arrays mockados criados inline em `app/page.tsx`/`constants/categories.ts`, tipados com os tipos reais (`Store`, `Brand`, `ProductHighlight`) para que a troca por dados reais não exija mudar os componentes — mas a troca ainda não foi feita.
 
-## Fluxo da busca
+## Fluxo da busca (Sprint 3.3)
 
 ```
-SearchBar (client) --router.push--> /search?q=X
+SearchBar (client, via useSearch) --router.push(searchPath(q))--> /search?q=X
                                         │
                                         ▼
                           SearchPage (Server Component)
-                          NÃO lê searchParams
+                          lê searchParams.q, gera metadata (canonical/OG/robots)
                                         │
                                         ▼
-                          SearchResults (Server, estático)
-                          sempre renderiza "Nenhum resultado encontrado"
+                          <Suspense fallback={SearchResultsSkeleton}>
+                            SearchResultsAsync → getCachedSearch(q) → searchEverything(q)
+                          </Suspense>
+                                        │
+                                        ▼
+                          SearchResults (Server) — agrupa por tipo,
+                          EmptyState se total === 0 ou sem query
 ```
 
-`services/search.service.ts` (`searchEverything`) existe e faz `Promise.all` de três `ilike` queries (products/stores/brands), mas **não é chamado por nada** — nem por um hook, nem diretamente pela página. `hooks/useSearch.ts` está vazio. A busca é, hoje, puramente decorativa.
+`services/search.service.ts` (`searchEverything`) faz `Promise.all` de quatro `ilike` queries (`products`/`stores`/`brands`/`categories`), escapando `%`/`_` do termo do usuário antes de montar o padrão (evita que o usuário injete wildcards do Postgres), limita 8 resultados por seção, e lança erro apenas se todas as queries falharem — capturado por `app/search/error.tsx` (Client Component, usa a prop `unstable_retry` do Next 16.2, distingue erro genérico de estado offline via `navigator.onLine`). `hooks/useSearch.ts` é puramente de apresentação: mantém o valor do input e empurra a navegação via `searchPath()`, sem chamar o service diretamente — a busca real acontece no servidor, dentro do Server Component da página, com `React.cache` evitando refetch entre `generateMetadata` (que não chama `searchEverything`, só lê `q`) e o corpo da página.
 
 ## Fluxo dos produtos
 
@@ -127,7 +132,6 @@ A camada que está **mais madura** é `types/` + os 4 services implementados —
 
 ## Melhorias identificadas
 
-- Resolver o domínio de busca (ligar `app/search/page.tsx` a `searchParams`, `useSearch`, `search.service.ts`) antes de adicionar mais UI nessa área.
 - Unificar o fetch de produto: mover toda a busca para o Server Component (layout/page server) e passar os dados como props para um Client Component pequeno só para as partes interativas (galeria, favoritar, compartilhar), eliminando o `useProduct` client-side ou reduzindo seu uso a casos que realmente precisam de refetch no cliente.
 - Versionar o schema do banco (`database/migrations`) em vez de mantê-lo só no painel do Supabase e em markdown descritivo.
 - Adicionar tipagem de retorno do Supabase com validação em runtime (ou ao menos `zod`) em vez de `as Product[]` — hoje uma mudança de schema no banco não quebra o TypeScript, só quebra em runtime.

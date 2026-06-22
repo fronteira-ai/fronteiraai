@@ -53,11 +53,13 @@ Contratos de todas as funções de `services/*.service.ts` que têm implementaç
 
 ## search.service.ts
 
-### `searchEverything(search: string): Promise<{ products: any[]; stores: any[]; brands: any[] }>`
-- **Tabelas**: `products`, `stores`, `brands` em paralelo (`Promise.all`), todas com `ilike("name", "%search%")`
-- **Comportamento especial**: se `search.trim()` for vazio, retorna `{ products: [], stores: [], brands: [] }` sem consultar o banco
-- **Erro**: não trata explicitamente por tabela; usa `?? []` no resultado de cada `select`
-- **Consumidores**: nenhum (código morto — `hooks/useSearch.ts` está vazio e `app/search/page.tsx` não chama esta função)
+### `searchEverything(search: string): Promise<SearchResponse>`
+- **Tabelas**: `products`, `stores`, `brands`, `categories` em paralelo (`Promise.all`), todas com `ilike("name", pattern)` e `.limit(8)` (`RESULTS_PER_SECTION`)
+- **Sanitização**: o termo do usuário passa por `escapeLikePattern` (escapa `%`/`_` com `\`) antes de virar `%termo%`, para que não seja interpretado como wildcard do Postgres
+- **Comportamento especial**: se `search.trim()` for vazio, retorna uma `SearchResponse` vazia (`total: 0`) sem consultar o banco
+- **Erro**: loga cada `error` individualmente; lança `Error` apenas se **todas** as 4 queries falharem (erro parcial não interrompe a resposta)
+- **Retorno**: `{ query, products: Product[], stores: Store[], brands: Brand[], categories: Category[], total, durationMs }` (`types/search.ts`)
+- **Consumidores**: `app/search/page.tsx` (via `React.cache`, dentro de `<Suspense>`)
 
 ## Services sem implementação (apenas placeholder)
 
@@ -73,5 +75,6 @@ Contratos de todas as funções de `services/*.service.ts` que têm implementaç
 | `offers` | `offer.service.ts` | `*`, join `store:stores(*)`, filtro por `product_id`, ordenação por `price` |
 | `stores` | `store.service.ts`, `search.service.ts` | `*`, filtro por `id`, `name`; ordenação por `rating` |
 | `brands` | `search.service.ts` | `*`, filtro por `name` |
+| `categories` | `search.service.ts` | `*`, filtro por `name` |
 
 Nenhuma migration versionada existe para confirmar o schema real dessas tabelas — este documento reflete apenas o que o código assume que existe (ver `TECH_DEBT.md`).

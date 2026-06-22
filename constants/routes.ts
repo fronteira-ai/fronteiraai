@@ -9,3 +9,11 @@ export function productPath(slug: string): string {
 export function productUrl(slug: string): string {
   return `${SITE_URL}${productPath(slug)}`;
 }
+
+export function searchPath(query?: string): string {
+  return query ? `/search?q=${encodeURIComponent(query)}` : "/search";
+}
+
+export function searchUrl(query?: string): string {
+  return `${SITE_URL}${searchPath(query)}`;
+}

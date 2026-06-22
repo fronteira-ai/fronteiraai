@@ -2,8 +2,8 @@
 
 Auditoria gerada por leitura completa do código-fonte (sem alterações de código). Substitui o conteúdo anterior deste arquivo, que descrevia um estado de planejamento ("Sprint 0", 15%) já superado pelo código real.
 
-Última atualização: 2026-06-22 (Sprint 3.2 — Encerramento e Consolidação da Base de Engenharia)
-Branch auditada: `main` @ `647382f` + consolidação não commitada desta sprint
+Última atualização: 2026-06-22 (Sprint 3.3 — Domínio de Busca, Release 0.4)
+Branch auditada: `main` @ `d52f9df` + Sprint 3.3 (Busca) desta auditoria
 
 ---
 
@@ -41,10 +41,10 @@ Ver `docs/ARCHITECTURE.md` (atualizado nesta auditoria) para o mapeamento comple
 - **Favoritos** — `useFavorites` funcional via `localStorage` (`useSyncExternalStore`), sem dependência de Supabase/autenticação.
 - **Navbar/Footer** — completos, estáticos.
 - **Sistema de motion/animação** (Sprint 3.2) — `styles/animations.ts` + keyframes em `globals.css`, usado em quase todos os componentes (`Reveal`, `cardHover`, contadores animados em `StatCard`), com respeito a `prefers-reduced-motion`.
+- **Busca (`/search`)** (Sprint 3.3) — fluxo completo ponta-a-ponta: `app/search/page.tsx` (Server Component) lê `searchParams.q`, tem `generateMetadata` (canonical, OG, `robots: noindex` para resultados com query), e renderiza `SearchResultsAsync` dentro de `<Suspense>` (fallback `SearchResultsSkeleton`). `hooks/useSearch.ts` governa o input/navegação mantendo a URL como fonte de verdade. `services/search.service.ts` (`searchEverything`) busca `products`/`stores`/`brands`/`categories` em paralelo, escapa `%`/`_` do termo do usuário, limita 8 resultados por seção, e lança erro apenas se todas as queries falharem (capturado por `app/search/error.tsx`, que usa a API `unstable_retry` do Next 16.2 e detecta estado offline). `SearchResults` agrupa por tipo com `EmptyState` para estado vazio/sem query. JSON-LD `WebSite`/`SearchAction` adicionado em `app/layout.tsx`.
 
 ## Funcionalidades parcialmente implementadas
 
-- **Busca (`/search`)** — existe a página, `SearchBar` (redireciona para `/search?q=...`) e `SearchResults`, mas **nada está conectado**: a página não lê `searchParams`, `SearchResults` é um placeholder estático ("Nenhum resultado encontrado"), e `services/search.service.ts` (`searchEverything`) não é chamado por nenhum hook/página. `hooks/useSearch.ts` está vazio.
 - **Domínio de Loja** — `types/store.ts`, `services/store.service.ts` e `components/store/StoreCard.tsx` funcionam e são usados na Home, mas **não existe rota `/store/[slug]`**, e `components/store/StoreGrid.tsx`, `StoreDetails.tsx` e `hooks/useStore.ts` existem como arquivos vazios (placeholders).
 - **`components/product/ProductGrid.tsx`** — arquivo vazio; nada o importa ainda (não usado para listar produtos em `/products`, rota que também não existe).
 
@@ -63,35 +63,36 @@ Ver `docs/ARCHITECTURE.md` (atualizado nesta auditoria) para o mapeamento comple
 | Rota | Tipo | Status |
 |---|---|---|
 | `/` | Server Component | Completa (dados estáticos) |
-| `/search` | Server Component | UI shell, sem lógica |
+| `/search` | Server Component (com `<Suspense>`) | Completa, integrada ao Supabase |
 | `/product/[slug]` | Client page + Server layout | Completa, integrada ao Supabase |
 
 ## Componentes existentes
 
-- `home/`: Hero, SearchBar, Categories, Offers, FeaturesStores, AIShowcase, HowItWorks, Brands, Stats, CTASection — 10 componentes, todos implementados.
+- `home/`: Hero, SearchBar, Categories, Offers, FeaturesStores, AIShowcase, HowItWorks, Brands, Stats, CTASection — 10 componentes, todos implementados. `SearchBar` agora delega estado/navegação a `useSearch` (Sprint 3.3).
 - `layout/`: Navbar, Footer — implementados.
 - `product/`: ProductCard, ProductGallery, ProductHeader, ProductSpecifications, ProductOffers, ProductBreadcrumb, RelatedProducts, FavoriteButton, ShareButton, ProductHighlightCard — implementados. `ProductGrid` — vazio.
 - `store/`: StoreCard — implementado. `StoreGrid`, `StoreDetails` — vazios.
-- `search/`: SearchResults — placeholder estático.
-- `ui/`: Badge, Button, Chip, Container, Section, SectionTitle, CategoryCard, FeatureCard, StatCard, Logo, Reveal, GlassCard, GradientCard — implementados (13). `Card`, `EmptyState`, `Input`, `Loading`, `SearchInput` — vazios (5).
+- `search/`: SearchResults (Sprint 3.3, renderiza resultados reais agrupados por tipo), SearchResultsSkeleton (novo) — implementados.
+- `ui/`: Badge, Button, Chip, Container, Section, SectionTitle, CategoryCard, FeatureCard, StatCard, Logo, Reveal, GlassCard, GradientCard, EmptyState (Sprint 3.3) — implementados (14). `Card`, `Input`, `Loading`, `SearchInput` — vazios (4).
 
 ## Hooks existentes
 
 - `useProduct` — implementado, usado em `/product/[slug]`.
 - `useFavorites` — implementado, usado em `FavoriteButton`.
-- `useStore`, `useSearch`, `useOffers` — arquivos vazios (placeholders).
+- `useSearch` (Sprint 3.3) — implementado, usado em `SearchBar`.
+- `useStore`, `useOffers` — arquivos vazios (placeholders).
 
 ## Services existentes
 
 - `product.service.ts` — implementado (`getProducts`, `getProductBySlug`, `getRelatedProducts`, `searchProducts`).
 - `offer.service.ts` — implementado (`getOffers`, `getOffersByProduct`).
 - `store.service.ts` — implementado (`getStores`, `getStore`).
-- `search.service.ts` — implementado (`searchEverything`) mas **não usado em nenhum lugar** (código morto até a busca ser ligada).
+- `search.service.ts` — implementado e em uso (Sprint 3.3): `searchEverything` agora também busca `categories`, escapa `%`/`_` do termo do usuário, limita resultados por seção, e é chamado por `app/search/page.tsx` via `React.cache`.
 - `brand.service.ts`, `category.service.ts`, `ai.service.ts` — vazios.
 
 ## Tipos existentes
 
-`Product`/`ProductWithRelations`/`ProductHighlight`, `Offer`/`OfferWithStore`, `Store`, `Brand`, `Category`, `Favorite` — implementados. `User`, `Review`, `Search` — vazios.
+`Product`/`ProductWithRelations`/`ProductHighlight`, `Offer`/`OfferWithStore`, `Store`, `Brand`, `Category`, `Favorite`, `Search` (`SearchResponse`, Sprint 3.3) — implementados. `User`, `Review` — vazios.
 
 ## Providers existentes
 
@@ -115,7 +116,7 @@ Projeto linkado a um projeto Vercel (`.vercel/project.json` presente localmente,
 
 ## Status do build
 
-✅ `npm run build` — sucesso (Turbopack, 3 rotas: `/`, `/_not-found`, `/product/[slug]` estático/dinâmico, `/search` estático).
+✅ `npm run build` — sucesso (Turbopack, 4 rotas: `/` estático, `/_not-found`, `/product/[slug]` dinâmico, `/search` dinâmico — passou a ser dinâmico nesta sprint por depender de `searchParams`).
 
 ## Status do lint
 
@@ -129,8 +130,12 @@ Projeto linkado a um projeto Vercel (`.vercel/project.json` presente localmente,
 
 Esta sprint não adicionou funcionalidades; consolidou a base de engenharia: unificação do acesso a `process.env` em `lib/env.ts` (ADR-001), correção do `.gitignore` que bloqueava `.env.example` (ADR-002), limpeza de scripts quebrados/não-portáveis em `package.json` (ADR-003, ADR-004), e a criação de seis documentos permanentes de engenharia: `docs/DECISIONS.md`, `CONVENTIONS.md`, `API_CONTRACTS.md`, `DOMAIN_MODEL.md`, `COMPONENT_INDEX.md`, `DEPENDENCY_GRAPH.md`. Nenhuma rota, componente ou comportamento de produto foi alterado.
 
+## Sprint 3.3 — Domínio de Busca (Release 0.4, parte 1)
+
+Liga a busca de ponta a ponta: `app/search/page.tsx` lê `searchParams.q` e ganha `generateMetadata` (canonical/OG/robots); `hooks/useSearch.ts` e `services/search.service.ts` saem do estado de placeholder/código morto; `SearchResults` passa a renderizar resultados reais agrupados por tipo (produtos/lojas/categorias/marcas) com estado vazio via `EmptyState` (novo componente genérico em `ui/`); adicionados `loading.tsx`/`error.tsx`/`SearchResultsSkeleton` espelhando o padrão já usado em `/product/[slug]`; JSON-LD `WebSite`/`SearchAction` adicionado ao root layout, que também ganhou metadata customizada (antes era o padrão do `create-next-app`). Filtros, paginação e autocomplete ficam para uma fase 2 do Release 0.4. Validado com `npm run lint`/`typecheck`/`build`.
+
 ---
 
-## Status Geral: **30%**
+## Status Geral: **35%**
 
-Critério: dos 8 domínios do roadmap original (Home, Produto, Loja, Busca, Comparação, IA, Admin, Crawler), 1 está completo com dados reais (Produto), 1 está com UI pronta mas dados mockados (Home), 2 estão começados parcialmente (Loja, Busca), e os demais 4 não foram iniciados. A fundação técnica (arquitetura, tipos, convenções, build/lint/TS limpos) está sólida, o que justifica não estar mais baixo.
+Critério: dos 8 domínios do roadmap original (Home, Produto, Loja, Busca, Comparação, IA, Admin, Crawler), 2 estão completos com dados reais (Produto, Busca), 1 está com UI pronta mas dados mockados (Home), 1 está começado parcialmente (Loja), e os demais 4 não foram iniciados. A fundação técnica (arquitetura, tipos, convenções, build/lint/TS limpos) está sólida, e a Busca sair do estado "decorativo" fecha um dos três domínios centrais da Home (Produto, Loja, Busca).
