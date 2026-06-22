@@ -1,599 +1,137 @@
 # ARCHITECTURE.md
 
-# ParaguAI Architecture
+Mapeamento real da arquitetura, gerado por leitura completa do código. Complementa (e corrige pontos desatualizados de) `docs/CLAUDE.md`, que descreve a arquitetura *pretendida* — este documento descreve a arquitetura *como está implementada hoje*.
 
-Version: 1.0
-
----
-
-# Purpose
-
-This document defines the official architecture of the ParaguAI platform.
-
-Every new feature must respect these standards.
+Documentos relacionados, mais granulares: `docs/CONVENTIONS.md` (regras de estilo/nomenclatura), `docs/API_CONTRACTS.md` (contratos de cada service), `docs/DOMAIN_MODEL.md` (entidades e relacionamentos), `docs/COMPONENT_INDEX.md` (tabela de todos os componentes), `docs/DEPENDENCY_GRAPH.md` (grafo de imports entre camadas), `docs/DECISIONS.md` (histórico de decisões arquiteturais).
 
 ---
 
-# Architectural Principles
-
-The project follows a layered architecture.
+## Estrutura de pastas (real)
 
 ```
-UI
-↓
-
-Page
-
-↓
-
-Hook
-
-↓
-
-Service
-
-↓
-
-Supabase
-
-↓
-
-Database
-```
-
-Each layer has a single responsibility.
-
----
-
-# Directory Structure
-
-```
-app/
+app/                    rotas (App Router)
+  page.tsx              Home — Server Component, dados estáticos
+  search/page.tsx       Server Component, sem lógica de busca
+  product/[slug]/       layout.tsx (Server, fetch+metadata+JSON-LD) + page.tsx (Client, refetch via hook)
 components/
-hooks/
-services/
-types/
-lib/
-utils/
-database/
-docs/
-public/
-assets/
+  home/                 10 componentes, todos Server Components exceto SearchBar ("use client")
+  layout/               Navbar ("use client", scroll listener), Footer (Server)
+  product/              10 componentes, Server exceto FavoriteButton/ShareButton/ProductGallery ("use client")
+  store/                 StoreCard (Server); StoreGrid/StoreDetails vazios
+  search/                SearchResults (Server, estático)
+  ui/                    kit compartilhado, 18 arquivos (13 implementados, 5 vazios)
+hooks/                  useProduct, useFavorites implementados; useStore/useSearch/useOffers vazios
+services/               product/offer/store/search implementados; brand/category/ai vazios
+types/                  Product/Offer/Store/Brand/Category/Favorite implementados; User/Review/Search vazios
+lib/                    supabase.ts (cliente), env.ts (novo, não commitado, não usado)
+constants/              routes.ts/categories.ts implementados; demais (config/colors/navigation/currencies/countries/restrictedProducts) vazios
+utils/                  currency.ts implementado; format/search/slug/validators vazios
+styles/                 animations.ts implementado e amplamente usado; theme/typography/spacing/radius/shadows vazios
+database/               DATABASE.md/ERD.md (documentação descritiva); migrations/seed/sql só .gitkeep — sem SQL versionado
+ai/                     só .gitkeep — nada implementado
+assets/                 só .gitkeep — nada implementado
+docs/                   documentação de produto/processo (este arquivo e os 5 irmãos)
 ```
 
----
+## Dependências
 
-# app/
+`package.json`: `@supabase/supabase-js ^2.108.2`, `lucide-react ^1.21.0`, `next 16.2.9`, `react`/`react-dom 19.2.4`. Dev: `tailwindcss ^4`, `@tailwindcss/postcss`, `eslint 9` + `eslint-config-next 16.2.9`, `typescript ^5`. Sem libs de state management, data-fetching (React Query/SWR), validação (zod) ou testes — tudo é `useState`/`useEffect` manual e tipagem direta do retorno do Supabase (`as Product[]`, sem validação em runtime).
 
-Contains Next.js routes.
+## Camadas e fluxo de dados (intencional vs. real)
 
-Responsibilities:
-
-* Routing
-* Layouts
-* Metadata
-* Server Components
-* Client Pages
-
-Must never contain business logic.
-
----
-
-# components/
-
-Reusable UI components.
-
-Organization:
+Fluxo declarado em `docs/CLAUDE.md`:
 
 ```
-components/
-
-home/
-
-product/
-
-store/
-
-search/
-
-compare/
-
-layout/
-
-ui/
+Page → Hook → Service → Supabase → Database
 ```
 
-Rules:
+Na prática, **dois padrões coexistem**:
 
-* Small components
-* Reusable
-* Independent
-* No database access
+1. **Produto** (o único fluxo "completo"): o **layout** (Server Component) chama `product.service`/`offer.service` diretamente via `cache()` do React para metadata + JSON-LD; a **page** (Client Component) chama os mesmos dados de novo através de `useProduct` (que internamente chama os mesmos services). Resultado: **a mesma query ao Supabase roda duas vezes por request** — uma no servidor (layout, para SEO) e uma no cliente (page, para render). Isso funciona, mas é redundante e gasta uma chamada extra a cada acesso à página de produto.
+2. **Home**: não há fluxo nenhum até o service — os componentes recebem arrays mockados criados inline em `app/page.tsx`/`constants/categories.ts`, tipados com os tipos reais (`Store`, `Brand`, `ProductHighlight`) para que a troca por dados reais não exija mudar os componentes — mas a troca ainda não foi feita.
 
----
-
-# hooks/
-
-Business logic for the frontend.
-
-Examples:
+## Fluxo da busca
 
 ```
-useProduct()
-
-useStore()
-
-useSearch()
-
-useOffers()
-
-useFavorites()
+SearchBar (client) --router.push--> /search?q=X
+                                        │
+                                        ▼
+                          SearchPage (Server Component)
+                          NÃO lê searchParams
+                                        │
+                                        ▼
+                          SearchResults (Server, estático)
+                          sempre renderiza "Nenhum resultado encontrado"
 ```
 
-Rules:
+`services/search.service.ts` (`searchEverything`) existe e faz `Promise.all` de três `ilike` queries (products/stores/brands), mas **não é chamado por nada** — nem por um hook, nem diretamente pela página. `hooks/useSearch.ts` está vazio. A busca é, hoje, puramente decorativa.
 
-* Call Services
-* Manage loading state
-* Manage errors
-* Never access Supabase directly
-
----
-
-# services/
-
-Data layer.
-
-Responsible for:
-
-* Queries
-* Inserts
-* Updates
-* Deletes
-
-Every communication with Supabase belongs here.
-
-Example:
+## Fluxo dos produtos
 
 ```
-product.service.ts
-
-store.service.ts
-
-offer.service.ts
-
-search.service.ts
+ProductPage (client, useParams) → useProduct(slug)
+                                       │
+                       getProductBySlug ─┼─ getOffersByProduct
+                       getRelatedProducts┘
+                                       │
+                          supabase.from("products"/"offers")
 ```
 
----
+Em paralelo, `app/product/[slug]/layout.tsx` roda no servidor: `getCachedProduct`/`getCachedOffers` (memorizados com `React.cache`, mas só dentro do próprio request do layout — não compartilhado com o client component da page) para `generateMetadata` + JSON-LD.
 
-# types/
+`notFound()` é chamado dentro do corpo de um Client Component (`"use client"` + `useParams`), que funciona no Next 16 mas é atípico — o padrão recomendado em App Router é resolver `params`/`notFound` no Server Component e passar os dados como props para um Client Component apenas onde há interatividade (favoritar, galeria). Aqui a página inteira é client-side, perdendo streaming/SSR para o conteúdo principal (só o `layout` é SSR, para metadata/SEO).
 
-Every entity must have its own type.
-
-Examples:
+## Fluxo das lojas
 
 ```
-Product
-
-Offer
-
-Store
-
-Brand
-
-Category
-
-Favorite
-
-User
+StoreCard (recebe Store via props, vindo de app/page.tsx mockado)
+       │
+       └─ link para /store/[slug] → rota INEXISTENTE (404)
 ```
 
-Never use "any".
+`store.service.ts` (`getStores`, `getStore`) está implementado e correto, mas nenhuma rota/hook o consome ainda. `StoreGrid`/`StoreDetails`/`useStore` são placeholders vazios — o domínio de Loja está no início do Release 0.3 (ver `docs/ROADMAP.md`).
 
----
+## Server Components vs. Client Components
 
-# lib/
+- **Server (default)**: `app/page.tsx`, `app/search/page.tsx`, `app/product/[slug]/layout.tsx`, todos os componentes de `home/` exceto `SearchBar`, `Footer`, a maioria de `ui/`, `ProductHeader`/`ProductSpecifications`/`ProductOffers`/`ProductBreadcrumb`/`RelatedProducts`/`ProductHighlightCard`/`ProductCard`, `StoreCard`, `SearchResults`.
+- **Client (`"use client"`)**: `SearchBar`, `Navbar` (scroll listener), `Reveal`/`StatCard` (IntersectionObserver), `ProductGallery` (estado de imagem ativa), `FavoriteButton`/`ShareButton` (interação + `localStorage`/clipboard), `useFavorites`/`useProduct` (hooks), e a **página inteira** `app/product/[slug]/page.tsx`.
 
-Shared libraries.
+A separação segue a convenção do CLAUDE.md ("client só quando precisa de estado/eventos"), exceto pela page de produto ser inteiramente client quando poderia ser majoritariamente server com ilhas de interatividade.
 
-Examples:
+## Roteamento
 
-```
-supabase.ts
+App Router puro, sem route groups, sem paralelo/intercepting routes. Único parâmetro dinâmico: `app/product/[slug]`. `app/search` lê `?q=` apenas na intenção (o link existe, a leitura não). Várias rotas são referenciadas em `Navbar`/`Footer` mas não existem: `/stores`, `/products`, `/compare`, `/favorites`, `/price-history`, `/about`, `/contact`, `/privacy`, `/terms`, `/#categorias`, `/#ia` (os dois últimos são anchors válidos dentro de `/`).
 
-constants.ts
+## Providers
 
-env.ts
-```
+Nenhum. Sem `ThemeProvider`, sem `AuthProvider`, sem `QueryClientProvider`. `app/layout.tsx` é o root layout padrão do `create-next-app` (título/descrição ainda "Create Next App" — nunca customizado).
 
----
+## Services
 
-# utils/
+Ver inventário em `PROJECT_STATUS.md`. Convenção consistente: toda função retorna o tipo esperado ou `[]`/`null` em erro, loga via `console.error`, nunca lança. Bem seguida nos 4 services implementados.
 
-Pure utility functions.
+## Tipos
 
-Examples:
+Modelagem 1:1 com tabelas do Supabase (`Product`, `Offer`, `Store`, `Brand`, `Category`, `Favorite`), mais tipos de composição (`ProductWithRelations`, `OfferWithStore`, `ProductHighlight`) para os `select()` com joins. Padrão saudável e consistente onde implementado.
 
-```
-currency.ts
+## Camadas — avaliação
 
-formatDate.ts
+A camada que está **mais madura** é `types/` + os 4 services implementados — modelagem de dados consistente e sem duplicação. A camada **mais fraca** é `hooks/`: de 5 hooks declarados (`useProduct`, `useStore`, `useSearch`, `useOffers`, `useFavorites`), só 2 têm corpo. Isso força padrões ad-hoc quando alguém precisar de lojas/busca antes desses hooks existirem.
 
-slug.ts
+## Duplicações identificadas
 
-validators.ts
-```
+1. **Fetch duplicado de produto** — `layout.tsx` (server) e `page.tsx` (client, via `useProduct`) buscam o mesmo produto/ofertas de forma independente, sem compartilhar cache entre os dois (o `React.cache()` usado no layout não atravessa a fronteira server/client). Toda visita à página de produto dispara a query ao Supabase ao menos duas vezes.
+2. **`components/product/ProductCard.tsx`** vs **`components/product/ProductHighlightCard.tsx`** — ambos são "card de produto clicável com imagem, nome e preço", com layout quase idêntico, divergindo só nos campos extras (desconto/estoque no Highlight) e no tipo de entrada (`Product` vs `ProductHighlight`). Poderiam convergir para um único componente parametrizado.
+3. ~~Validação de env do Supabase duplicada~~ — **resolvido na Sprint 3.2** (ver `docs/DECISIONS.md`, ADR-001): `lib/env.ts` é agora a única fonte de `process.env`, `lib/supabase.ts` e `constants/routes.ts` consomem `env` de lá.
+4. **`constants/routes.ts`** só cobre `product*`; `StoreCard` constrói o link da loja como string literal (`` `/store/${store.slug}` ``) em vez de usar um helper como `storePath()` análogo a `productPath()` — inconsistência que vai se multiplicar conforme mais rotas forem adicionadas.
 
----
+## Melhorias identificadas
 
-# Database Layer
+- Resolver o domínio de busca (ligar `app/search/page.tsx` a `searchParams`, `useSearch`, `search.service.ts`) antes de adicionar mais UI nessa área.
+- Unificar o fetch de produto: mover toda a busca para o Server Component (layout/page server) e passar os dados como props para um Client Component pequeno só para as partes interativas (galeria, favoritar, compartilhar), eliminando o `useProduct` client-side ou reduzindo seu uso a casos que realmente precisam de refetch no cliente.
+- Versionar o schema do banco (`database/migrations`) em vez de mantê-lo só no painel do Supabase e em markdown descritivo.
+- Adicionar tipagem de retorno do Supabase com validação em runtime (ou ao menos `zod`) em vez de `as Product[]` — hoje uma mudança de schema no banco não quebra o TypeScript, só quebra em runtime.
 
-Current entities:
+## Definição de sucesso da arquitetura (mantida do documento original)
 
-Brands
-
-Categories
-
-Products
-
-Offers
-
-Stores
-
-Favorites (future)
-
-Users (future)
-
-Price History (future)
-
----
-
-# Entity Relationships
-
-```
-Brand
-
-↓
-
-Products
-
-↓
-
-Offers
-
-↓
-
-Stores
-```
-
-One Product
-
-↓
-
-Many Offers
-
-One Store
-
-↓
-
-Many Offers
-
----
-
-# Product Domain
-
-Responsibilities:
-
-* Product page
-* Specifications
-* Gallery
-* Related products
-* Price history
-* Offers
-
-Future components:
-
-```
-ProductCard
-
-ProductGallery
-
-ProductHeader
-
-ProductSpecifications
-
-ProductOffers
-
-ProductBreadcrumb
-
-ProductPriceHistory
-```
-
----
-
-# Store Domain
-
-Responsibilities:
-
-* Store profile
-* Store products
-* Store information
-* Ratings
-
-Future components:
-
-```
-StoreCard
-
-StoreHeader
-
-StoreProducts
-
-StoreInformation
-```
-
----
-
-# Search Domain
-
-Responsibilities:
-
-* Search products
-* Search stores
-* Search brands
-
-Future:
-
-Autocomplete
-
-Filters
-
-Ranking
-
-Suggestions
-
-AI Search
-
----
-
-# Compare Domain
-
-Responsibilities:
-
-Compare products.
-
-Compare specifications.
-
-Compare prices.
-
-Compare stores.
-
----
-
-# AI Domain
-
-Responsibilities:
-
-Shopping assistant.
-
-Recommendations.
-
-Buying advice.
-
-Price explanation.
-
-Future integrations:
-
-OpenAI
-
-Claude
-
----
-
-# Naming Convention
-
-Components
-
-PascalCase
-
-```
-ProductCard.tsx
-```
-
-Hooks
-
-camelCase
-
-```
-useProduct.ts
-```
-
-Services
-
-camelCase
-
-```
-product.service.ts
-```
-
-Pages
-
-Next.js App Router
-
-```
-app/product/[slug]/page.tsx
-```
-
----
-
-# Data Flow
-
-Correct flow:
-
-```
-Page
-
-↓
-
-Hook
-
-↓
-
-Service
-
-↓
-
-Supabase
-
-↓
-
-Database
-```
-
-Incorrect:
-
-```
-Page
-
-↓
-
-Supabase
-```
-
----
-
-# Error Handling
-
-Services return:
-
-* data
-* error
-
-Hooks transform errors into UI state.
-
-Pages only display information.
-
----
-
-# UI Guidelines
-
-Dark-first interface.
-
-Responsive.
-
-Modern.
-
-Minimal.
-
-Rounded corners.
-
-Consistent spacing.
-
-Accessible.
-
----
-
-# Performance
-
-Reuse components.
-
-Avoid duplicated logic.
-
-Lazy load when appropriate.
-
-Optimize images.
-
-Cache requests when possible.
-
----
-
-# Security
-
-Never expose secrets.
-
-Never trust client input.
-
-Validate server-side.
-
-Respect Supabase RLS policies.
-
----
-
-# Scalability
-
-Architecture must support:
-
-* Mobile app
-* Public API
-* AI
-* Admin Panel
-* Crawlers
-* Price History
-* Notifications
-
-Without major refactoring.
-
----
-
-# Future Modules
-
-Current:
-
-Home
-
-Products
-
-Stores
-
-Search
-
-Future:
-
-Authentication
-
-Favorites
-
-History
-
-Notifications
-
-Admin
-
-Analytics
-
-Crawler
-
-Marketplace
-
----
-
-# Development Rules
-
-Every new feature must:
-
-Reuse existing components.
-
-Reuse hooks.
-
-Reuse services.
-
-Avoid duplicated code.
-
-Respect folder structure.
-
-Respect naming conventions.
-
-Keep documentation updated.
-
----
-
-# Definition of Architecture Success
-
-A developer unfamiliar with the project must understand:
-
-* where code belongs;
-* how data flows;
-* how modules interact;
-* where to add new features;
-
-within minutes of reading this document.
+Um desenvolvedor novo deve entender, em minutos: onde o código pertence, como os dados fluem, como os módulos interagem e onde adicionar novas features. Com a estrutura atual isso é majoritariamente verdade — a maior fonte de confusão é justamente a duplicação de fetch entre layout e page do produto, e a quantidade de arquivos vazios que parecem implementados até serem abertos.

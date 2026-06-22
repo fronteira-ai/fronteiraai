@@ -1,4 +1,6 @@
-export const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
+import { env } from "@/lib/env";
+
+export const SITE_URL = env.NEXT_PUBLIC_SITE_URL;
 
 export function productPath(slug: string): string {
   return `/product/${slug}`;
