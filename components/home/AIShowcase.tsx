@@ -18,17 +18,17 @@ export default function AIShowcase() {
     <Section id="ia">
       <Reveal direction="up">
         <GradientCard className="flex flex-col items-center text-center">
-          <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-blue-500/10 text-blue-400">
+          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-blue-500/10 text-blue-400">
             <Bot size={32} />
           </div>
 
           <Badge className="mt-8">Assistente de compras</Badge>
 
-          <h2 className="mt-6 max-w-2xl text-3xl font-bold text-white sm:text-4xl">
+          <h2 className="mx-auto mt-4 max-w-2xl text-3xl font-bold text-white sm:text-4xl">
             Pergunte. A IA do ParaguAI encontra a melhor compra para você.
           </h2>
 
-          <p className="mt-4 max-w-xl text-lg text-slate-400">
+          <p className="mx-auto mt-4 max-w-xl text-lg text-slate-400">
             Descreva o que você precisa em poucas palavras e deixe a nossa IA
             comparar preços, lojas e especificações por você.
           </p>

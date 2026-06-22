@@ -6,7 +6,7 @@ import { animations } from "@/styles/animations";
 
 export default function Hero() {
   return (
-    <section className="relative flex min-h-[92vh] items-center justify-center overflow-hidden bg-[#050816] pt-32 pb-20">
+    <section className="relative flex min-h-[92vh] items-center justify-center overflow-hidden bg-[#050816] pt-32 pb-[60px]">
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,#2563eb22,transparent_65%)]" />
 
       <div
@@ -60,7 +60,7 @@ export default function Hero() {
         <Reveal
           direction="up"
           delay={340}
-          className="mt-24 grid w-full max-w-4xl gap-6 sm:grid-cols-3"
+          className="mt-24 flex w-full flex-wrap justify-center gap-6"
         >
           <StatCard value={350} suffix="+" label="Lojas cadastradas" />
           <StatCard value={500000} suffix="+" label="Produtos monitorados" />

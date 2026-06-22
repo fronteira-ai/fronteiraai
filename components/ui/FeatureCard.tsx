@@ -8,21 +8,29 @@ type Props = {
   description: string;
 };
 
-function FeatureCard({ icon: Icon, step, title, description }: Props) {
+function FeatureCard({
+  icon: Icon,
+  title,
+  description,
+}: Props) {
   return (
     <div
-      className={`group rounded-3xl border border-slate-800 bg-slate-900/60 p-8 ${animations.cardHover}`}
+      className={`group flex min-h-[280px] flex-col items-center justify-center rounded-3xl border border-slate-800 bg-slate-900/60 p-8 text-center ${animations.cardHover}`}
     >
-      <div className="flex items-center justify-between">
-        <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-500/10 text-blue-400 transition-transform duration-300 group-hover:scale-110">
-          <Icon size={26} />
-        </div>
-
-        <span className="text-sm font-semibold text-slate-600">{step}</span>
+      {/* Ícone */}
+      <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-blue-500/10 text-blue-400 transition-transform duration-300 group-hover:scale-110">
+        <Icon size={30} />
       </div>
 
-      <h3 className="mt-6 text-xl font-bold text-white">{title}</h3>
-      <p className="mt-3 text-slate-400">{description}</p>
+      {/* Título */}
+      <h3 className="mt-6 text-2xl font-bold text-white">
+        {title}
+      </h3>
+
+      {/* Descrição */}
+      <p className="mt-4 max-w-xs leading-7 text-slate-400">
+        {description}
+      </p>
     </div>
   );
 }

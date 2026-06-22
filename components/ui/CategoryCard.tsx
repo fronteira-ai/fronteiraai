@@ -9,23 +9,30 @@ type Props = {
   productCount?: number;
 };
 
-function CategoryCard({ icon, name, href = "#", productCount }: Props) {
+function CategoryCard({
+  icon,
+  name,
+  href = "#",
+  productCount,
+}: Props) {
   return (
     <Link
       href={href}
-      className={`group rounded-3xl border border-slate-800 bg-slate-900/60 p-8 text-left hover:bg-slate-800 ${animations.cardHover}`}
+      className={`group flex min-h-[220px] flex-col items-center justify-center overflow-hidden rounded-3xl border border-slate-800 bg-slate-900/60 p-8 text-center hover:bg-slate-800 ${animations.cardHover}`}
     >
-      <div className="text-5xl transition-transform duration-300 group-hover:-rotate-3 group-hover:scale-110">
+      <div className="mb-6 text-5xl transition-transform duration-300 group-hover:-rotate-3 group-hover:scale-110">
         {icon}
       </div>
 
-      <h3 className="mt-6 text-2xl font-bold text-white">{name}</h3>
+      <h3 className="text-2xl font-bold text-white">
+        {name}
+      </h3>
 
-      {productCount !== undefined ? (
+      {productCount !== undefined && (
         <p className="mt-3 text-slate-400">
           {productCount.toLocaleString("pt-BR")} produtos
         </p>
-      ) : null}
+      )}
     </Link>
   );
 }

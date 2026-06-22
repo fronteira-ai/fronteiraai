@@ -13,7 +13,7 @@ function StoreCard({ store, productCount }: Props) {
   return (
     <Link
       href={`/store/${store.slug}`}
-      className={`group overflow-hidden rounded-3xl border border-slate-800 bg-slate-900 ${animations.cardHover}`}
+      className={`group flex flex-col overflow-hidden rounded-3xl border border-slate-800 bg-slate-900 ${animations.cardHover}`}
     >
       <div className="flex h-48 w-full items-center justify-center overflow-hidden bg-slate-950">
         {store.banner_url ? (

@@ -12,7 +12,7 @@ const stats = [
 export default function Stats() {
   return (
     <Section>
-      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="flex flex-wrap justify-center gap-6">
         {stats.map((stat, index) => (
           <Reveal key={stat.label} direction="up" delay={index * 80}>
             <StatCard

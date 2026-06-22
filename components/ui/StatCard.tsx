@@ -15,11 +15,17 @@ function prefersReducedMotion(): boolean {
   return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 }
 
-function StatCard({ value, suffix = "", label, animate = true }: Props) {
+function StatCard({
+  value,
+  suffix = "",
+  label,
+  animate = true,
+}: Props) {
   const [reducedMotion] = useState(prefersReducedMotion);
   const [display, setDisplay] = useState(
     animate && !reducedMotion ? 0 : value
   );
+
   const ref = useRef<HTMLDivElement>(null);
   const started = useRef(reducedMotion);
 
@@ -32,6 +38,7 @@ function StatCard({ value, suffix = "", label, animate = true }: Props) {
     const observer = new IntersectionObserver(
       (entries) => {
         const entry = entries[0];
+
         if (!entry?.isIntersecting || started.current) return;
 
         started.current = true;
@@ -42,6 +49,7 @@ function StatCard({ value, suffix = "", label, animate = true }: Props) {
 
         function step(now: number) {
           const progress = Math.min((now - startTime) / duration, 1);
+
           setDisplay(Math.round(progress * value));
 
           if (progress < 1) {
@@ -51,7 +59,9 @@ function StatCard({ value, suffix = "", label, animate = true }: Props) {
 
         requestAnimationFrame(step);
       },
-      { threshold: 0.4 }
+      {
+        threshold: 0.4,
+      }
     );
 
     observer.observe(element);
@@ -62,14 +72,16 @@ function StatCard({ value, suffix = "", label, animate = true }: Props) {
   return (
     <div
       ref={ref}
-      className={`rounded-3xl border border-slate-800 bg-slate-900/60 p-8 backdrop-blur ${animations.cardHover}`}
+      className={`flex min-h-[180px] min-w-[260px] max-w-[420px] shrink-0 flex-col items-center justify-center rounded-3xl border border-slate-800 bg-slate-900/60 px-4 py-9 text-center backdrop-blur sm:min-w-[380px] sm:px-7 ${animations.cardHover}`}
     >
-      <h3 className="text-5xl font-black text-blue-400">
+      <h3 className="whitespace-nowrap text-center text-5xl font-black tracking-tight text-blue-400">
         {display.toLocaleString("pt-BR")}
         {suffix}
       </h3>
 
-      <p className="mt-3 text-lg text-slate-400">{label}</p>
+      <p className="mt-4 text-center text-lg text-slate-400">
+        {label}
+      </p>
     </div>
   );
 }
