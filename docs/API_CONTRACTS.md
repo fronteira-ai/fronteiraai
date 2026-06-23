@@ -37,6 +37,11 @@ Contratos de todas as funções de `services/*.service.ts` que têm implementaç
 - **Erro**: loga e retorna `[]`
 - **Consumidores**: `app/product/[slug]/layout.tsx`, `hooks/useProduct.ts` → `ProductOffers`
 
+### `getOffersByStore(storeId: string): Promise<OfferWithProduct[]>` — Sprint 3.4
+- **Tabela**: `offers`, `select("*, product:products(*)")`, filtra `store_id`, ordena por `price` ascendente
+- **Erro**: loga e retorna `[]`
+- **Consumidores**: `app/store/[slug]/layout.tsx`, `hooks/useStore.ts` → `StoreOffers`
+
 ## store.service.ts
 
 ### `getStores(): Promise<Store[]>`
@@ -48,8 +53,18 @@ Contratos de todas as funções de `services/*.service.ts` que têm implementaç
 - **Tabela**: `stores`, `select("*")`, `.eq("id", id).single()`
 - **Erro**: não trata explicitamente
 - **Tipo de retorno**: implícito — inconsistente com o resto do arquivo
-- **Observação**: busca por `id`, não por `slug`, diferente do padrão `getProductBySlug`. Quando o domínio de Loja for implementado (`/store/[slug]`), provavelmente vai precisar de um `getStoreBySlug(slug)` análogo.
+- **Observação**: busca por `id`, não por `slug`. Desde a Sprint 3.4 ficou redundante com `getStoreBySlug` (abaixo) — mantido por não ter sido pedida sua remoção, continua sem consumidor.
 - **Consumidores**: nenhum hoje
+
+### `getStoreBySlug(slug: string): Promise<Store | null>` — Sprint 3.4
+- **Tabela**: `stores`, `select("*")`, `.eq("slug", slug).single()`
+- **Erro**: loga e retorna `null`
+- **Consumidores**: `app/store/[slug]/layout.tsx` (server, via `React.cache`), `hooks/useStore.ts` (client)
+
+### `getRelatedStores(excludeStoreId: string, limit = 4): Promise<Store[]>` — Sprint 3.4
+- **Tabela**: `stores`, filtra `id` diferente, ordena por `rating` descendente, `limit`
+- **Erro**: loga e retorna `[]`
+- **Consumidores**: `hooks/useStore.ts` → `StoreGrid`
 
 ## search.service.ts
 

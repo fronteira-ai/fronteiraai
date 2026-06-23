@@ -1,5 +1,5 @@
 import { supabase } from "@/lib/supabase";
-import { Offer, OfferWithStore } from "@/types/offer";
+import { Offer, OfferWithStore, OfferWithProduct } from "@/types/offer";
 
 export async function getOffers(): Promise<Offer[]> {
   const { data, error } = await supabase
@@ -29,4 +29,21 @@ export async function getOffersByProduct(
   }
 
   return data as OfferWithStore[];
+}
+
+export async function getOffersByStore(
+  storeId: string
+): Promise<OfferWithProduct[]> {
+  const { data, error } = await supabase
+    .from("offers")
+    .select("*, product:products(*)")
+    .eq("store_id", storeId)
+    .order("price", { ascending: true });
+
+  if (error) {
+    console.error(error);
+    return [];
+  }
+
+  return data as OfferWithProduct[];
 }

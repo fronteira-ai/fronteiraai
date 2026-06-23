@@ -1,4 +1,5 @@
 import { Store } from "@/types/store";
+import { Product } from "@/types/product";
 
 export interface Offer {
   id: string;
@@ -17,4 +18,8 @@ export interface Offer {
 
 export interface OfferWithStore extends Offer {
   store: Store | null;
+}
+
+export interface OfferWithProduct extends Offer {
+  product: Product | null;
 }

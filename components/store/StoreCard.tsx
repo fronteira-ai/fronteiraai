@@ -3,6 +3,7 @@ import Link from "next/link";
 import { Star, MapPin } from "lucide-react";
 import { Store } from "@/types/store";
 import { animations } from "@/styles/animations";
+import { storePath } from "@/constants/routes";
 
 type Props = {
   store: Store;
@@ -12,7 +13,7 @@ type Props = {
 function StoreCard({ store, productCount }: Props) {
   return (
     <Link
-      href={`/store/${store.slug}`}
+      href={storePath(store.slug)}
       className={`group flex flex-col overflow-hidden rounded-3xl border border-slate-800 bg-slate-900 ${animations.cardHover}`}
     >
       <div className="flex h-48 w-full items-center justify-center overflow-hidden bg-slate-950">

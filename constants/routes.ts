@@ -17,3 +17,11 @@ export function searchPath(query?: string): string {
 export function searchUrl(query?: string): string {
   return `${SITE_URL}${searchPath(query)}`;
 }
+
+export function storePath(slug: string): string {
+  return `/store/${slug}`;
+}
+
+export function storeUrl(slug: string): string {
+  return `${SITE_URL}${storePath(slug)}`;
+}

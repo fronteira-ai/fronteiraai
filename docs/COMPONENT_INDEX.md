@@ -21,7 +21,7 @@
 
 | Componente | Tipo | Props | Status |
 |---|---|---|---|
-| `Navbar` | Client (scroll listener) | — | Implementado; menu linka para rotas inexistentes (`/stores`, `/products`, `/compare`) |
+| `Navbar` | Client (scroll listener) | — | Implementado; menu linka para rotas inexistentes (`/stores`, `/products`, `/compare`) — `/stores` continua sem listagem própria mesmo após a Sprint 3.4 (só `/store/[slug]` existe) |
 | `Footer` | Server | — | Implementado; linka para rotas inexistentes (`/favorites`, `/price-history`, `/about`, `/contact`, `/privacy`, `/terms`) |
 
 ## product/
@@ -44,9 +44,10 @@
 
 | Componente | Tipo | Props | Status |
 |---|---|---|---|
-| `StoreCard` (`memo`) | Server | `store: Store`, `productCount?: number` | Implementado; link para `/store/[slug]`, rota ainda inexistente |
-| `StoreGrid` | — | — | **Vazio** (placeholder) |
-| `StoreDetails` | — | — | **Vazio** (placeholder) |
+| `StoreCard` (`memo`) | Server | `store: Store`, `productCount?: number` | Implementado; link para `/store/[slug]` via `storePath()` (Sprint 3.4), rota agora existe |
+| `StoreDetails` (`memo`) | Server | `store: Store` | Implementado (Sprint 3.4): rating, badge verificada, cidade/país, descrição — só campos reais do tipo `Store` |
+| `StoreOffers` (`memo`) | Server | `offers: OfferWithProduct[]` | Implementado (Sprint 3.4): lista de ofertas da loja, cada linha já linka ao produto — espelha `ProductOffers` |
+| `StoreGrid` (`memo`) | Server | `stores: Store[]`, `title?: string` | Implementado (Sprint 3.4): grid de outras lojas, espelha `RelatedProducts` |
 
 ## search/
 
@@ -82,8 +83,8 @@
 
 ## Resumo
 
-- **Total de arquivos de componente**: 42 (incluindo `SearchResultsSkeleton`, novo na Sprint 3.3)
-- **Implementados**: 35
-- **Vazios (placeholder)**: 7 (`ProductGrid`, `StoreGrid`, `StoreDetails`, `Card`, `Input`, `Loading`, `SearchInput`)
-- **Client Components**: 7 (`SearchBar`, `Navbar`, `ProductGallery`, `FavoriteButton`, `ShareButton`, `Reveal`, `StatCard`) + `app/search/error.tsx` (Client, fora de `components/`)
+- **Total de arquivos de componente**: 43 (incluindo `StoreOffers`, novo na Sprint 3.4)
+- **Implementados**: 38
+- **Vazios (placeholder)**: 5 (`ProductGrid`, `Card`, `Input`, `Loading`, `SearchInput`)
+- **Client Components**: 7 (`SearchBar`, `Navbar`, `ProductGallery`, `FavoriteButton`, `ShareButton`, `Reveal`, `StatCard`) + `app/search/error.tsx`, `app/store/[slug]/error.tsx` (Client, fora de `components/`)
 - **Componentes duplicados/quase-duplicados**: `ProductCard` × `ProductHighlightCard` (ver `TECH_DEBT.md`)

@@ -26,7 +26,7 @@ interface Store {
   created_at: string;
 }
 ```
-Representa uma loja parceira (ex.: Cellshop, Nissei). `rating` é um número direto na tabela (não calculado a partir de reviews — `Review` ainda não existe).
+Representa uma loja parceira (ex.: Cellshop, Nissei). `rating` é um número direto na tabela (não calculado a partir de reviews — `Review` ainda não existe). **Não tem campos de contato (telefone/WhatsApp/e-mail) nem horário de funcionamento** — confirmado consultando o Supabase real na Sprint 3.4; proposta de migration para adicioná-los em `database/migrations/0001_proposed_store_contact_hours.sql` (não aplicada, ver `docs/DECISIONS.md` ADR-006). **Achado de dados**: as 5 linhas reais hoje têm `slug: null` (ver ADR-007) — o tipo está correto, é o conteúdo da tabela que está incompleto.
 
 ### `Product` / `ProductWithRelations` / `ProductHighlight` (`types/product.ts`)
 ```ts
@@ -62,8 +62,12 @@ interface Offer {
 interface OfferWithStore extends Offer {
   store: Store | null;
 }
+
+interface OfferWithProduct extends Offer {  // Sprint 3.4
+  product: Product | null;
+}
 ```
-É aqui que o preço mora. `currency` é livre (string), convertido em runtime via `utils/currency.ts` (suporta `USD`/`BRL` hoje).
+É aqui que o preço mora. `currency` é livre (string), convertido em runtime via `utils/currency.ts` (suporta `USD`/`BRL` hoje). `OfferWithProduct` é o inverso de `OfferWithStore`: usado em `getOffersByStore` (perspectiva "quais produtos esta loja oferece"), enquanto `OfferWithStore` é usado em `getOffersByProduct` (perspectiva "quais lojas vendem este produto"). Confirmado nesta sprint que a tabela `products` real está vazia (0 linhas) — ver ADR-007.
 
 ### `Brand` (`types/brand.ts`)
 ```ts

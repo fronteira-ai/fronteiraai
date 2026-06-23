@@ -39,16 +39,17 @@ Inventário de funcionalidades por estado real (verificado lendo cada arquivo, n
 - **Limitação conhecida**: produtos retornados pela busca não exibem preço — `searchEverything` não faz join com `offers` (a busca consulta só `products.name`, sem preço, já que preço pertence à oferta, não ao produto). Ver `TECH_DEBT.md`.
 - **Performance**: fetch único por request — `generateMetadata` não dispara uma segunda consulta porque só lê `searchParams.q` (não chama `searchEverything`); a busca real ocorre dentro do `<Suspense>` via `getCachedSearch` (`React.cache`).
 
+### Domínio de Loja (Release 0.3 do roadmap) — Sprint 3.4
+- **Objetivo**: perfil completo de loja (`/store/[slug]`) com produtos/ofertas, avaliações (estrutura preparada) e localização — espelhando exatamente a arquitetura do Domínio de Produto.
+- **Arquivos**: `app/store/[slug]/page.tsx` (Client, via `useStore`), `layout.tsx` (Server, `generateMetadata` + JSON-LD `LocalBusiness`), `loading.tsx`, `error.tsx` (`unstable_retry`), `not-found.tsx`
+- **Componentes**: `StoreDetails` (header/perfil: rating, verificado, cidade/país, descrição — só campos reais do tipo `Store`) · `StoreOffers` (lista de ofertas da loja, cada linha já mostra o produto vinculado — une "produtos da loja" e "ofertas" em uma única lista, sem duplicar lógica/templates) · `StoreGrid` (outras lojas, espelha `RelatedProducts`) · `EmptyState` (reaproveitado, seção "Avaliações em breve")
+- **Dependências**: `hooks/useStore.ts` (espelha `useProduct.ts`), `services/store.service.ts` (`getStoreBySlug`, `getRelatedStores`, novos), `services/offer.service.ts` (`getOffersByStore`, novo), `types/offer.ts` (`OfferWithProduct`, novo), `constants/routes.ts` (`storePath`/`storeUrl`, novos — `StoreCard` migrado de string literal)
+- **Não implementado (por decisão, não por esquecimento)**: contato (telefone/WhatsApp/e-mail) e horário de funcionamento — essas colunas não existem na tabela `stores` real do Supabase (confirmado por query direta nesta sprint); nenhum mock/valor fixo foi usado. Proposta de migration em `database/migrations/0001_proposed_store_contact_hours.sql` (não aplicada — ver `docs/DECISIONS.md`, ADR-006). Avaliações reais dependem do domínio de Reviews (`types/review.ts` ainda vazio).
+- **Achado de dados**: as 5 lojas reais no Supabase têm `slug: null` hoje, então `/store/[slug]` (assim como `/product/[slug]`) não tem nenhuma loja navegável em produção até alguém popular esse campo — ver `docs/DECISIONS.md` ADR-007. Não é uma falha desta implementação.
+
 ---
 
 ## Em desenvolvimento
-
-### Domínio de Loja (Release 0.3 do roadmap)
-- **Objetivo**: perfil completo de loja (`/store/[slug]`) com produtos, avaliação, localização.
-- **Arquivos**: nenhuma rota criada ainda.
-- **Componentes**: `StoreCard` (pronto, usado na Home) · `StoreGrid` (arquivo vazio) · `StoreDetails` (arquivo vazio)
-- **Dependências**: `services/store.service.ts` (pronto: `getStores`, `getStore`) · `hooks/useStore.ts` (vazio) · `types/store.ts` (pronto)
-- **O que falta**: rota `app/store/[slug]/`, implementar `useStore`, implementar `StoreGrid`/`StoreDetails`, decidir se `getStore` busca por `id` ou deveria buscar por `slug` (hoje só aceita `id`, inconsistente com o padrão `getProductBySlug`).
 
 ### Listagem de produtos
 - **Objetivo**: grid de produtos (presumivelmente para `/products`, linkado no `Footer`/`Navbar`/`Offers`).
@@ -63,7 +64,8 @@ Inventário de funcionalidades por estado real (verificado lendo cada arquivo, n
 | Feature | Release no roadmap | Evidência de planejamento |
 |---|---|---|
 | Filtros/paginação/ordenação na Busca | 0.4 (parte 2) | `docs/NEXT_STEPS.md` — busca já lê `?q=` e renderiza resultados reais (Sprint 3.3), mas sem filtro por tipo/categoria, paginação ou autocomplete ainda |
-| Rota `/categories/[slug]` | — | `Categories.tsx`/`SearchResults.tsx` já linkam para `/categories/${slug}`, rota inexistente (mesmo padrão de link morto de `/store/[slug]` antes da Sprint de Loja) |
+| Rota `/categories/[slug]` | — | `Categories.tsx`/`SearchResults.tsx` já linkam para `/categories/${slug}`, rota inexistente |
+| Contato e horário de funcionamento da loja | 0.3 (extensão) | Proposta de migration em `database/migrations/0001_proposed_store_contact_hours.sql` (Sprint 3.4, não aplicada); depende de aprovação para alterar o schema do Supabase — ver `docs/DECISIONS.md` ADR-006 |
 | Comparação de produtos | 0.5 | `docs/ROADMAP.md`, link `/compare` no Navbar/Footer |
 | Assistente de IA (chat) | 0.6 | `services/ai.service.ts` vazio, `ai/` só `.gitkeep`, `AIShowcase` é só marketing estático |
 | Painel administrativo | 0.7 | `docs/ROADMAP.md` |
