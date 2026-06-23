@@ -1,0 +1,63 @@
+-- PROPOSTA DE MIGRATION — NÃO APLICADA
+--
+-- Gerada na Sprint 3.4.1 (Consolidação da Camada de Dados), substituindo
+-- `0001_proposed_store_contact_hours.sql` (superada — ver cabeçalho
+-- daquele arquivo e docs/DECISIONS.md ADR-008).
+--
+-- Diferente da 0001, esta proposta foi escrita DEPOIS de consultar o
+-- schema real do Supabase coluna por coluna via PostgREST (select de cada
+-- campo candidato, lendo o erro "column does not exist" quando ausente —
+-- método seguro/somente-leitura, sem precisar de service-role key).
+--
+-- ACHADO PRINCIPAL: a tabela `stores` real já tem 24 colunas, muito mais
+-- completa do que `types/store.ts` (11 campos) ou `database/DATABASE.md`
+-- sugeriam. Todas as colunas que a proposta anterior tentava criar JÁ
+-- EXISTEM:
+--
+--   proposta 0001 (errada)      coluna real (já existe)
+--   ----------------------      -----------------------
+--   phone                    →  phone
+--   whatsapp                 →  whatsapp
+--   email                    →  email
+--   website_url              →  website        (nome diferente)
+--   address                  →  address
+--   business_hours (jsonb)   →  opening_hours  (text livre, não jsonb)
+--
+-- Schema real completo de `stores` (confirmado por amostra de dados):
+--   id, name, description, whatsapp, website, address, city, rating,
+--   created_at, logo_url, instagram, is_verified, opening_hours,
+--   latitude, longitude, slug, cover_image, delivery, pickup, pix_br,
+--   active, phone, email, country
+--
+-- Conclusão: NENHUMA coluna nova é necessária em `stores` para contato e
+-- horário de funcionamento. O trabalho restante é 100% de código —
+-- corrigir `types/store.ts` para refletir os nomes reais (`cover_image`
+-- em vez de `banner_url`, `is_verified` em vez de `verified`, e adicionar
+-- os ~13 campos hoje ausentes do tipo) e implementar a seção de
+-- Contato/Horário em `StoreDetails.tsx` usando os dados que já existem.
+-- Isso não tem nada para esta migration fazer — é tratado em
+-- `docs/DECISIONS.md` ADR-008 e fica para aprovação separada de código.
+--
+-- ---------------------------------------------------------------------
+-- O QUE ESTA MIGRATION REALMENTE PROPÕE (apenas integridade, não colunas)
+-- ---------------------------------------------------------------------
+
+-- FASE 1 — pode ser aplicada a qualquer momento (NULL não conflita com
+-- UNIQUE no Postgres, então não exige backfill prévio):
+ALTER TABLE stores
+  ADD CONSTRAINT stores_slug_unique UNIQUE (slug);
+
+-- FASE 2 — só aplicar DEPOIS que todas as 5 lojas reais tiverem `slug`
+-- preenchido (ver estratégia de seed em docs/NEXT_STEPS.md e
+-- docs/DECISIONS.md ADR-007/ADR-008). Tentar isto antes do backfill falha
+-- com "column contains null values":
+-- ALTER TABLE stores ALTER COLUMN slug SET NOT NULL;
+
+-- Nenhuma alteração proposta para `products`, `offers`, `brands` ou
+-- `categories` — a auditoria da Sprint 3.4.1 confirmou que os campos que
+-- a aplicação espera (price, stock, installments, url em `offers`) não
+-- existem por nomes diferentes (`price_usd`/`price_brl`, `in_stock`,
+-- `available`, `stock_quantity`, `product_url`, `old_price`, `condition`),
+-- não por colunas faltantes — de novo, é correção de tipo/código, não de
+-- schema. Ver docs/DOMAIN_MODEL.md (schema real) e docs/DECISIONS.md
+-- ADR-008 para o levantamento completo coluna a coluna.

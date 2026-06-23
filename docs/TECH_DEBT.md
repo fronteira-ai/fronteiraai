@@ -2,6 +2,19 @@
 
 Itens identificados por leitura completa do código. Nenhum é bloqueante hoje (build/lint/TS passam), mas todos custam mais quanto mais tarde forem corrigidos.
 
+## 🔴 Bugs críticos confirmados (Sprint 3.4.1 — auditoria de dados)
+
+Diferente do resto deste documento, os itens abaixo não são "dívida" — são **bugs reais confirmados** consultando o Supabase diretamente (ver `docs/DECISIONS.md`, ADR-008, e `docs/DOMAIN_MODEL.md`). `npm run lint`/`typecheck`/`build` não pegam nenhum deles porque os services fazem `data as Tipo[]` sem validação em runtime.
+
+- **`offer.price` não existe no banco** (o real é `price_usd`/`price_brl`, dois valores independentes). `ProductOffers.tsx` e `StoreOffers.tsx` calculam `convertToUSD(offer.price, offer.currency)` → `NaN` exibido como preço assim que existir uma oferta real.
+- **`offer.stock` não existe** (o real é `in_stock`/`available`/`stock_quantity`). O badge de estoque em `ProductOffers.tsx`/`StoreOffers.tsx` sempre mostra "Sem estoque", mesmo para ofertas disponíveis.
+- **`offer.url` não existe** (o real é `product_url`). O botão "Ver oferta" nunca aparece.
+- **`offer.installments` não existe** — nenhum campo de parcelamento foi encontrado no schema real (testados vários nomes candidatos, todos ausentes).
+- **`store.banner_url` não existe** (o real é `cover_image`). O banner da loja em `StoreCard`/`app/store/[slug]/page.tsx`/`layout.tsx` nunca é exibido, mesmo quando a loja tem capa cadastrada.
+- **`store.verified` não existe** (o real é `is_verified`). O badge "Loja verificada" nunca aparece, mesmo para as 3 lojas reais marcadas como verificadas.
+
+**Correção não aplicada nesta sprint** (auditoria/diagnóstico, sem mudança de código por instrução explícita da missão) — depende de aprovação para corrigir `types/offer.ts`, `types/store.ts`, `services/{offer,store}.service.ts` e os componentes consumidores. Ver proposta de correção em `docs/DECISIONS.md` ADR-008 e a pergunta de decisão no relatório da Sprint 3.4.1.
+
 ## Componentes duplicados / quase-duplicados
 
 - `ProductCard` vs `ProductHighlightCard` — mesma estrutura visual (imagem + nome + preço + link), tipos de entrada diferentes (`Product` vs `ProductHighlight`). Candidato a unificação com props opcionais em vez de dois componentes.
@@ -40,7 +53,7 @@ Itens identificados por leitura completa do código. Nenhum é bloqueante hoje (
 
 ## Domínio de Loja (Sprint 3.4) — limitações conhecidas
 
-- **Contato e horário de funcionamento não implementados** — não existem como colunas em `stores` (confirmado consultando o Supabase real nesta sprint). `StoreDetails.tsx` usa só os campos existentes; nenhuma seção fictícia foi criada. Proposta de migration em `database/migrations/0001_proposed_store_contact_hours.sql` (não aplicada) — ver ADR-006 em `docs/DECISIONS.md`.
+- ~~Contato e horário de funcionamento não implementados porque não existem como colunas em `stores`~~ — **corrigido na Sprint 3.4.1**: essa conclusão estava errada. As colunas (`phone`, `whatsapp`, `email`, `website`, `address`, `opening_hours`) **já existem** no banco real — a investigação da Sprint 3.4 só checou os campos que o tipo já declarava, sem fazer `select("*")` real. Ver ADR-008. A seção continua não implementada (é mudança de código, fora do escopo da Sprint 3.4.1), mas agora por falta de implementação, não por falta de schema.
 - **Achado de dados (não é bug de código)**: testando manualmente esta sprint, as 5 lojas reais no Supabase têm `slug: null`, e a tabela `products` está vazia (0 linhas). Isso significa que `/store/[slug]` (e, em menor grau, `/product/[slug]` e a Busca) não tem nenhum dado real navegável hoje — `getStoreBySlug`/`getProductBySlug` funcionam corretamente e retornam `null`/404 porque não há linha com aquele slug, não porque o código esteja errado. Ver ADR-007 em `docs/DECISIONS.md`. Requer alguém popular `stores.slug` (slugificar `name`) e cadastrar produtos/ofertas reais antes de qualquer demo com dados de produção.
 - **Avaliações** — seção "Avaliações em breve" usa `EmptyState` genuinamente vazio (sem reviews mocadas), porque `types/review.ts` e a tabela `reviews` ainda não existem (ver `DOMAIN_MODEL.md`). Vira uma seção real só quando o domínio de Reviews for implementado.
 - **"Produtos da loja" e "ofertas" unificados em `StoreOffers`** — decisão deliberada para não duplicar lógica/templates: cada oferta da loja já mostra o produto (nome + link) e os termos da oferta (preço, estoque, garantia, cashback) na mesma linha, em vez de duas seções separadas mostrando os mesmos dados de formas diferentes.
@@ -59,6 +72,6 @@ Itens identificados por leitura completa do código. Nenhum é bloqueante hoje (
 ## Outras observações de organização
 
 - Grande quantidade de arquivos rastreados pelo Git como vazios (0 bytes ou 1 linha): `services/{brand,category,ai}.service.ts`, `hooks/useOffers.ts`, `types/{user,review}.ts`, `components/ui/{Card,Input,Loading,SearchInput}.tsx`, `components/product/ProductGrid.tsx`, `utils/{format,search,slug,validators}.ts`, `constants/{config,colors,navigation,currencies,countries,restrictedProducts}.ts`, `styles/{theme,typography,spacing,radius,shadows}.ts`. Isso é uma convenção deliberada do projeto (placeholders para trabalho futuro, conforme `CLAUDE.md`), mas o volume atual cria ruído real: é fácil esquecer qual arquivo tem conteúdo sem abri-lo. Vale considerar um marcador padronizado (ex.: comentário `// TODO(release-x): implementar` em cada placeholder) para diferenciar "vazio de propósito" de "vazio por esquecimento" — foi exatamente esse padrão (arquivo vazio committado por engano) que causou a falha de build na Vercel investigada nesta sessão (`types/store.ts` ficou vazio no HEAD por um commit incompleto).
-- `database/migrations`/`seed`/`sql` praticamente vazios — sem versionamento de schema real, todo o estado do banco vive só no painel do Supabase. A Sprint 3.4 adicionou o primeiro arquivo (`0001_proposed_store_contact_hours.sql`), mas é uma **proposta não aplicada**, não uma migration versionada de verdade — continua sem processo formal de migrations. Risco de drift entre ambientes e impossibilidade de recriar o banco a partir do repositório.
+- `database/migrations`/`seed`/`sql` praticamente vazios — sem versionamento de schema real, todo o estado do banco vive só no painel do Supabase. A Sprint 3.4 adicionou `0001_proposed_store_contact_hours.sql`; a Sprint 3.4.1 marcou esse arquivo como **superado** (propunha colunas que já existiam) e adicionou `0002_revised_store_data_layer.sql` em seu lugar. Ambos são **propostas não aplicadas** — continua sem processo formal de migrations versionadas. Risco de drift entre ambientes e impossibilidade de recriar o banco a partir do repositório.
 - ~~`package.json` script `format` (Prettier) quebrado~~ — **resolvido na Sprint 3.2**: removido por não haver `prettier` instalado (ADR-003). Adotar Prettier formalmente (com `.prettierrc` + `eslint-config-prettier`) é uma decisão própria, ainda não tomada.
 - ~~`.env.example` nunca chegava ao Git~~ — **resolvido na Sprint 3.2**: `.gitignore` tinha uma regra `.env*` sem exceção; corrigido com `!.env.example`, e o arquivo foi movido de `lib/.env.example` (local não convencional) para a raiz (ADR-002).

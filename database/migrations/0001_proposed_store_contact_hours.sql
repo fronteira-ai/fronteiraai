@@ -1,3 +1,28 @@
+-- ████ SUPERADA — NÃO APLICAR ████
+--
+-- Status atualizado na Sprint 3.4.1 (auditoria de dados): esta proposta
+-- partiu de `types/store.ts` e `database/DATABASE.md`, sem consultar o
+-- schema real do Supabase. A auditoria da Sprint 3.4.1 (query direta via
+-- PostgREST) revelou que a tabela `stores` real JÁ TEM `phone`, `whatsapp`,
+-- `email`, `website` (não `website_url`), `address` e `opening_hours`
+-- (texto livre, não `business_hours jsonb`) — ou seja, NENHUMA das colunas
+-- abaixo deveria ser adicionada, pois já existem (a maioria com nomes
+-- diferentes do que esta proposta assumia).
+--
+-- Ver a versão revisada: `0002_revised_store_data_layer.sql`.
+-- Ver `docs/DECISIONS.md`, ADR-008, para o achado completo.
+--
+-- Mantido neste arquivo (não apagado) para registro histórico de como o
+-- engano aconteceu: a causa raiz foi gerar a proposta a partir do tipo
+-- TypeScript existente em vez de consultar o banco real diretamente —
+-- exatamente o tipo de suposição que `docs/CONVENTIONS.md` já alertava
+-- ("antes de assumir que um arquivo está implementado, sempre abra-o") e
+-- que ADR-007 já tinha começado a expor.
+--
+-- ---------------------------------------------------------------------
+-- Conteúdo original abaixo (histórico, não aplicar):
+-- ---------------------------------------------------------------------
+--
 -- PROPOSTA DE MIGRATION — NÃO APLICADA
 --
 -- Gerada na Sprint 3.4 (Domínio de Loja) a pedido do CTO, para avaliação
