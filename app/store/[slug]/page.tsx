@@ -1,7 +1,6 @@
 "use client";
 
 import { notFound, useParams } from "next/navigation";
-import Link from "next/link";
 import { Star } from "lucide-react";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
@@ -9,6 +8,7 @@ import StoreDetails from "@/components/store/StoreDetails";
 import StoreOffers from "@/components/store/StoreOffers";
 import StoreGrid from "@/components/store/StoreGrid";
 import EmptyState from "@/components/ui/EmptyState";
+import Breadcrumb from "@/components/ui/Breadcrumb";
 import { useStore } from "@/hooks/useStore";
 import Loading from "./loading";
 
@@ -38,18 +38,12 @@ export default function StorePage() {
       <Navbar />
 
       <div className="mx-auto max-w-7xl px-6 pt-32 pb-24">
-        <nav className="flex items-center gap-2 text-sm text-slate-400">
-          <Link href="/" className="transition hover:text-white">
-            Início
-          </Link>
-          <span>/</span>
-          <span className="text-white">{store.name}</span>
-        </nav>
+        <Breadcrumb items={[{ label: store.name }]} />
 
         <div className="mt-10 flex aspect-[3/1] w-full items-center justify-center overflow-hidden rounded-3xl border border-slate-800 bg-slate-950">
-          {store.banner_url ? (
+          {store.cover_image ? (
             <img
-              src={store.banner_url}
+              src={store.cover_image}
               alt={store.name}
               loading="lazy"
               decoding="async"

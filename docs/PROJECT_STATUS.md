@@ -1,13 +1,13 @@
 # PROJECT_STATUS.md
 
-Auditoria gerada por leitura completa do código-fonte (sem alterações de código). Substitui o conteúdo anterior deste arquivo, que descrevia um estado de planejamento ("Sprint 0", 15%) já superado pelo código real.
+Auditoria gerada por leitura completa do código-fonte. Substitui o conteúdo anterior deste arquivo.
 
-Última atualização: 2026-06-22 (Sprint 3.4.1 — Consolidação da Camada de Dados)
-Branch auditada: `main` @ `07baf68` + Sprint 3.4.1 (auditoria de dados) desta atualização
+Última atualização: 2026-06-23 (Sprint 3.5 — Catálogo Premium de Produtos)
+Branch auditada: `main` @ `d4c83ff` + Sprint 3.5 (correção de dados + catálogo) desta atualização
 
-> 🔴 **Bugs críticos confirmados (Sprint 3.4.1)**: auditoria direta do Supabase real revelou que `types/offer.ts` e `types/store.ts` divergem do schema do banco. `offer.price`/`stock`/`installments`/`url` **não existem** (o banco usa `price_usd`/`price_brl`, `in_stock`/`available`/`stock_quantity`, `product_url`) — assim que houver uma oferta real, preço será exibido como `NaN`, estoque sempre "Sem estoque", botão "Ver oferta" nunca aparece. `store.banner_url`/`verified` também não existem (são `cover_image`/`is_verified`) — banner e badge "Verificada" nunca aparecem. **Nenhum erro de lint/typecheck/build pega isso** (casts `as Tipo[]` sem validação em runtime). Ver `docs/DECISIONS.md` ADR-008 e `docs/DOMAIN_MODEL.md`. Correção de código **não aplicada ainda** — depende de aprovação.
+> ✅ **Bugs críticos corrigidos (Sprint 3.5)**: os bugs confirmados na Sprint 3.4.1 (`offer.price`/`stock`/`installments`/`url`, `store.banner_url`/`verified` divergindo do schema real) foram corrigidos antes de construir o catálogo de produtos sobre eles — ver `docs/DECISIONS.md` ADR-009. `types/offer.ts`/`types/store.ts` agora usam os nomes reais (`price_usd`/`price_brl`, `in_stock`, `product_url`, `cover_image`, `is_verified`, mais os 13 campos de contato/horário que já existiam no banco).
 >
-> ⚠️ **Achado de dados (Sprint 3.4)**: as 5 lojas cadastradas têm `slug: null` e a tabela `products` está vazia (0 linhas) — sem dados reais navegáveis hoje, independente dos bugs acima. Ver ADR-007.
+> ⚠️ **Achado de dados (ainda válido, Sprint 3.4)**: as 5 lojas cadastradas continuam com `slug: null` e a tabela `products` continua vazia (0 linhas) — sem dados reais navegáveis hoje em nenhum domínio, incluindo o novo catálogo. Ver ADR-007.
 
 ---
 
@@ -36,31 +36,31 @@ Fluxo em camadas, conforme `docs/CLAUDE.md`/`CLAUDE.md`:
 types/*.ts → services/*.service.ts → hooks/use*.ts → components/* → app/*
 ```
 
-Ver `docs/ARCHITECTURE.md` (atualizado nesta auditoria) para o mapeamento completo.
+Ver `docs/ARCHITECTURE.md` para o mapeamento completo, incluindo o novo fluxo do catálogo de produtos.
 
 ## Funcionalidades implementadas
 
-- **Home (`/`)** — todas as seções (Hero, Categories, Offers, FeaturesStores, AIShowcase, HowItWorks, Brands, Stats, CTASection) renderizadas com **dados de exemplo hardcoded** em `app/page.tsx`/`constants/categories.ts`, não com dados reais do Supabase.
-- **Página de Produto (`/product/[slug]`)** — única rota com integração real ponta-a-ponta: `product.service` + `offer.service` → `useProduct`/layout server-side → componentes (`ProductHeader`, `ProductGallery`, `ProductSpecifications`, `ProductOffers`, `ProductBreadcrumb`, `RelatedProducts`, `FavoriteButton`, `ShareButton`). Inclui `generateMetadata`, JSON-LD (schema.org Product) e estados `loading.tsx`/`error.tsx`/`not-found.tsx`.
-- **Favoritos** — `useFavorites` funcional via `localStorage` (`useSyncExternalStore`), sem dependência de Supabase/autenticação.
-- **Navbar/Footer** — completos, estáticos.
-- **Sistema de motion/animação** (Sprint 3.2) — `styles/animations.ts` + keyframes em `globals.css`, usado em quase todos os componentes (`Reveal`, `cardHover`, contadores animados em `StatCard`), com respeito a `prefers-reduced-motion`.
-- **Busca (`/search`)** (Sprint 3.3) — fluxo completo ponta-a-ponta: `app/search/page.tsx` (Server Component) lê `searchParams.q`, tem `generateMetadata` (canonical, OG, `robots: noindex` para resultados com query), e renderiza `SearchResultsAsync` dentro de `<Suspense>` (fallback `SearchResultsSkeleton`). `hooks/useSearch.ts` governa o input/navegação mantendo a URL como fonte de verdade. `services/search.service.ts` (`searchEverything`) busca `products`/`stores`/`brands`/`categories` em paralelo, escapa `%`/`_` do termo do usuário, limita 8 resultados por seção, e lança erro apenas se todas as queries falharem (capturado por `app/search/error.tsx`, que usa a API `unstable_retry` do Next 16.2 e detecta estado offline). `SearchResults` agrupa por tipo com `EmptyState` para estado vazio/sem query. JSON-LD `WebSite`/`SearchAction` adicionado em `app/layout.tsx`.
-- **Página de Loja (`/store/[slug]`)** (Sprint 3.4) — segunda rota com integração real ponta-a-ponta, espelhando exatamente o padrão de `/product/[slug]`: `store.service` (`getStoreBySlug`, `getRelatedStores`) + `offer.service` (`getOffersByStore`) → `useStore`/layout server-side → componentes (`StoreDetails`, `StoreOffers`, `StoreGrid`). Inclui `generateMetadata`, JSON-LD (schema.org `LocalBusiness`) e estados `loading.tsx`/`error.tsx`/`not-found.tsx`. Contato e horário de funcionamento **não implementados** (não existem no schema real — ver ADR-006); avaliações mostram `EmptyState` honesto ("Avaliações em breve"), sem dados mocados.
+- **Home (`/`)** — todas as seções renderizadas com **dados de exemplo hardcoded** em `app/page.tsx`/`constants/categories.ts`, não com dados reais do Supabase.
+- **Página de Produto (`/product/[slug]`)** — integração real ponta-a-ponta: `product.service` + `offer.service` → `useProduct`/layout server-side → componentes. `generateMetadata`, JSON-LD (Product), estados `loading`/`error`/`not-found`. Breadcrumb agora via `components/ui/Breadcrumb.tsx` genérico (Sprint 3.5).
+- **Favoritos** — `useFavorites` funcional via `localStorage`, sem dependência de Supabase/autenticação.
+- **Navbar/Footer** — completos, estáticos. `/products` deixou de ser link morto (Sprint 3.5).
+- **Sistema de motion/animação** — `styles/animations.ts` + keyframes, usado na maioria dos componentes, respeitando `prefers-reduced-motion`.
+- **Busca (`/search`)** — fluxo completo ponta-a-ponta, com filtros/paginação/autocomplete ainda pendentes (ver `TECH_DEBT.md`).
+- **Página de Loja (`/store/[slug]`)** — integração real ponta-a-ponta, espelhando o Domínio de Produto. **Sprint 3.5**: `StoreDetails` ganhou a seção de Contato/Horário (telefone, WhatsApp, e-mail, site, endereço, horário), antes bloqueada por uma premissa de schema incorreta (ADR-006/ADR-009); avaliações continuam `EmptyState` honesto.
+- **Catálogo de Produtos (`/products`)** — **novo nesta sprint (Release 0.2, parte 2)**: listagem com filtros (categoria, marca, loja, faixa de preço, disponibilidade, busca textual) e ordenação (mais recentes / menor preço / maior preço, todos sincronizados com a URL; "mais vendidos"/"melhor avaliação" como estrutura preparada), paginação SSR via `<Link>`, `generateMetadata` (canonical/OG/Twitter/robots por combinação de filtro), JSON-LD `CollectionPage`+`ItemList`+`BreadcrumbList`, `<Suspense>` em torno da listagem (filtros renderizam fora do Suspense). Ver `docs/FEATURES.md` para o detalhe completo.
 
 ## Funcionalidades parcialmente implementadas
 
-- **`components/product/ProductGrid.tsx`** — arquivo vazio; nada o importa ainda (não usado para listar produtos em `/products`, rota que também não existe).
+Nenhuma nesta auditoria — `ProductGrid.tsx` (única pendência apontada na auditoria anterior) foi implementado nesta sprint.
 
 ## Funcionalidades não iniciadas
 
-- Listagem `/products`, `/stores`, `/compare`, `/favorites`, `/price-history`, `/about`, `/contact`, `/privacy`, `/terms` — todas linkadas no `Navbar`/`Footer`, nenhuma existe (404 em produção).
-- Autenticação de usuário (`types/user.ts` vazio, sem Supabase Auth configurado).
-- Reviews (`types/review.ts` vazio).
-- Marcas e categorias dinâmicas (`services/brand.service.ts`, `services/category.service.ts` vazios; Home usa listas estáticas).
+- Listagem `/stores`, `/compare`, `/favorites`, `/price-history`, `/about`, `/contact`, `/privacy`, `/terms` — ainda linkadas no `Navbar`/`Footer`, nenhuma existe (404 em produção).
+- Autenticação de usuário (`types/user.ts` vazio, sem Supabase Auth configurado no código da aplicação — embora a tabela `profiles` sugira que a infraestrutura pode já existir no painel, ver `DOMAIN_MODEL.md`).
+- Reviews (`types/review.ts` vazio; tabela `reviews` não existe no Supabase).
 - IA/Assistente de compras (`services/ai.service.ts` vazio; `ai/` é só placeholders `.gitkeep`).
 - Histórico de preços, crawler, painel admin, marketplace multi-vendedor — nada começado.
-- Design system formal (`styles/theme.ts`, `typography.ts`, `spacing.ts`, `radius.ts`, `shadows.ts`, `styles/DESIGN_SYSTEM.md` — todos vazios; cores/espaçamento hoje são hardcoded inline via Tailwind arbitrary values, não tokens centralizados).
+- Design system formal (`styles/theme.ts`, `typography.ts`, `spacing.ts`, `radius.ts`, `shadows.ts` — todos vazios; cores/espaçamento hoje são hardcoded inline via Tailwind arbitrary values).
 
 ## Páginas existentes
 
@@ -68,55 +68,55 @@ Ver `docs/ARCHITECTURE.md` (atualizado nesta auditoria) para o mapeamento comple
 |---|---|---|
 | `/` | Server Component | Completa (dados estáticos) |
 | `/search` | Server Component (com `<Suspense>`) | Completa, integrada ao Supabase |
+| `/products` | Server Component (com `<Suspense>`) | **Nova (Sprint 3.5)**, integrada ao Supabase |
 | `/product/[slug]` | Client page + Server layout | Completa, integrada ao Supabase |
-| `/store/[slug]` | Client page + Server layout | Completa, integrada ao Supabase (Sprint 3.4) |
+| `/store/[slug]` | Client page + Server layout | Completa, integrada ao Supabase |
 
 ## Componentes existentes
 
-- `home/`: Hero, SearchBar, Categories, Offers, FeaturesStores, AIShowcase, HowItWorks, Brands, Stats, CTASection — 10 componentes, todos implementados. `SearchBar` agora delega estado/navegação a `useSearch` (Sprint 3.3).
+- `home/`: 10 componentes implementados; `Offers` agora renderiza `ProductCard` (antes `ProductHighlightCard`, removido).
 - `layout/`: Navbar, Footer — implementados.
-- `product/`: ProductCard, ProductGallery, ProductHeader, ProductSpecifications, ProductOffers, ProductBreadcrumb, RelatedProducts, FavoriteButton, ShareButton, ProductHighlightCard — implementados. `ProductGrid` — vazio.
-- `store/`: StoreCard, StoreDetails, StoreGrid, StoreOffers (3 últimos novos na Sprint 3.4) — todos implementados.
-- `search/`: SearchResults (Sprint 3.3, renderiza resultados reais agrupados por tipo), SearchResultsSkeleton — implementados.
-- `ui/`: Badge, Button, Chip, Container, Section, SectionTitle, CategoryCard, FeatureCard, StatCard, Logo, Reveal, GlassCard, GradientCard, EmptyState — implementados (14). `Card`, `Input`, `Loading`, `SearchInput` — vazios (4).
+- `product/`: `ProductCard` (unificado, ADR-010), `ProductGrid`/`ProductGridSkeleton`/`ProductFilters` (novos, Sprint 3.5), `ProductGallery`, `ProductHeader`, `ProductSpecifications`, `ProductOffers`, `RelatedProducts`, `FavoriteButton`, `ShareButton` — todos implementados. `ProductHighlightCard`/`ProductBreadcrumb` removidos.
+- `store/`: StoreCard, StoreDetails, StoreOffers, StoreGrid — todos implementados.
+- `search/`: SearchResults, SearchResultsSkeleton — implementados.
+- `ui/`: 16 implementados (12 anteriores + `EmptyState` + `Breadcrumb`/`Pagination`/`Input`/`Select`, novos/preenchidos na Sprint 3.5). `Card`, `Loading`, `SearchInput` — vazios (3).
+
+Ver `docs/COMPONENT_INDEX.md` para o detalhe item a item.
 
 ## Hooks existentes
 
-- `useProduct` — implementado, usado em `/product/[slug]`.
-- `useFavorites` — implementado, usado em `FavoriteButton`.
-- `useSearch` — implementado, usado em `SearchBar`.
-- `useStore` (Sprint 3.4) — implementado, espelha `useProduct`, usado em `/store/[slug]`.
-- `useOffers` — arquivo vazio (placeholder).
+- `useProduct`, `useFavorites`, `useSearch`, `useStore` — implementados.
+- `useProductFilters` (Sprint 3.5) — implementado, sincroniza os filtros do catálogo com a URL.
+- `useOffers` — arquivo vazio (placeholder, sem consumidor planejado nesta sprint).
 
 ## Services existentes
 
-- `product.service.ts` — implementado (`getProducts`, `getProductBySlug`, `getRelatedProducts`, `searchProducts`).
-- `offer.service.ts` — implementado (`getOffers`, `getOffersByProduct`, `getOffersByStore` novo na Sprint 3.4).
-- `store.service.ts` — implementado (`getStores`, `getStore`, `getStoreBySlug` e `getRelatedStores` novos na Sprint 3.4).
-- `search.service.ts` — implementado e em uso: `searchEverything` busca `products`/`stores`/`brands`/`categories`, escapa `%`/`_` do termo do usuário, limita resultados por seção, chamado por `app/search/page.tsx` via `React.cache`.
-- `brand.service.ts`, `category.service.ts`, `ai.service.ts` — vazios.
+- `product.service.ts` — implementado (`getProducts`, `getProductBySlug`, `getRelatedProducts`, `searchProducts`, `getProductsCatalog` novo na Sprint 3.5).
+- `offer.service.ts` — implementado (`getOffers`, `getOffersByProduct`, `getOffersByStore`; ordenação corrigida para `price_usd` na Sprint 3.5).
+- `store.service.ts` — implementado (`getStores`, `getStore`, `getStoreBySlug`, `getRelatedStores`).
+- `search.service.ts` — implementado, `searchEverything`.
+- `category.service.ts`, `brand.service.ts` — **implementados na Sprint 3.5** (antes vazios): `getCategories`/`getCategoryBySlug`, `getBrands`/`getBrandBySlug`.
+- `ai.service.ts` — vazio.
 
 ## Tipos existentes
 
-`Product`/`ProductWithRelations`/`ProductHighlight`, `Offer`/`OfferWithStore`/`OfferWithProduct` (novo, Sprint 3.4), `Store`, `Brand`, `Category`, `Favorite`, `Search` (`SearchResponse`) — implementados. `User`, `Review` — vazios.
+`Product`/`ProductWithRelations`/`ProductCatalogItem` (novo, Sprint 3.5)/`ProductHighlight`, `Offer`/`OfferWithStore`/`OfferWithProduct` (corrigidos para o schema real na Sprint 3.5, ADR-009), `Store` (corrigido, idem), `Brand`, `Category`, `Favorite`, `Search` — implementados. `User`, `Review` — vazios.
 
 ## Providers existentes
 
-**Nenhum.** Não há `providers/` no projeto, nenhum React Context global, nenhum theme/auth provider. Estado global (favoritos) é resolvido via módulo singleton + `useSyncExternalStore`, fora do padrão de providers.
+**Nenhum.** Sem `providers/`, sem React Context global, sem theme/auth provider. Estado global (favoritos) é resolvido via módulo singleton + `useSyncExternalStore`.
 
 ## Integração com Supabase
 
-Cliente único em `lib/supabase.ts`, criado a partir de `env.NEXT_PUBLIC_SUPABASE_URL`/`env.NEXT_PUBLIC_SUPABASE_ANON_KEY`. **Consolidado nesta sprint** (ver `docs/DECISIONS.md`, ADR-001): toda leitura de `process.env` agora passa exclusivamente por `lib/env.ts`, que lança erro descritivo e distinto para ambiente local ("defina em `.env.local`, veja `.env.example`") vs. Vercel ("configure no painel do projeto"), em vez do antigo `createClient(url!, key!)` que só dizia `supabaseUrl is required.`. Testado manualmente: build com `.env.local` ausente produz a mensagem nova corretamente.
+Cliente único em `lib/supabase.ts`, criado a partir de `lib/env.ts` (única fonte de `process.env`, ADR-001).
 
-Esquema do banco documentado em `database/DATABASE.md`/`ERD.md` (não código, apenas descrição), mas **sem migrations versionadas** — `database/seed`, `database/sql` contêm apenas `.gitkeep`; `database/migrations` ganhou na Sprint 3.4 uma primeira **proposta** não aplicada (`0001_proposed_store_contact_hours.sql`, ver ADR-006). O schema real continua existindo apenas no painel do Supabase.
+Esquema do banco documentado em `database/DATABASE.md`/`ERD.md` (não código, apenas descrição); `database/migrations` tem 3 propostas não aplicadas (`0001` superada, `0002` integridade de `stores`, `0003` view de agregação de preço para o catálogo — Sprint 3.5). O schema real continua existindo apenas no painel do Supabase.
 
-Consulta direta ao Supabase nesta sprint confirmou: `stores` tem 5 linhas reais, todas com `slug: null`; `products` tem 0 linhas. Ver o aviso no topo deste documento e ADR-007.
+Auditoria direta confirmou (Sprint 3.4.1, corrigido no código na Sprint 3.5): `stores` tem 24 colunas reais, `offers` tem 16 — ambas agora totalmente modeladas em `types/`. `stores` tem 5 linhas reais, todas com `slug: null`; `products` tem 0 linhas (ver ADR-007, ainda não resolvido — depende de alguém popular dados via painel do Supabase).
 
 ## Integração com Vercel / Deploy
 
-Projeto linkado a um projeto Vercel (`.vercel/project.json` presente localmente, ignorado pelo Git). Histórico recente de commits (`9e8298e`, `ae432d3`, `3d3f1ff`, `647382f`) indica uma sessão de troubleshooting de deploy, já resolvida (build local reproduzido em worktree limpo passa). Variáveis de ambiente do Supabase precisam estar configuradas no painel do projeto Vercel — não há como confirmar isso a partir do repositório; ver `docs/NEXT_STEPS.md`/relatório da sprint para o status verificado via CLI nesta sessão.
-
-`.env.example` (raiz do projeto) agora é commitável — corrigido nesta sprint um `.gitignore` que bloqueava esse arquivo por engano (regra genérica `.env*` sem exceção). Ver ADR-002.
+Projeto linkado a um projeto Vercel. Variáveis de ambiente do Supabase precisam estar configuradas no painel do projeto Vercel.
 
 ## CI atual
 
@@ -124,34 +124,43 @@ Projeto linkado a um projeto Vercel (`.vercel/project.json` presente localmente,
 
 ## Status do build
 
-✅ `npm run build` — sucesso (Turbopack, 5 rotas: `/` estático, `/_not-found`, `/product/[slug]` dinâmico, `/search` dinâmico, `/store/[slug]` dinâmico — nova nesta sprint).
+✅ `npm run build` — ver relatório da Sprint 3.5 para o resultado mais recente (rotas esperadas: `/`, `/_not-found`, `/product/[slug]`, `/search`, `/store/[slug]`, `/products` — nova nesta sprint).
 
 ## Status do lint
 
-✅ `npm run lint` — 0 erros, 6 warnings (`@next/next/no-img-element` em `ProductCard`, `ProductGallery` (×2), `ProductHighlightCard`, `StoreCard`, `app/store/[slug]/page.tsx` (banner) — uso de `<img>` em vez de `next/image`).
+✅ `npm run lint` — ver relatório da Sprint 3.5 para o resultado mais recente.
 
 ## Status do TypeScript
 
-✅ `npx tsc --noEmit` — 0 erros.
+✅ `npx tsc --noEmit` — ver relatório da Sprint 3.5 para o resultado mais recente.
 
 ## Sprint 3.2 — Consolidação (sem novas features de negócio)
 
-Esta sprint não adicionou funcionalidades; consolidou a base de engenharia: unificação do acesso a `process.env` em `lib/env.ts` (ADR-001), correção do `.gitignore` que bloqueava `.env.example` (ADR-002), limpeza de scripts quebrados/não-portáveis em `package.json` (ADR-003, ADR-004), e a criação de seis documentos permanentes de engenharia: `docs/DECISIONS.md`, `CONVENTIONS.md`, `API_CONTRACTS.md`, `DOMAIN_MODEL.md`, `COMPONENT_INDEX.md`, `DEPENDENCY_GRAPH.md`. Nenhuma rota, componente ou comportamento de produto foi alterado.
+Unificação do acesso a `process.env` em `lib/env.ts` (ADR-001), correção do `.gitignore` (ADR-002), limpeza de scripts (ADR-003/004), criação de 6 documentos permanentes de engenharia.
 
 ## Sprint 3.3 — Domínio de Busca (Release 0.4, parte 1)
 
-Liga a busca de ponta a ponta: `app/search/page.tsx` lê `searchParams.q` e ganha `generateMetadata` (canonical/OG/robots); `hooks/useSearch.ts` e `services/search.service.ts` saem do estado de placeholder/código morto; `SearchResults` passa a renderizar resultados reais agrupados por tipo (produtos/lojas/categorias/marcas) com estado vazio via `EmptyState` (novo componente genérico em `ui/`); adicionados `loading.tsx`/`error.tsx`/`SearchResultsSkeleton` espelhando o padrão já usado em `/product/[slug]`; JSON-LD `WebSite`/`SearchAction` adicionado ao root layout, que também ganhou metadata customizada (antes era o padrão do `create-next-app`). Filtros, paginação e autocomplete ficam para uma fase 2 do Release 0.4. Validado com `npm run lint`/`typecheck`/`build`.
+Liga a busca de ponta a ponta: `app/search/page.tsx`, `hooks/useSearch.ts`, `services/search.service.ts`, `SearchResults` com estados reais, `EmptyState` (novo, reaproveitável), JSON-LD `WebSite`/`SearchAction` no root layout.
 
 ## Sprint 3.4 — Domínio de Loja (Release 0.3)
 
-Fecha o terceiro domínio central da Home, espelhando exatamente a arquitetura do Domínio de Produto: `store.service.ts` ganha `getStoreBySlug`/`getRelatedStores`; `offer.service.ts` ganha `getOffersByStore` (+ tipo `OfferWithProduct`); `hooks/useStore.ts` espelha `useProduct.ts`; `components/store/StoreDetails.tsx`/`StoreGrid.tsx`/`StoreOffers.tsx` saem do estado de placeholder; `app/store/[slug]/` ganha `layout.tsx` (metadata + JSON-LD `LocalBusiness`), `page.tsx`, `loading.tsx`, `error.tsx` (`unstable_retry`), `not-found.tsx`; `constants/routes.ts` ganha `storePath`/`storeUrl`, usado por `StoreCard` no lugar de string literal. Contato e horário de funcionamento **não foram implementados** nesta sprint, com base na conclusão (ADR-006) de que não existiam no schema real — **conclusão corrigida na Sprint 3.4.1**: as colunas já existiam, a investigação só não tinha feito `select("*")` real (ver ADR-008). Avaliações mostram um `EmptyState` honesto, sem dados fictícios. Testes manuais contra o Supabase real revelaram que nenhuma loja tem `slug` preenchido hoje (ADR-007) — achado de dados, não de código. Validado com `npm run lint`/`typecheck`/`build`.
+Fecha o terceiro domínio central da Home, espelhando a arquitetura do Domínio de Produto: `getStoreBySlug`/`getRelatedStores`, `getOffersByStore`, `hooks/useStore.ts`, `StoreDetails`/`StoreGrid`/`StoreOffers`, `app/store/[slug]/` completo, `storePath`/`storeUrl`.
 
 ## Sprint 3.4.1 — Consolidação da Camada de Dados (auditoria, sem novas telas)
 
-Sprint de diagnóstico puro, sem implementação de UI, a pedido explícito do CTO. Auditou `stores`/`products`/`offers`/`brands`/`categories` direto no Supabase (via `select("*")` e, para tabelas vazias, testando coluna-por-coluna o erro "column does not exist" do PostgREST — método somente-leitura). Achado principal: **`types/offer.ts` e `types/store.ts` divergem do schema real** (ver aviso no topo deste documento e ADR-008 em `docs/DECISIONS.md`) — `offer.price`/`stock`/`installments`/`url` e `store.banner_url`/`verified` não existem com esses nomes no banco. Confirmados também: as 4 FKs usadas pelos services (`offers→stores`, `offers→products`, `products→brands`, `products→categories`) são reais e resolvidas corretamente pelo PostgREST; nenhuma das 14 tabelas "futuras" de `database/DATABASE.md` existe ainda; duas tabelas reais não documentadas (`profiles`, `favorites`) foram encontradas. `database/migrations/0001_proposed_store_contact_hours.sql` (Sprint 3.4) foi marcado como **superado** — as colunas que propunha já existiam — e substituído por `0002_revised_store_data_layer.sql`, que propõe só uma constraint `UNIQUE (slug)`. Nenhuma migration foi aplicada, nenhum dado foi inserido, nenhum código de produção foi alterado — só documentação (`DOMAIN_MODEL.md`, `DECISIONS.md`, `TECH_DEBT.md`, este arquivo).
+Auditoria direta do Supabase real (sem alterar código): confirmou que `types/offer.ts`/`types/store.ts` divergem do schema real (ADR-008), que contato/horário de loja já existiam no banco (corrigindo ADR-006), e que 4 FKs usadas pelos services são reais. Nenhuma correção de código aplicada — ficou para aprovação.
+
+## Sprint 3.5 — Catálogo Premium de Produtos (Release 0.2, parte 2)
+
+Duas frentes, nesta ordem (decisão tomada com o CTO antes de iniciar a implementação, ver pergunta de decisão registrada na sessão):
+
+1. **Correção do modelo de dados** (ADR-009): `types/offer.ts`/`types/store.ts` corrigidos para os nomes reais do schema (ver aviso no topo deste documento); `utils/currency.ts` perdeu a conversão por taxa fixa (não tem mais consumidor); `StoreDetails.tsx` ganhou a seção de Contato/Horário.
+2. **Catálogo de produtos** (`/products`): `services/category.service.ts`/`brand.service.ts` implementados (antes vazios); `services/product.service.ts` ganhou `getProductsCatalog` (filtros via PostgREST embedding `offers!inner`/`offers!left`, paginação real via `count: "exact"`, ordenação por preço corrigida em memória por página — limitação documentada, ADR-011); `components/product/ProductGrid.tsx` implementado (antes vazio), `ProductGridSkeleton`/`ProductFilters` novos; `hooks/useProductFilters.ts` novo (URL como fonte de verdade); `components/ui/Breadcrumb.tsx`/`Pagination.tsx`/`Input.tsx`/`Select.tsx` novos/preenchidos; `ProductCard`/`ProductHighlightCard` unificados (ADR-010), `ProductBreadcrumb` substituído pelo `Breadcrumb` genérico; `app/products/{page,loading,error}.tsx` novos, com `generateMetadata`, JSON-LD `CollectionPage`+`ItemList`+`BreadcrumbList` e `<Suspense>`.
+
+Proposta de migration (não aplicada): `database/migrations/0003_proposed_product_catalog_price_view.sql` (materialized view para ordenação de preço escalável). Validado com `npm run lint`/`typecheck`/`build` — ver relatório da sprint para o resultado.
 
 ---
 
-## Status Geral: **40%** (sem alteração — Sprint 3.4.1 foi diagnóstico, não mudou o que está implementado)
+## Status Geral: **50%**
 
-Critério: dos 8 domínios do roadmap original (Home, Produto, Loja, Busca, Comparação, IA, Admin, Crawler), 3 estão completos no código com integração real ao Supabase (Produto, Busca, Loja), 1 está com UI pronta mas dados mockados (Home), e os demais 4 não foram iniciados. A fundação técnica (arquitetura, convenções, build/lint/TS limpos) é sólida, mas a Sprint 3.4.1 revelou que a camada de **tipos** tem bugs reais não pegos por lint/TS (ver aviso no topo) — o percentual de "completo" não cai porque a estrutura/arquitetura está certa, mas a prontidão para produção piora até a correção ser aprovada e aplicada.
+Critério: dos 8 domínios do roadmap original (Home, Produto, Loja, Busca, Catálogo/Listagem, Comparação, IA, Admin, Crawler), 4 estão completos no código com integração real ao Supabase (Produto, Busca, Loja, Catálogo — novo), 1 está com UI pronta mas dados mockados (Home), e os demais 3 não foram iniciados. A correção da camada de tipos (ADR-009) elimina os bugs latentes que impediam considerar Produto/Loja prontos para dados reais; a fundação técnica permanece sólida (arquitetura, convenções, build/lint/TS limpos).

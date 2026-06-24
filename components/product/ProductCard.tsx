@@ -1,26 +1,44 @@
 import { memo } from "react";
 import Link from "next/link";
-import { Product } from "@/types/product";
-import { formatUSD } from "@/utils/currency";
+import { ArrowRight } from "lucide-react";
+import { formatUSD, discountPercentage } from "@/utils/currency";
+import { productPath } from "@/constants/routes";
 import { animations } from "@/styles/animations";
 
 type Props = {
-  product: Product;
-  lowestPriceUSD?: number;
+  slug: string;
+  name: string;
+  imageUrl: string | null;
+  priceUSD?: number;
+  originalPriceUSD?: number;
+  subtitle?: string;
+  inStock?: boolean;
 };
 
-function ProductCard({ product, lowestPriceUSD }: Props) {
+function ProductCard({
+  slug,
+  name,
+  imageUrl,
+  priceUSD,
+  originalPriceUSD,
+  subtitle,
+  inStock,
+}: Props) {
+  const discount =
+    originalPriceUSD && priceUSD
+      ? discountPercentage(originalPriceUSD, priceUSD)
+      : 0;
+
   return (
     <Link
-      href={`/product/${product.slug}`}
-      className={`group overflow-hidden rounded-3xl border border-slate-800 bg-slate-900/60 ${animations.cardHover}`}
+      href={productPath(slug)}
+      className={`group flex flex-col overflow-hidden rounded-3xl border border-slate-800 bg-slate-900/60 ${animations.cardHover}`}
     >
-
-      <div className="flex aspect-square w-full items-center justify-center overflow-hidden bg-slate-950">
-        {product.image_url ? (
+      <div className="relative flex aspect-square w-full items-center justify-center overflow-hidden bg-slate-950">
+        {imageUrl ? (
           <img
-            src={product.image_url}
-            alt={product.name}
+            src={imageUrl}
+            alt={name}
             loading="lazy"
             decoding="async"
             className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
@@ -28,22 +46,49 @@ function ProductCard({ product, lowestPriceUSD }: Props) {
         ) : (
           <span className="text-slate-600">Sem imagem</span>
         )}
-      </div>
 
-      <div className="p-6">
-
-        <h3 className="line-clamp-2 text-lg font-bold text-white">
-          {product.name}
-        </h3>
-
-        {lowestPriceUSD !== undefined ? (
-          <p className="mt-3 text-2xl font-black text-blue-400">
-            {formatUSD(lowestPriceUSD)}
-          </p>
+        {discount > 0 ? (
+          <span className="absolute left-4 top-4 rounded-full bg-emerald-500 px-3 py-1 text-xs font-bold text-white">
+            -{discount}%
+          </span>
         ) : null}
 
+        {inStock === false ? (
+          <span className="absolute right-4 top-4 rounded-full bg-slate-800 px-3 py-1 text-xs font-semibold text-slate-300">
+            Esgotado
+          </span>
+        ) : null}
       </div>
 
+      <div className="flex flex-1 flex-col p-6">
+        <h3 className="line-clamp-2 text-lg font-bold text-white">{name}</h3>
+
+        {subtitle ? (
+          <p className="mt-1 text-sm text-slate-500">{subtitle}</p>
+        ) : null}
+
+        {priceUSD !== undefined ? (
+          <div className="mt-4 flex items-baseline gap-2">
+            <span className="text-2xl font-black text-white">
+              {formatUSD(priceUSD)}
+            </span>
+
+            {originalPriceUSD ? (
+              <span className="text-sm text-slate-500 line-through">
+                {formatUSD(originalPriceUSD)}
+              </span>
+            ) : null}
+          </div>
+        ) : null}
+
+        <span className="mt-5 inline-flex items-center justify-center gap-1.5 rounded-full border border-slate-700 py-2.5 text-sm font-semibold text-slate-200 transition-all duration-300 group-hover:border-blue-500 group-hover:text-white">
+          Ver Produto
+          <ArrowRight
+            size={14}
+            className="-translate-x-1 opacity-0 transition-all duration-300 group-hover:translate-x-0 group-hover:opacity-100"
+          />
+        </span>
+      </div>
     </Link>
   );
 }

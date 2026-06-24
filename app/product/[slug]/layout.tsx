@@ -2,7 +2,6 @@ import { cache } from "react";
 import type { Metadata } from "next";
 import { getProductBySlug } from "@/services/product.service";
 import { getOffersByProduct } from "@/services/offer.service";
-import { convertToUSD } from "@/utils/currency";
 import { productUrl } from "@/constants/routes";
 
 type Params = Promise<{ slug: string }>;
@@ -88,12 +87,12 @@ export default async function ProductLayout({
           offers.length > 0
             ? offers.map((offer) => ({
                 "@type": "Offer",
-                price: convertToUSD(offer.price, offer.currency).toFixed(2),
+                price: offer.price_usd.toFixed(2),
                 priceCurrency: "USD",
-                availability: offer.stock
+                availability: offer.in_stock
                   ? "https://schema.org/InStock"
                   : "https://schema.org/OutOfStock",
-                url: offer.url ?? productUrl(product.slug),
+                url: offer.product_url ?? productUrl(product.slug),
                 seller: offer.store
                   ? { "@type": "Organization", name: offer.store.name }
                   : undefined,

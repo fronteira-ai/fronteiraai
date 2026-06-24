@@ -32,58 +32,49 @@ Sprint de diagnóstico puro, a pedido explícito do CTO ("não implemente novas 
 
 Nenhum código de produção foi alterado nesta sprint — só documentação e a migration revisada (não aplicada).
 
+## Sprint 3.5 (encerrada) — Catálogo Premium de Produtos
+
+Diferente do que esta seção propunha anteriormente (duas sprints separadas, "3.5" para corrigir dados e "3.6" para o catálogo), o CTO decidiu — diante da pergunta de decisão levantada nesta sessão — tratar as duas frentes em uma única Sprint 3.5, corrigindo o modelo de dados **antes** de construir o catálogo sobre ele (mesma ordem recomendada abaixo, só que sem abrir uma sprint extra). Escopo executado:
+
+1. **Correção do modelo de dados** (ADR-009, equivalente ao antigo plano de "Sprint 3.5" abaixo): `types/offer.ts`/`types/store.ts` corrigidos para os nomes reais; `utils/currency.ts` perdeu a conversão por taxa fixa; `services/offer.service.ts` corrigido (`order("price_usd")`); todos os componentes consumidores atualizados; `StoreDetails.tsx` ganhou a seção de Contato/Horário.
+2. **Catálogo de produtos `/products`** (equivalente ao antigo plano de "Sprint 3.6" abaixo, exceto a parte de seed de dados — não incluída): `getProductsCatalog` (filtros via PostgREST embedding, paginação real, ordenação por preço "best effort" — ADR-011), `category.service.ts`/`brand.service.ts` implementados, `ProductGrid`/`ProductGridSkeleton`/`ProductFilters` novos, `hooks/useProductFilters.ts` novo, `Breadcrumb`/`Pagination`/`Input`/`Select` novos/preenchidos em `ui/`, `ProductCard`/`ProductHighlightCard` unificados (ADR-010), `app/products/{page,loading,error}.tsx` com SEO completo.
+
+**Não incluído**: seed de dados (popular `stores.slug`/`products`/`offers` reais) — continua exigindo aprovação separada para alterar produção (ADR-007); ordenação por preço com agregação real no banco (proposta em `0003_proposed_product_catalog_price_view.sql`, não aplicada, ADR-011).
+
+Ver `docs/CHANGELOG.md` para o detalhe completo. Validado com `npm run lint`/`typecheck`/`build`.
+
 ## Sprint atual (avaliação)
 
-Release 0.2 (Produto), Release 0.4 parte 1 (Busca) e Release 0.3 (Loja) estão concluídos na **arquitetura**, mas a Sprint 3.4.1 confirmou bugs reais na camada de tipos que afetam os três (mais Loja e Produto que Busca, já que Busca não exibe preço/estoque). Antes de avançar para qualquer tela nova (listagem de produtos, comparação, etc.), a base de dados precisa estar correta — continuar construindo sobre `offer.price`/`stock`/`url` inexistentes só multiplicaria o retrabalho.
+Release 0.2 (Produto + Catálogo), Release 0.3 (Loja) e Release 0.4 parte 1 (Busca) estão concluídos na **arquitetura e no código**, com a camada de tipos agora alinhada ao schema real (ADR-009). O bloqueio que resta para validar qualquer um desses domínios com dados reais é puramente de **conteúdo**, não de código: `stores.slug` nulo e `products` vazia (ADR-007).
 
-**Próxima sprint recomendada**: Sprint 3.5 — corrigir `types/offer.ts`/`types/store.ts` e os componentes consumidores para usar os nomes reais (ver proposta abaixo), **antes** da antiga proposta de Sprint 3.5 (seed + Listagem de Produtos), que passa a ser Sprint 3.6.
+**Próxima sprint recomendada**: Sprint 3.6 — ver proposta abaixo (seed de dados + Comparação de Produtos, que reaproveita diretamente o catálogo desta sprint).
 
 ---
 
 ## Roadmap proposto (próximos passos imediatos)
 
-## Sprint 3.5 (proposta) — Corrigir o modelo de dados (`offer`/`store`)
+## Sprint 3.6 (proposta) — Seed de dados + início da Comparação de Produtos
 
-**Objetivo**: eliminar os bugs confirmados na ADR-008 antes de qualquer nova tela. Isto é correção de bug, não feature nova — recomendo tratar com a mesma prioridade de um bug de produção, mesmo que ainda não visível (porque não há ofertas reais ainda).
-
-**Escopo**:
-1. `types/offer.ts`: renomear/substituir `price`→`price_usd`+`price_brl`, `stock`→`in_stock`/`available`/`stock_quantity` (decidir qual representa "disponível para compra" na UI), `url`→`product_url`; remover `installments` (sem equivalente real) ou propor a coluna em uma migration própria; adicionar `old_price`, `condition` se forem usados.
-2. `types/store.ts`: `banner_url`→`cover_image`, `verified`→`is_verified`; adicionar os 13 campos reais ainda ausentes do tipo (`phone`, `whatsapp`, `email`, `website`, `address`, `opening_hours`, `instagram`, `latitude`, `longitude`, `delivery`, `pickup`, `pix_br`, `active`).
-3. `utils/currency.ts`: reavaliar — se `price_usd`/`price_brl` já vêm prontos do banco, a conversão por taxa fixa (`USD_TO_BRL_RATE`) deixa de ser necessária para exibição (continua útil só se algum dia precisar converter para uma 3ª moeda sem coluna própria, ex. Guarani).
-4. `services/offer.service.ts`/`store.service.ts`: ajustar qualquer `.order("price", ...)` para `.order("price_usd", ...)`.
-5. `components/product/ProductOffers.tsx`, `components/store/StoreOffers.tsx`: atualizar para os novos nomes de campo.
-6. `components/store/StoreCard.tsx`, `StoreDetails.tsx`, `app/store/[slug]/{page,layout}.tsx`: `cover_image`/`is_verified`; implementar a seção de Contato/Horário (agora possível, dados existem) em `StoreDetails.tsx`.
-7. Aplicar a migration `0002_revised_store_data_layer.sql` (`UNIQUE (slug)`) — requer aprovação separada, fora do controle de código.
-8. Atualizar `docs/API_CONTRACTS.md`/`COMPONENT_INDEX.md` com os contratos corrigidos.
-
-**Riscos**: 🟢 Baixo no código (são renomeações diretas, sem mudança de lógica) — risco real é de produto/negócio: decidir o que `in_stock` vs `available` significam exatamente (perguntar a quem cadastra os dados, se possível), e se `old_price` é sempre USD/BRL ou tem moeda própria.
-
-**Estimativa**: 1–2 dias.
-
-**Impacto no produto**: faz `/product/[slug]` e `/store/[slug]` mostrarem preço/estoque/link corretos no instante em que existir uma oferta real — sem essa correção, a primeira oferta cadastrada exibiria `$NaN` em produção.
-
-## Sprint 3.6 (proposta, antiga "Sprint 3.5") — Seed de dados + Listagem de Produtos
-
-**Objetivo**: com o modelo de dados corrigido (Sprint 3.5), tornar os dados de demonstração testáveis e fechar a Listagem de Produtos (`/products`).
+**Objetivo**: com o catálogo e o modelo de dados prontos (Sprint 3.5), tornar os três domínios centrais (Produto/Loja/Catálogo) testáveis com dados reais, e iniciar o Release 0.5 (Comparação), que reaproveita diretamente `ProductCard`/`ProductGrid`/`getProductsCatalog`.
 
 **Escopo**:
-1. **Proposta de seed de dados** (não aplicada): gerar `database/seed/0001_proposed_demo_data.sql` com `UPDATE stores SET slug = ...` para as 5 lojas reais existentes (slugificando `name`) e alguns `INSERT INTO products`/`offers` de exemplo usando os nomes de coluna reais (`price_usd`/`price_brl`, não `price`) — documentado para revisão, **não executado** sem aprovação explícita.
-2. **Listagem de produtos (`/products`)**: implementar `components/product/ProductGrid.tsx` (grid reaproveitando `ProductCard`, mesmo padrão de `StoreGrid`/`RelatedProducts`), criar `app/products/page.tsx` com filtro por categoria via `searchParams`, usando `getProducts()` já implementado.
-3. **Categorias/marcas dinâmicas**: implementar `services/category.service.ts`/`brand.service.ts` (hoje vazios) para alimentar `/products`.
-4. Atualizar `Navbar`/`Footer` (`/products` deixa de ser link morto).
+1. **Proposta de seed de dados** (não aplicada): gerar `database/seed/0001_proposed_demo_data.sql` com `UPDATE stores SET slug = ...` para as 5 lojas reais existentes e alguns `INSERT INTO products`/`offers` de exemplo usando os nomes de coluna reais (`price_usd`/`price_brl`) — documentado para revisão, **não executado** sem aprovação explícita.
+2. **Comparação de produtos (`/compare`)**: tela de seleção (2–4 produtos) com tabela de especificações/preços lado a lado, reaproveitando `services/product.service.ts`/`offer.service.ts` e `ProductCard`.
+3. **Aplicar a migration `0002_revised_store_data_layer.sql`** (`UNIQUE (slug)`) — requer aprovação separada, fora do controle de código.
+4. Avaliar se a materialized view proposta em `0003_proposed_product_catalog_price_view.sql` deve ser aplicada nesta sprint, dependendo do volume de dados real depois do seed.
 
-**Riscos**: 🟡 Médio — a parte de seed/dados depende de decisão do CTO sobre alterar produção; a parte de código (grid + rota) é de baixo risco.
+**Riscos**: 🟡 Médio — a parte de seed/dados e migrations depende de decisão do CTO sobre alterar produção; a parte de código (comparação) é de baixo risco, reaproveitando componentes já validados.
 
 **Estimativa**: 2–3 dias de código + tempo de decisão/aprovação para a parte de dados.
 
-**Impacto no produto**: primeira oportunidade real de testar Produto/Busca/Loja com dados de verdade e preço/estoque corretos (se a Sprint 3.5 + seed forem aprovados), e fecha a navegação de `/products`.
+**Impacto no produto**: primeira oportunidade real de testar Produto/Busca/Loja/Catálogo com dados de verdade e preço/estoque corretos, e entrega a primeira fatia do Release 0.5.
 
 ### Sprint C — Eliminar dívidas técnicas críticas antes de crescer mais
 - **Prioridade**: 🟡 Média (mas crescente — quanto mais o código cresce, mais caro fica)
 - **Risco**: Baixo
 - **Complexidade**: Baixa–Média
-- **Estimativa**: 1–2 dias (reduzida — unificação de `lib/supabase.ts`/`lib/env.ts` já concluída na Sprint 3.2, ver `docs/CHANGELOG.md`)
-- Tarefas restantes: resolver o double-fetch de produto **e agora também de loja** (mover fetch para o server, reduzir `app/product/[slug]/page.tsx` e `app/store/[slug]/page.tsx` a ilhas client), trocar `<img>` por `next/image` nos 6 componentes apontados pelo lint.
+- **Estimativa**: 1–2 dias
+- Tarefas restantes: resolver o double-fetch de produto e de loja (mover fetch para o server, reduzir `app/product/[slug]/page.tsx` e `app/store/[slug]/page.tsx` a ilhas client — `/products`, Sprint 3.5, já segue esse padrão e serve de referência); trocar `<img>` por `next/image` nos componentes apontados pelo lint; aplicar a materialized view de preço (`0003_proposed_product_catalog_price_view.sql`) quando o volume de dados justificar.
 
 ### Releases seguintes (sem mudança em relação ao roadmap pré-existente)
 0.5 Comparação de produtos → 0.6 Assistente de IA → 0.7 Painel Admin → 0.8 Crawler → 0.9 Plataforma de usuário (Auth/Favoritos reais/Histórico) → 1.0 Produção (SEO/Performance/Acessibilidade/PWA/Monitoramento). Ver `docs/ROADMAP.md` para o detalhamento original — segue válido como visão de longo prazo.
@@ -104,4 +95,4 @@ Release 0.2 (Produto), Release 0.4 parte 1 (Busca) e Release 0.3 (Loja) estão c
 | Manutenibilidade | ★★★★☆ | Convenções claras e documentadas (`CLAUDE.md`), fácil para outro dev continuar; risco principal é justamente assumir que um tipo reflete o banco sem verificar — exatamente a causa raiz do achado desta sprint. |
 | Prontidão para Produção | ★★☆☆☆ | Código pronto para os 3 domínios centrais, mas **sem dados reais** (ADR-007) e com bugs confirmados de tipo↔schema que vão aparecer assim que houver dados (ADR-008) — duas camadas de risco antes de estar pronto para usuários reais. |
 
-**Média geral: ≈ 3,5/5** — fundação arquitetural sólida, mas a auditoria de dados revelou que a camada de tipos não é tão confiável quanto o lint/TS sugeriam. Consistente com a estimativa de **40%** em `docs/PROJECT_STATUS.md` (percentual de funcionalidades implementadas não muda — o que muda é a confiança na correção do que já existe).
+**Média geral: ≈ 3,5/5** (avaliação congelada na Sprint 3.4.1, antes da correção). **Atualização Sprint 3.5**: a correção da camada de tipos (ADR-009) e a entrega do catálogo elevam principalmente "Código" e "Prontidão para Produção" — ver `docs/PROJECT_STATUS.md` (**50%**) para o número atualizado; esta tabela não foi reavaliada item a item nesta sprint.

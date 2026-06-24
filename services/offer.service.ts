@@ -21,7 +21,7 @@ export async function getOffersByProduct(
     .from("offers")
     .select("*, store:stores(*)")
     .eq("product_id", productId)
-    .order("price", { ascending: true });
+    .order("price_usd", { ascending: true });
 
   if (error) {
     console.error(error);
@@ -38,7 +38,7 @@ export async function getOffersByStore(
     .from("offers")
     .select("*, product:products(*)")
     .eq("store_id", storeId)
-    .order("price", { ascending: true });
+    .order("price_usd", { ascending: true });
 
   if (error) {
     console.error(error);

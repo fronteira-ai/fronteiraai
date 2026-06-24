@@ -31,8 +31,8 @@ export async function generateMetadata({
     : `Confira os produtos e ofertas de ${store.name} no ParaguAI.`;
 
   const url = storeUrl(store.slug);
-  const images = store.banner_url
-    ? [store.banner_url]
+  const images = store.cover_image
+    ? [store.cover_image]
     : store.logo_url
       ? [store.logo_url]
       : [];
@@ -76,10 +76,13 @@ export default async function StoreLayout({
         "@type": "LocalBusiness",
         name: store.name,
         description: store.description,
-        image: store.banner_url ?? store.logo_url ?? undefined,
+        image: store.cover_image ?? store.logo_url ?? undefined,
         url: storeUrl(store.slug),
+        telephone: store.phone ?? undefined,
+        email: store.email ?? undefined,
         address: {
           "@type": "PostalAddress",
+          streetAddress: store.address ?? undefined,
           addressLocality: store.city,
           addressCountry: store.country,
         },

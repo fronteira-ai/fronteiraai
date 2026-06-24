@@ -17,9 +17,9 @@ function StoreCard({ store, productCount }: Props) {
       className={`group flex flex-col overflow-hidden rounded-3xl border border-slate-800 bg-slate-900 ${animations.cardHover}`}
     >
       <div className="flex h-48 w-full items-center justify-center overflow-hidden bg-slate-950">
-        {store.banner_url ? (
+        {store.cover_image ? (
           <img
-            src={store.banner_url}
+            src={store.cover_image}
             alt={store.name}
             loading="lazy"
             decoding="async"
@@ -36,7 +36,7 @@ function StoreCard({ store, productCount }: Props) {
         <div className="flex items-center justify-between gap-3">
           <h3 className="text-2xl font-bold text-white">{store.name}</h3>
 
-          {store.verified ? (
+          {store.is_verified ? (
             <span
               className={`shrink-0 rounded-full bg-blue-500/20 px-3 py-1 text-xs font-semibold text-blue-300 ${animations.pulseSoft}`}
             >

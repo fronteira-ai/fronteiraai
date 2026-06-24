@@ -4,14 +4,9 @@ import { Product } from "@/types/product";
 import { Store } from "@/types/store";
 import { Brand } from "@/types/brand";
 import { Category } from "@/types/category";
+import { escapeLikePattern } from "@/utils/search";
 
 const RESULTS_PER_SECTION = 8;
-
-// Escapa os caracteres especiais do LIKE/ILIKE do Postgres (% e _) para que
-// o termo do usuário seja tratado como texto literal, não como wildcard.
-function escapeLikePattern(value: string): string {
-  return value.replace(/[%_]/g, (char) => `\\${char}`);
-}
 
 function emptyResponse(query: string, durationMs = 0): SearchResponse {
   return {

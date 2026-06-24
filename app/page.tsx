@@ -19,8 +19,26 @@ import { ProductHighlight } from "@/types/product";
 // domínio, bastando substituir estes arrays por chamadas de hooks/services
 // no futuro, sem alterar os componentes.
 
+const sampleStoreDefaults = {
+  logo_url: null,
+  phone: null,
+  whatsapp: null,
+  email: null,
+  website: null,
+  address: null,
+  opening_hours: null,
+  instagram: null,
+  latitude: null,
+  longitude: null,
+  delivery: null,
+  pickup: null,
+  pix_br: null,
+  active: true,
+};
+
 const sampleStores: (Store & { productCount: number })[] = [
   {
+    ...sampleStoreDefaults,
     id: "1",
     name: "Cellshop",
     slug: "cellshop",
@@ -28,14 +46,14 @@ const sampleStores: (Store & { productCount: number })[] = [
     city: "Ciudad del Este",
     country: "Paraguai",
     rating: 4.9,
-    logo_url: null,
-    banner_url:
+    cover_image:
       "https://images.unsplash.com/photo-1556740749-887f6717d7e4?w=800",
-    verified: true,
+    is_verified: true,
     created_at: new Date().toISOString(),
     productCount: 18500,
   },
   {
+    ...sampleStoreDefaults,
     id: "2",
     name: "Shopping China",
     slug: "shopping-china",
@@ -43,14 +61,14 @@ const sampleStores: (Store & { productCount: number })[] = [
     city: "Ciudad del Este",
     country: "Paraguai",
     rating: 4.8,
-    logo_url: null,
-    banner_url:
+    cover_image:
       "https://images.unsplash.com/photo-1481437156560-3205f6a55735?w=800",
-    verified: true,
+    is_verified: true,
     created_at: new Date().toISOString(),
     productCount: 26000,
   },
   {
+    ...sampleStoreDefaults,
     id: "3",
     name: "Nissei",
     slug: "nissei",
@@ -58,10 +76,9 @@ const sampleStores: (Store & { productCount: number })[] = [
     city: "Ciudad del Este",
     country: "Paraguai",
     rating: 4.8,
-    logo_url: null,
-    banner_url:
+    cover_image:
       "https://images.unsplash.com/photo-1520607162513-77705c0f0d4a?w=800",
-    verified: true,
+    is_verified: true,
     created_at: new Date().toISOString(),
     productCount: 15200,
   },

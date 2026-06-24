@@ -42,20 +42,20 @@ Inventário de funcionalidades por estado real (verificado lendo cada arquivo, n
 ### Domínio de Loja (Release 0.3 do roadmap) — Sprint 3.4
 - **Objetivo**: perfil completo de loja (`/store/[slug]`) com produtos/ofertas, avaliações (estrutura preparada) e localização — espelhando exatamente a arquitetura do Domínio de Produto.
 - **Arquivos**: `app/store/[slug]/page.tsx` (Client, via `useStore`), `layout.tsx` (Server, `generateMetadata` + JSON-LD `LocalBusiness`), `loading.tsx`, `error.tsx` (`unstable_retry`), `not-found.tsx`
-- **Componentes**: `StoreDetails` (header/perfil: rating, verificado, cidade/país, descrição — só campos reais do tipo `Store`) · `StoreOffers` (lista de ofertas da loja, cada linha já mostra o produto vinculado — une "produtos da loja" e "ofertas" em uma única lista, sem duplicar lógica/templates) · `StoreGrid` (outras lojas, espelha `RelatedProducts`) · `EmptyState` (reaproveitado, seção "Avaliações em breve")
-- **Dependências**: `hooks/useStore.ts` (espelha `useProduct.ts`), `services/store.service.ts` (`getStoreBySlug`, `getRelatedStores`, novos), `services/offer.service.ts` (`getOffersByStore`, novo), `types/offer.ts` (`OfferWithProduct`, novo), `constants/routes.ts` (`storePath`/`storeUrl`, novos — `StoreCard` migrado de string literal)
-- **Não implementado (por decisão, não por esquecimento)**: contato (telefone/WhatsApp/e-mail) e horário de funcionamento — essas colunas não existem na tabela `stores` real do Supabase (confirmado por query direta nesta sprint); nenhum mock/valor fixo foi usado. Proposta de migration em `database/migrations/0001_proposed_store_contact_hours.sql` (não aplicada — ver `docs/DECISIONS.md`, ADR-006). Avaliações reais dependem do domínio de Reviews (`types/review.ts` ainda vazio).
-- **Achado de dados**: as 5 lojas reais no Supabase têm `slug: null` hoje, então `/store/[slug]` (assim como `/product/[slug]`) não tem nenhuma loja navegável em produção até alguém popular esse campo — ver `docs/DECISIONS.md` ADR-007. Não é uma falha desta implementação.
+- **Componentes**: `StoreDetails` (header/perfil: rating, verificado, cidade/país, descrição, **Contato/Horário desde a Sprint 3.5**) · `StoreOffers` (lista de ofertas da loja, cada linha já mostra o produto vinculado) · `StoreGrid` (outras lojas, espelha `RelatedProducts`) · `EmptyState` (reaproveitado, seção "Avaliações em breve")
+- **Dependências**: `hooks/useStore.ts`, `services/store.service.ts` (`getStoreBySlug`, `getRelatedStores`), `services/offer.service.ts` (`getOffersByStore`), `types/offer.ts`/`types/store.ts` (corrigidos para o schema real na Sprint 3.5, ver ADR-009), `constants/routes.ts` (`storePath`/`storeUrl`)
+- **Contato e horário de funcionamento implementados na Sprint 3.5**: a conclusão original (ADR-006, "colunas não existem no banco") estava errada — corrigida na Sprint 3.4.1 (ADR-008) e implementada no código nesta sprint (ADR-009). `StoreDetails.tsx` exibe telefone/WhatsApp/e-mail/site/endereço/horário condicionalmente, sem mocks. Avaliações reais ainda dependem do domínio de Reviews (`types/review.ts` vazio).
+- **Achado de dados**: as 5 lojas reais no Supabase têm `slug: null` hoje, então `/store/[slug]` não tem nenhuma loja navegável em produção até alguém popular esse campo — ver `docs/DECISIONS.md` ADR-007. Não é uma falha de implementação.
 
----
-
-## Em desenvolvimento
-
-### Listagem de produtos
-- **Objetivo**: grid de produtos (presumivelmente para `/products`, linkado no `Footer`/`Navbar`/`Offers`).
-- **Arquivos**: nenhuma rota criada.
-- **Componentes**: `ProductGrid` (arquivo vazio, não importado por nada)
-- **Dependências**: `services/product.service.ts` (`getProducts` já existe e está pronto para alimentar isso).
+### Catálogo de Produtos (Release 0.2, parte 2) — Sprint 3.5
+- **Objetivo**: listagem completa de produtos em `/products`, com filtros sincronizados à URL, ordenação, paginação SSR e SEO — base para Comparador de Preços, Favoritos, Alertas e demais features de marketplace previstas no roadmap.
+- **Arquivos**: `app/products/page.tsx` (Server, `generateMetadata` com canonical/OG/Twitter/robots, JSON-LD `CollectionPage`+`ItemList`+`BreadcrumbList`, `<Suspense>`), `loading.tsx`, `error.tsx` (`unstable_retry`, espelha `/search`)
+- **Componentes**: `ProductFilters` (Client, via `useProductFilters` — busca, categoria, marca, loja, faixa de preço, disponibilidade, ordenação) · `ProductGrid` (Server, antes vazio — grid + `EmptyState`) · `ProductGridSkeleton` (fallback do `<Suspense>`) · `Breadcrumb`/`Pagination` (`ui/`, novos, genéricos e reaproveitáveis) · `ProductCard` (unificado com o antigo `ProductHighlightCard`, ver ADR-010)
+- **Dependências**: `services/product.service.ts` (`getProductsCatalog`, novo), `services/category.service.ts`/`brand.service.ts` (implementados nesta sprint, antes vazios), `services/store.service.ts` (`getStores`/`getStoreBySlug`, primeiro consumidor real de `getStores`), `hooks/useProductFilters.ts` (novo, URL como fonte de verdade), `utils/search.ts` (novo, `escapeLikePattern` compartilhado com a Busca)
+- **Filtros**: categoria/marca (resolvidos por slug → id), loja (idem, via embedding `offers!inner` em `products`), faixa de preço (`offers.price_usd`, idem), disponibilidade (`offers.in_stock`, idem), busca textual (`products.name`, `ilike` com termo escapado) — todos corretos e escaláveis nativamente via PostgREST.
+- **Ordenação**: "mais recentes" (nativa, `created_at desc`); "menor/maior preço" (corrigida em memória dentro da página já buscada — limitação documentada, ver `docs/TECH_DEBT.md`/ADR-011, com proposta de correção via materialized view não aplicada); "mais vendidos"/"melhor avaliação" (estrutura preparada na UI e no tipo `ProductCatalogSort`, sem coluna de apoio real — caem em "mais recentes").
+- **Paginação**: real, via `.range()` + `count: "exact"` da própria query filtrada; renderizada com `components/ui/Pagination.tsx` (links `<Link>`, sem JavaScript necessário, URLs indexáveis).
+- **Achado de dados**: a tabela `products` está vazia (0 linhas) em produção — o catálogo não pôde ser testado manualmente contra dados reais nesta sprint, validado por leitura de código e pelas checagens de qualidade (lint/typecheck/build).
 
 ---
 
@@ -63,9 +63,8 @@ Inventário de funcionalidades por estado real (verificado lendo cada arquivo, n
 
 | Feature | Release no roadmap | Evidência de planejamento |
 |---|---|---|
-| Filtros/paginação/ordenação na Busca | 0.4 (parte 2) | `docs/NEXT_STEPS.md` — busca já lê `?q=` e renderiza resultados reais (Sprint 3.3), mas sem filtro por tipo/categoria, paginação ou autocomplete ainda |
-| Rota `/categories/[slug]` | — | `Categories.tsx`/`SearchResults.tsx` já linkam para `/categories/${slug}`, rota inexistente |
-| Contato e horário de funcionamento da loja | 0.3 (extensão) | Proposta de migration em `database/migrations/0001_proposed_store_contact_hours.sql` (Sprint 3.4, não aplicada); depende de aprovação para alterar o schema do Supabase — ver `docs/DECISIONS.md` ADR-006 |
+| Filtros/paginação/ordenação na Busca | 0.4 (parte 2) | `docs/NEXT_STEPS.md` — busca já lê `?q=` e renderiza resultados reais, mas sem filtro por tipo/categoria, paginação ou autocomplete ainda (distinto do catálogo `/products`, que já tem os três) |
+| Rota `/categories/[slug]` e `/stores` (listagem) | — | `Categories.tsx`/`SearchResults.tsx` linkam para `/categories/${slug}`; `Navbar`/`Footer` linkam para `/stores` — nenhuma das duas rotas existe |
 | Comparação de produtos | 0.5 | `docs/ROADMAP.md`, link `/compare` no Navbar/Footer |
 | Assistente de IA (chat) | 0.6 | `services/ai.service.ts` vazio, `ai/` só `.gitkeep`, `AIShowcase` é só marketing estático |
 | Painel administrativo | 0.7 | `docs/ROADMAP.md` |
@@ -73,7 +72,7 @@ Inventário de funcionalidades por estado real (verificado lendo cada arquivo, n
 | Contas de usuário / Auth | 0.9 | `types/user.ts` vazio, sem Supabase Auth configurado |
 | Histórico de preços | 0.9/1.0 | link `/price-history` no Footer, tabela `price_history` listada como futura |
 | Reviews/avaliações | 0.9 | `types/review.ts` vazio |
-| Marcas/categorias dinâmicas | — | `services/brand.service.ts`, `services/category.service.ts` vazios |
+| Ordenação por preço com agregação no banco | — | `database/migrations/0003_proposed_product_catalog_price_view.sql` (Sprint 3.5, não aplicada) — ver ADR-011 |
 | Design system formal (tokens) | — | `styles/theme.ts`/`typography.ts`/`spacing.ts`/`radius.ts`/`shadows.ts` vazios, `styles/DESIGN_SYSTEM.md` vazio |
 | SEO/Performance/Acessibilidade/PWA | 1.0 | `docs/ROADMAP.md` |
 | Apps mobile nativos | 2.0 | `docs/ROADMAP.md` |

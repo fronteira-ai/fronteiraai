@@ -120,3 +120,55 @@ Registro de decisões arquiteturais (ADR leve). Cada entrada documenta o que foi
 **Alternativas descartadas**: corrigir os tipos silenciosamente durante esta auditoria — rejeitada porque a missão pediu diagnóstico antes de ação, e uma mudança nos tipos/services tocaria componentes já em produção (`ProductOffers`, `StoreOffers`, `StoreCard`, `StoreDetails`) sem o usuário ter visto o tamanho real do problema primeiro.
 
 **Consequência**: `database/migrations/0001_proposed_store_contact_hours.sql` marcado como superado; `0002_revised_store_data_layer.sql` propõe apenas constraints de integridade (`UNIQUE (slug)`), já que nenhuma coluna nova é necessária. `docs/DOMAIN_MODEL.md` reescrito com o schema real lado a lado com o tipo. Qualquer sprint futura que toque `offers`/`stores` deve assumir os nomes reais (`price_usd`/`price_brl`, `in_stock`/`available`, `product_url`, `cover_image`, `is_verified`), não os do tipo atual, até a correção ser aprovada e aplicada.
+
+---
+
+## ADR-009 — Correção aplicada: `types/offer.ts`/`types/store.ts` passam a refletir o schema real
+
+**Data**: 2026-06-23 (Sprint 3.5 — Catálogo Premium de Produtos)
+**Status**: Aceita e aplicada
+
+**Contexto**: ADR-008 (Sprint 3.4.1) documentou, mas não corrigiu, a divergência entre `types/offer.ts`/`types/store.ts` e o schema real do Supabase. A missão da Sprint 3.5 (Catálogo de Produtos) depende diretamente de preço/estoque corretos (ordenação "menor/maior preço", filtro de faixa de preço e disponibilidade) — construir o catálogo sobre os tipos antigos teria multiplicado o retrabalho. Decisão tomada com o CTO antes de iniciar a implementação: corrigir a camada de dados primeiro.
+
+**Decisão**:
+- `types/offer.ts`: `price`/`currency` → `price_usd` + `price_brl` (valores independentes, não convertidos); `stock` → `in_stock` (fonte da verdade para o badge "Em estoque" na UI — `available`/`stock_quantity` também passam a existir no tipo, mas não são usados em nenhuma tela ainda); `url` → `product_url`; `installments` removido (nenhuma coluna real equivalente foi encontrada na auditoria); `old_price`/`condition` adicionados (colunas reais sem uso de UI ainda).
+- `types/store.ts`: `banner_url` → `cover_image`; `verified` → `is_verified`; adicionados os 13 campos reais que faltavam (`phone`, `whatsapp`, `email`, `website`, `address`, `opening_hours`, `instagram`, `latitude`, `longitude`, `delivery`, `pickup`, `pix_br`, `active`).
+- `utils/currency.ts`: `convertToUSD`/`convertToBRL` removidos (a conversão por taxa fixa não tem mais consumidor — o banco já entrega `price_usd`/`price_brl` prontos).
+- `services/offer.service.ts`: `.order("price", ...)` → `.order("price_usd", ...)`.
+- Consumidores atualizados: `ProductOffers.tsx`, `StoreOffers.tsx`, `StoreCard.tsx`, `StoreDetails.tsx` (que ganhou a seção de Contato/Horário antes bloqueada pelo ADR-006), `app/store/[slug]/{page,layout}.tsx`, `app/product/[slug]/layout.tsx`, `app/page.tsx` (dados de exemplo).
+
+**Decisão de produto incluída**: entre `in_stock`/`available`, `in_stock` foi escolhido como a fonte da UI para "disponível para compra" — é o nome mais direto e o que mais se aproxima semanticamente do campo antigo `stock` que a UI já usava. `available` fica modelado no tipo, sem consumidor, para uma decisão futura caso sua semântica (ex.: "produto descontinuado" vs. "temporariamente esgotado") precise aparecer separadamente na UI.
+
+**Consequência**: bugs de `NaN`/"Sem estoque sempre"/botão "Ver oferta" ausente (ADR-008) ficam resolvidos assim que existir uma oferta real. `docs/DOMAIN_MODEL.md`, `API_CONTRACTS.md`, `TECH_DEBT.md` atualizados para remover o aviso de divergência tipo↔schema.
+
+---
+
+## ADR-010 — Unificação de `ProductCard`/`ProductHighlightCard` em um único componente
+
+**Data**: 2026-06-23 (Sprint 3.5)
+**Status**: Aceita e aplicada
+
+**Contexto**: `docs/ARCHITECTURE.md`/`TECH_DEBT.md` já apontavam `ProductCard` e `ProductHighlightCard` como quase-duplicados (mesmo layout de card — imagem, nome, preço, link —, divergindo só em campos extras de desconto/estoque/loja e no tipo de entrada). A Sprint 3.5 precisava de um card de produto para o novo `ProductGrid` (catálogo); criar um terceiro componente teria piorado a duplicação em vez de resolvê-la, e a missão da sprint pede explicitamente para corrigir duplicações encontradas durante a auditoria.
+
+**Decisão**: unificar em um único `components/product/ProductCard.tsx`, com props já achatadas (`slug`, `name`, `imageUrl`, `priceUSD?`, `originalPriceUSD?`, `subtitle?`, `inStock?`) em vez de receber o tipo de domínio inteiro (`Product`/`ProductHighlight`/`ProductCatalogItem`) — cada call site (`RelatedProducts`, `SearchResults`, `ProductGrid`, `home/Offers.tsx`) faz seu próprio mapeamento simples na hora de renderizar. O visual adotado é o do antigo `ProductHighlightCard` (mais completo: badge de desconto, badge "Esgotado", CTA com seta) para todos os usos, elevando a consistência visual em vez de manter dois padrões. `components/product/ProductHighlightCard.tsx` foi removido (aprovação explícita do CTO antes da remoção, por restrição do `CLAUDE.md`).
+
+**Alternativas descartadas**: manter os dois componentes e só adicionar um terceiro para o catálogo — rejeitada por aumentar a duplicação já identificada como dívida técnica; fazer `ProductCard` aceitar genericamente `Product | ProductHighlight | ProductCatalogItem` via union type — rejeitada por acoplar o componente de apresentação a três tipos de domínio diferentes, quando props achatadas o tornam agnóstico e mais simples de testar/reutilizar.
+
+**Consequência**: qualquer tela nova que precise de um card de produto reaproveita `ProductCard` com um mapeamento de poucas linhas, sem decidir entre dois componentes quase iguais. `docs/COMPONENT_INDEX.md` atualizado.
+
+---
+
+## ADR-011 — Ordenação por preço no catálogo (`/products`) é "best effort" até existir uma view de agregação
+
+**Data**: 2026-06-23 (Sprint 3.5)
+**Status**: Aceita — limitação documentada, com proposta de correção não aplicada
+
+**Contexto**: o catálogo de produtos (`getProductsCatalog`, `services/product.service.ts`) precisa ordenar produtos por "menor preço"/"maior preço", mas preço pertence à oferta, não ao produto (`docs/DOMAIN_MODEL.md`) — um produto pode ter N ofertas, e "o preço do produto" para fins de ordenação é o mínimo entre elas. PostgREST/Supabase resolvem filtros sobre tabelas relacionadas via embedding (`offers!inner`), o que cobre corretamente os filtros de loja/disponibilidade/faixa de preço sem precisar de view nenhuma — mas **ordenar** as linhas de `products` por uma agregação (`MIN(offers.price_usd)`) por grupo não é algo que o PostgREST resolve nativamente numa única query paginada, sem uma view/RPC dedicada.
+
+**Decisão**: para esta sprint, implementar a ordenação por preço como correção client-side da página já buscada: a query principal continua paginando por `created_at` (ou pelos filtros ativos) no banco, embute as ofertas relevantes por produto, calcula `lowestPriceUSD` em memória, e — somente quando o usuário pede `price_asc`/`price_desc` — reordena o array da página atual por esse valor antes de devolver ao componente. Isso garante que **a página exibida está sempre corretamente ordenada**, mas não garante ordem global perfeita entre páginas diferentes em catálogos com muitos produtos (ex.: o produto mais barato da página 3 pode, em teoria, ser mais barato que algum da página 2, se a paginação de base não foi feita por preço). Dado que a tabela `products` está vazia em produção hoje (ADR-007), esse limite é teórico, não observável, e documentado para ser resolvido antes de qualquer carga real de dados.
+
+**Correção proposta, não aplicada**: `database/migrations/0003_proposed_product_catalog_price_view.sql` cria uma materialized view `product_price_summary` (preço mínimo/máximo, contagem de ofertas e flag de estoque por produto, com índice único e índice no preço) que permitiria `getProductsCatalog` ordenar nativamente por preço com paginação correta entre páginas, sem o reordenamento client-side. Não aplicada nesta sprint por ser uma alteração de schema (restrição do `CLAUDE.md`: nunca alterar schema sem aprovação).
+
+**Alternativas descartadas**: "sobrebuscar" (overfetch) um lote maior de ofertas ordenadas por preço e deduplicar por produto — rejeitada por ser uma solução frágil ("temporária" no sentido que `CLAUDE.md` proíbe), que falha silenciosamente em catálogos com produtos de muitas ofertas duplicadas e não escala para "milhões de produtos" (objetivo explícito da missão); chamar um `rpc()` que ainda não existe no banco e mascarar o erro com fallback silencioso — rejeitada por esconder a limitação em vez de documentá-la.
+
+**Consequência**: filtros (categoria/marca/loja/disponibilidade/faixa de preço) e paginação são 100% corretos e escaláveis hoje, sem depender de nenhuma migration. Apenas a ordenação por preço tem o limite descrito acima, documentado em código (`services/product.service.ts`) e aqui. Ver `docs/TECH_DEBT.md`.

@@ -3,7 +3,7 @@
 import { notFound, useParams } from "next/navigation";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
-import ProductBreadcrumb from "@/components/product/ProductBreadcrumb";
+import Breadcrumb from "@/components/ui/Breadcrumb";
 import ProductGallery from "@/components/product/ProductGallery";
 import ProductHeader from "@/components/product/ProductHeader";
 import ProductSpecifications from "@/components/product/ProductSpecifications";
@@ -41,9 +41,13 @@ export default function ProductPage() {
 
       <div className="mx-auto max-w-7xl px-6 pt-32 pb-24">
 
-        <ProductBreadcrumb
-          categoryName={product.category?.name}
-          productName={product.name}
+        <Breadcrumb
+          items={[
+            ...(product.category
+              ? [{ label: product.category.name, href: `/products?category=${product.category.slug}` }]
+              : []),
+            { label: product.name },
+          ]}
         />
 
         <div className="mt-10 grid gap-12 lg:grid-cols-2">

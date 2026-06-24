@@ -2,7 +2,7 @@ import Section from "@/components/ui/Section";
 import SectionTitle from "@/components/ui/SectionTitle";
 import Button from "@/components/ui/Button";
 import Reveal from "@/components/ui/Reveal";
-import ProductHighlightCard from "@/components/product/ProductHighlightCard";
+import ProductCard from "@/components/product/ProductCard";
 import { ProductHighlight } from "@/types/product";
 
 type Props = {
@@ -21,7 +21,15 @@ export default function Offers({ products }: Props) {
       <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
         {products.map((product, index) => (
           <Reveal key={product.id} direction="up" delay={index * 70}>
-            <ProductHighlightCard product={product} />
+            <ProductCard
+              slug={product.slug}
+              name={product.name}
+              imageUrl={product.imageUrl}
+              priceUSD={product.priceUSD}
+              originalPriceUSD={product.originalPriceUSD}
+              subtitle={product.storeName}
+              inStock={product.inStock}
+            />
           </Reveal>
         ))}
       </div>

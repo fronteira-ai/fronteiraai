@@ -1,18 +1,6 @@
-const USD_TO_BRL_RATE = 5.4;
-
-const EXCHANGE_RATES_TO_USD: Record<string, number> = {
-  USD: 1,
-  BRL: 1 / USD_TO_BRL_RATE,
-};
-
-export function convertToUSD(value: number, currency: string): number {
-  const rate = EXCHANGE_RATES_TO_USD[currency] ?? 1;
-  return value * rate;
-}
-
-export function convertToBRL(value: number, currency: string): number {
-  return convertToUSD(value, currency) * USD_TO_BRL_RATE;
-}
+// Conversão por taxa fixa removida (ADR-009): o banco já guarda price_usd e
+// price_brl como valores independentes por oferta, definidos por quem
+// cadastra — não derivados matematicamente um do outro.
 
 export function formatUSD(value: number): string {
   return new Intl.NumberFormat("en-US", {
