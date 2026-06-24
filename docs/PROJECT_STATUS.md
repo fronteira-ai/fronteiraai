@@ -2,12 +2,12 @@
 
 Auditoria gerada por leitura completa do código-fonte. Substitui o conteúdo anterior deste arquivo.
 
-Última atualização: 2026-06-23 (Sprint 3.7 — Data Foundation v2)
-Branch auditada: `main` @ `e1fc394` + Sprint 3.6 (auditoria) + Sprint 3.7 (sistema de seed, migrations propostas, sem dado inserido) desta atualização
+Última atualização: 2026-06-24 (Sprint 3.9 — Price Engine v1 + Compare Foundation)
+Branch auditada: `main` @ `d093589` + Sprint 3.8 (seed real) + Sprint 3.9 (Price Engine v1, code-complete; migration de `price_history` proposta, não aplicada) desta atualização
 
 > ✅ **Bugs críticos corrigidos (Sprint 3.5)**: os bugs confirmados na Sprint 3.4.1 (`offer.price`/`stock`/`installments`/`url`, `store.banner_url`/`verified` divergindo do schema real) foram corrigidos antes de construir o catálogo de produtos sobre eles — ver `docs/DECISIONS.md` ADR-009. `types/offer.ts`/`types/store.ts` agora usam os nomes reais (`price_usd`/`price_brl`, `in_stock`, `product_url`, `cover_image`, `is_verified`, mais os 13 campos de contato/horário que já existiam no banco).
 >
-> ⚠️ **Achado de dados (reconfirmado ao vivo na Sprint 3.7)**: `products: 0`, `offers: 0`, `brands: 0`, `categories: 0`, `stores: 5` — todas as 5 lojas com `slug`/`active`/`cover_image` nulos. Sem dados reais navegáveis hoje em nenhum domínio. O sistema de seed para resolver isso já existe como código (`database/seed/`, Sprint 3.7), em modo dry-run — falta só a aprovação explícita do CTO para rodar `npm run db:seed:execute`. Ver ADR-007 e o relatório completo da Sprint 3.7.
+> ✅ **Achado de dados resolvido (Sprint 3.8)**: `npm run db:seed:execute` rodou com sucesso contra o Supabase real, usando `SUPABASE_SERVICE_ROLE_KEY` (a chave anônima não tem permissão de escrita por RLS em `brands`/`categories`/`products` — confirmado ao vivo, ver ADR-016). Estado real hoje: `stores: 5` (todas com `slug`/`active` preenchidos), `brands: 5`, `categories: 5`, `products: 6`, `offers: 9`. Os domínios Produto/Loja/Busca/Catálogo agora têm dados reais navegáveis em produção. ADR-007 está resolvido. Ver ADR-016 e o relatório completo da Sprint 3.8.
 
 ---
 
@@ -92,7 +92,7 @@ Ver `docs/COMPONENT_INDEX.md` para o detalhe item a item.
 ## Services existentes
 
 - `product.service.ts` — implementado (`getProducts`, `getProductBySlug`, `getRelatedProducts`, `searchProducts`, `getProductsCatalog` novo na Sprint 3.5).
-- `offer.service.ts` — implementado (`getOffers`, `getOffersByProduct`, `getOffersByStore`; ordenação corrigida para `price_usd` na Sprint 3.5).
+- `offer.service.ts` — implementado (`getOffers`, `getOffersByProduct`, `getOffersByStore`; ordenação corrigida para `price_usd` na Sprint 3.5). **Sprint 3.9**: `updateOfferPrice`/`getOfferPriceMetrics` novos (Price Engine v1, ADR-017) — code-complete e testados (degradação graciosa confirmada), sem consumidor ainda; dependem de `price_history`, tabela proposta (`0006`) mas não aplicada no Supabase real.
 - `store.service.ts` — implementado (`getStores`, `getStore`, `getStoreBySlug`, `getRelatedStores`).
 - `search.service.ts` — implementado, `searchEverything`.
 - `category.service.ts`, `brand.service.ts` — **implementados na Sprint 3.5** (antes vazios): `getCategories`/`getCategoryBySlug`, `getBrands`/`getBrandBySlug`.
@@ -100,7 +100,7 @@ Ver `docs/COMPONENT_INDEX.md` para o detalhe item a item.
 
 ## Tipos existentes
 
-`Product`/`ProductWithRelations`/`ProductCatalogItem` (novo, Sprint 3.5)/`ProductHighlight`, `Offer`/`OfferWithStore`/`OfferWithProduct` (corrigidos para o schema real na Sprint 3.5, ADR-009), `Store` (corrigido, idem), `Brand`, `Category`, `Favorite`, `Search` — implementados. `User`, `Review` — vazios.
+`Product`/`ProductWithRelations`/`ProductCatalogItem` (novo, Sprint 3.5)/`ProductHighlight`, `Offer`/`OfferWithStore`/`OfferWithProduct` (corrigidos para o schema real na Sprint 3.5, ADR-009), `Store` (corrigido, idem), `Brand`, `Category`, `Favorite`, `Search` — implementados. **`PriceHistoryEntry`/`OfferPriceMetrics`/`PriceUpdateResult`** (`types/priceHistory.ts`, novo, Sprint 3.9) — únicos tipos do projeto que descrevem um schema proposto, não confirmado no banco real (ver ADR-017). `User`, `Review` — vazios.
 
 ## Providers existentes
 
@@ -112,7 +112,7 @@ Cliente único em `lib/supabase.ts`, criado a partir de `lib/env.ts` (única fon
 
 Esquema do banco documentado em `database/DATABASE.md`/`ERD.md` (não código, apenas descrição); `database/migrations` tem 3 propostas não aplicadas (`0001` superada, `0002` integridade de `stores`, `0003` view de agregação de preço para o catálogo — Sprint 3.5). O schema real continua existindo apenas no painel do Supabase.
 
-Auditoria direta confirmou (Sprint 3.4.1, corrigido no código na Sprint 3.5): `stores` tem 24 colunas reais, `offers` tem 16 — ambas agora totalmente modeladas em `types/`. `stores` tem 5 linhas reais, todas com `slug: null`; `products` tem 0 linhas (ver ADR-007, ainda não resolvido — depende de alguém popular dados via painel do Supabase).
+Auditoria direta confirmou (Sprint 3.4.1, corrigido no código na Sprint 3.5): `stores` tem 24 colunas reais, `offers` tem 16 — ambas agora totalmente modeladas em `types/`. **Atualizado na Sprint 3.8**: `stores` tem 5 linhas reais, todas com `slug`/`active` preenchidos (ADR-007 resolvido); `brands: 5`, `categories: 5`, `products: 6`, `offers: 9` — dados de exemplo carregados via `database/seed/`, auditados sem FK órfã, slug duplicado ou inconsistência (ver relatório da Sprint 3.8).
 
 ## Integração com Vercel / Deploy
 
@@ -182,8 +182,35 @@ Sistema oficial de seed implementado como código (`database/seed/`), constraint
 
 Validado com `npm run lint` (0 erros, 5 warnings pré-existentes), `npx tsc --noEmit` (0 erros) e `npm run build` (sucesso, mesmas 6 rotas).
 
+## Sprint 3.8 — Seed Execution & Catalog Validation
+
+Executa, pela primeira vez, escrita real contra o Supabase de produção: o seed implementado na Sprint 3.7 saiu de dry-run para `--execute`, com aprovação explícita do CTO. Nenhuma migration aplicada, nenhuma feature de interface, nenhuma alteração de arquitetura.
+
+- **Bloqueio real encontrado e resolvido**: a primeira tentativa de `--execute`, só com `NEXT_PUBLIC_SUPABASE_ANON_KEY`, falhou — `INSERT` em `brands`/`categories`/`products` bloqueado por RLS (erro explícito) e o `UPDATE` de `stores.slug`/`active` foi **filtrado silenciosamente** pela RLS (0 linhas afetadas, sem erro, mas o script logou `[OK]` indevidamente — falso positivo confirmado por snapshot antes/depois). Nenhuma escrita real ocorreu nessa tentativa. Resolvido com `SUPABASE_SERVICE_ROLE_KEY` adicionada a `.env.local` pelo CTO. Ver ADR-016.
+- **Seed executado com sucesso** (2ª tentativa, com a chave de serviço): `stores` (5/5 backfill de `slug`/`active`), `brands` (5 criadas), `categories` (5 criadas), `products` (6 criados), `offers` (9 criadas). Reexecução confirmou idempotência (`[SKIP]` em tudo, sem duplicata).
+- **Auditoria de integridade**: `npm run db:validate` (0 problemas) + auditoria extra com anti-join real (não só `IS NULL`) via chave de serviço — 0 FKs órfãs (`offers.product_id`/`store_id`, `products.brand_id`/`category_id`), 0 slugs duplicados, 0 pares `product_id+store_id` duplicados, 0 produtos inativos. Único "achado" é deliberado: `playstation-5-slim` sem nenhuma oferta (testa o estado vazio da UI, conforme comentário do próprio dado de seed).
+- **Nenhuma correção de dados foi necessária** — o seed já carregou de forma consistente.
+- **Migrations `0002`/`0004`/`0005`**: continuam propostas, não aplicadas (fora do escopo desta sprint, por instrução explícita).
+- **Price Engine (ADR-013) / Offer Ranking (ADR-014)**: continuam apenas documentados, nenhum código novo.
+
+Ver relatório completo da Sprint 3.8 para o detalhe ambiente/snapshot/auditoria.
+
+## Sprint 3.9 — Price Engine v1 + Compare Foundation
+
+Implementa a primeira versão de código (não só arquitetura) do Price Engine proposto na Sprint 3.7 (ADR-013), e corrige o bug de log identificado na Sprint 3.8 (ADR-016). Nenhuma UI nova, nenhuma autenticação, nenhum scraping/IA — conforme escopo explícito da missão.
+
+- **`database/migrations/0006_proposed_price_history.sql`** (novo): tabela `price_history` (`offer_id`, `price_usd`, `price_brl`, `old_price_usd`, `source`, `recorded_at`) + índice composto `(offer_id, recorded_at DESC)`. **Proposta, não aplicada** — bloqueio de ferramenta, não de aprovação: nenhum mecanismo disponível neste projeto executa DDL contra o Supabase (sem `pg`/`DATABASE_URL`, sem Supabase CLI, sem RPC de SQL exposta). Ver ADR-017.
+- **`types/priceHistory.ts`** (novo): `PriceHistoryEntry`, `PriceChangeSource`, `OfferPriceMetrics`, `PriceUpdateResult`.
+- **`services/offer.service.ts`**: `updateOfferPrice()` (caminho único de escrita de preço, grava histórico antes de atualizar a oferta, no-op se o preço não mudou, confirma linhas afetadas) e `getOfferPriceMetrics()` (menor/maior preço histórico, variação percentual, última mudança — insumo do futuro `/compare`). Ambos testados ao vivo contra o Supabase real: degradação graciosa confirmada (preço atual real, campos de histórico `null`) enquanto `price_history` não existir.
+- **`database/seed/index.js`**: corrigido o bug do ADR-016 — o backfill de `stores` agora confirma linhas afetadas (`.select("id")`) antes de logar `[OK]`, e loga `[AVISO]` quando a RLS filtra a escrita silenciosamente. Testado contra o Supabase real com a chave anônima (reproduz o bug original) — detecção confirmada.
+- **`docs/DECISIONS.md`**: ADR-017 (schema do Price Engine, caminho único de escrita, bloqueio de DDL).
+
+Validado com `npm run lint` (0 erros, 5 warnings pré-existentes), `npx tsc --noEmit` (0 erros), `npm run build` (sucesso, mesmas 6 rotas), `npm run db:validate` (0 problemas) e reexecução de `npm run db:seed:execute` (idempotência confirmada, tudo `[SKIP]`).
+
+**Não incluído, por instrução explícita**: nenhuma UI/página nova (`/compare` segue sem interface); nenhuma autenticação; nenhuma migration aplicada (`0002`/`0004`/`0005`/`0006` continuam propostas); nenhuma alteração de RLS.
+
 ---
 
 ## Status Geral: **50%**
 
-Critério: dos 8 domínios do roadmap original (Home, Produto, Loja, Busca, Catálogo/Listagem, Comparação, IA, Admin, Crawler), 4 estão completos no código com integração real ao Supabase (Produto, Busca, Loja, Catálogo — novo), 1 está com UI pronta mas dados mockados (Home), e os demais 3 não foram iniciados. A correção da camada de tipos (ADR-009) elimina os bugs latentes que impediam considerar Produto/Loja prontos para dados reais; a fundação técnica permanece sólida (arquitetura, convenções, build/lint/TS limpos).
+Critério: dos 8 domínios do roadmap original (Home, Produto, Loja, Busca, Catálogo/Listagem, Comparação, IA, Admin, Crawler), 4 estão completos no código com integração real ao Supabase (Produto, Busca, Loja, Catálogo — novo), 1 está com UI pronta mas dados mockados (Home), e os demais 3 não foram iniciados. A correção da camada de tipos (ADR-009) elimina os bugs latentes que impediam considerar Produto/Loja prontos para dados reais; a fundação técnica permanece sólida (arquitetura, convenções, build/lint/TS limpos). **Atualização Sprint 3.8**: o percentual mede completude de código/arquitetura, não dado — por isso não muda aqui apesar do achado de dados (ADR-007) estar resolvido; o impacto real é que os 4 domínios completos agora são **testáveis com dados reais** pela primeira vez.

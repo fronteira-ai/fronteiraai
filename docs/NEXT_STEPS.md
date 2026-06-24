@@ -61,30 +61,57 @@ Diferente do que esta seção propunha (execução do seed + início do Comparad
 
 ## Sprint atual (avaliação)
 
-Release 0.2 (Produto + Catálogo), Release 0.3 (Loja) e Release 0.4 parte 1 (Busca) seguem concluídos na **arquitetura e no código**. A partir da Sprint 3.7, a fundação de dados também está pronta no nível de **ferramenta** (seed idempotente e seguro por padrão, migrations de integridade/índices/ranking revisadas, arquitetura de preço e de ranking de oferta já desenhadas) — o único passo que falta para destravar dados reais em todos os domínios é uma decisão humana: aprovar a execução do seed. Não é mais um bloqueio de código nem de planejamento.
+Release 0.2 (Produto + Catálogo), Release 0.3 (Loja) e Release 0.4 parte 1 (Busca) seguem concluídos na **arquitetura e no código**. A fundação de dados está pronta em produção desde a Sprint 3.8 (seed executado, ADR-007 resolvido). A partir da Sprint 3.9, o Price Engine também está **code-complete** (ADR-017) — falta só uma ação humana (aplicar `0006_proposed_price_history.sql` no SQL Editor do Supabase) para ele passar de "testado em degradação graciosa" para "operacional com histórico real".
 
-**Próxima sprint recomendada**: Sprint 3.8 — ver proposta abaixo (execução do seed, mediante aprovação explícita, + início da Comparação de Produtos).
+**Próxima sprint recomendada**: Sprint 4.0 — ver proposta abaixo (aplicar a migration `0006` + tela `/compare`).
 
 ---
 
 ## Roadmap proposto (próximos passos imediatos)
 
-## Sprint 3.8 (proposta) — Execução do Seed + início da Comparação de Produtos
+## Sprint 3.8 (encerrada) — Seed Execution & Catalog Validation
 
-**Objetivo**: com o sistema de seed já implementado e testado em dry-run (Sprint 3.7) e o catálogo pronto (Sprint 3.5), tornar os domínios centrais (Produto/Loja/Catálogo) testáveis com dados reais, e iniciar o Release 0.5 (Comparação), que reaproveita diretamente `ProductCard`/`ProductGrid`/`getProductsCatalog`.
+Diferente do que esta seção propunha anteriormente (seed + início da Comparação de Produtos numa única sprint), a missão recebida nesta sessão manteve o foco só em dados — execução do seed e validação de integridade —, sem nenhuma funcionalidade de interface nova, por instrução explícita do CTO. Comparação de Produtos fica para a Sprint 3.9, proposta abaixo.
 
-**Escopo**:
-1. **Aprovação e execução do seed** (`npm run db:seed:execute`, `database/seed/`, Sprint 3.7) — só após aprovação explícita do CTO para alterar dados de produção. Confirmar se `SUPABASE_SERVICE_ROLE_KEY` precisa ser adicionada a `.env.local` (a chave anônima pode não ter permissão de escrita por RLS — ver `docs/TECH_DEBT.md`).
-2. **Rodar `npm run db:validate`** imediatamente após o seed, antes de qualquer outra etapa — confirma que o dado inserido está limpo antes de construir o Comparador sobre ele.
-3. **Aplicar as migrations `0002` (fase 1) e `0004`** (constraints `UNIQUE (slug)` + índices) — depois do seed confirmado sem duplicata, requer aprovação separada.
-4. **Comparação de produtos (`/compare`)**: tela de seleção (2–4 produtos) com tabela de especificações/preços lado a lado, reaproveitando `services/product.service.ts`/`offer.service.ts` e `ProductCard`.
-5. Reavaliar `0003`/`0005` (views de preço e ranking de loja) só depois que o seed der volume real — não antes (ver Sprint 3.6/3.7).
+**Executado**:
+1. Auditoria de ambiente antes de qualquer escrita: confirmado que `SUPABASE_SERVICE_ROLE_KEY` não existia em nenhum lugar do ambiente (`.env.local`, `.vercel/.env.development.local`, variáveis de processo/usuário/máquina) — só `NEXT_PUBLIC_SUPABASE_ANON_KEY`.
+2. Snapshot do banco antes do seed: `stores: 5` (slug/active nulos), `brands/categories/products/offers: 0`.
+3. Dry-run reconfirmado idêntico ao plano esperado.
+4. **1ª tentativa de `--execute` (chave anônima)**: bloqueada por RLS — `INSERT` falhou explicitamente em `brands`/`categories`/`products`; o `UPDATE` de `stores` foi filtrado silenciosamente pela RLS (0 linhas afetadas, log `[OK]` falso-positivo). Confirmado por snapshot que nenhuma escrita real ocorreu. Parado para investigação, conforme regra da missão — reportado ao CTO, que adicionou `SUPABASE_SERVICE_ROLE_KEY` a `.env.local`.
+5. **2ª tentativa de `--execute` (chave de serviço)**: sucesso total — `stores` (5/5 backfill), `brands` (5), `categories` (5), `products` (6), `offers` (9). Reexecução confirmou idempotência.
+6. Auditoria de integridade: `npm run db:validate` (0 problemas) + anti-join real complementar via chave de serviço (0 FKs órfãs, 0 duplicatas). Nenhuma correção de dados necessária.
+7. Documentação atualizada: `docs/DECISIONS.md` (ADR-016), `docs/PROJECT_STATUS.md`, `docs/TECH_DEBT.md`, `docs/CHANGELOG.md`, este arquivo.
 
-**Riscos**: 🟡 Médio — a parte de seed/dados e migrations depende de decisão do CTO sobre alterar produção, e de confirmar se a chave de serviço está disponível; a parte de código (comparação) é de baixo risco, reaproveitando componentes já validados.
+Ver relatório completo da Sprint 3.8 para o detalhe ambiente/snapshot/auditoria.
 
-**Estimativa**: 2–3 dias de código + tempo de decisão/aprovação para a parte de dados.
+**Não incluído, por instrução explícita**: nenhuma migration (`0002`, `0004`, `0005`) aplicada; nenhuma alteração de policy de RLS; nenhuma tela do Comparador; bug de log falso-positivo em `database/seed/index.js` (ADR-016) documentado, não corrigido.
 
-**Impacto no produto**: primeira oportunidade real de testar Produto/Busca/Loja/Catálogo com dados de verdade e preço/estoque corretos, e entrega a primeira fatia do Release 0.5.
+## Sprint 3.9 (encerrada) — Price Engine v1 + Compare Foundation
+
+Diferente do que esta seção propunha (Price Engine + início da tela de Comparação no mesmo escopo), a missão recebida nesta sessão limitou o escopo a só Price Engine — registrar preço/histórico, métricas, correção do bug do ADR-016 — explicitamente sem UI/páginas novas ("preparar estrutura para `/compare`, sem implementar interface final"). Tela de Comparação fica para a Sprint 4.0, proposta abaixo.
+
+**Executado**: `database/migrations/0006_proposed_price_history.sql` (schema do histórico de preço, proposta — ver bloqueio abaixo); `types/priceHistory.ts` novo; `services/offer.service.ts` ganhou `updateOfferPrice()`/`getOfferPriceMetrics()`, code-complete e testados ao vivo contra o Supabase real (degradação graciosa confirmada); bug de log do ADR-016 corrigido em `database/seed/index.js` (testado contra o Supabase real com a chave anônima); `docs/DECISIONS.md` ADR-017. Validado com `npm run lint`/`tsc --noEmit`/`npm run build`/`db:validate`/reexecução do seed (idempotência). Ver `docs/CHANGELOG.md` e o relatório completo da sprint para o detalhe.
+
+**Bloqueio real, não decisão de escopo**: a migration `0006` não foi aplicada porque nenhuma ferramenta deste projeto executa DDL contra o Supabase (sem `pg`/`DATABASE_URL`, sem CLI configurado, sem RPC de SQL exposta) — diferente de `0002`/`0004`/`0005`, que ficaram propostas por decisão de aprovação, esta ficou proposta por impossibilidade técnica com as credenciais/ferramentas hoje disponíveis. Ver ADR-017.
+
+**Não incluído, por instrução explícita**: nenhuma tela `/compare`; nenhuma migration aplicada; nenhuma alteração de RLS; nenhuma autenticação/scraping/IA.
+
+## Sprint 4.0 (proposta) — Aplicar Price Engine + Comparação de Produtos
+
+**Objetivo**: tornar o Price Engine (Sprint 3.9) operacional de fato e entregar a primeira tela do Release 0.5.
+
+**Escopo proposto**:
+1. **Aplicar `0006_proposed_price_history.sql`** no SQL Editor do Supabase (ação humana — CTO ou alguém com acesso ao painel) — depois disso, `updateOfferPrice`/`getOfferPriceMetrics` já funcionam sem nenhuma mudança de código.
+2. **Comparação de produtos (`/compare`)**: tela de seleção (2–4 produtos) com tabela de especificações/preços lado a lado, reaproveitando `ProductCard`/`ProductGrid`/`getProductsCatalog` e `getOfferPriceMetrics` para mostrar variação de preço por oferta.
+3. **Aplicar as migrations `0002` (fase 1) e `0004`** (constraints `UNIQUE (slug)` + índices) — agora que o seed confirmou 0 duplicata, requer aprovação separada para aplicar contra produção.
+4. Avaliar se `updateOfferPrice` precisa de uma policy de RLS dedicada (ou credencial própria) antes do Admin/Crawler existirem de fato — a chave anônima provavelmente não tem permissão de escrita em `offers`/`price_history`, pelo mesmo padrão confirmado em `brands`/`categories`/`products` (ADR-016), mas isso não foi testado nesta sprint.
+5. Reavaliar `0003`/`0005` (views de preço e ranking de loja) — agora há volume real (6 produtos, 9 ofertas, 5 lojas) para validar a agregação, mas ainda pequeno; decisão do CTO se aplica agora ou espera mais volume.
+
+**Riscos**: 🟡 Médio — aplicar `0006` é uma ação humana fora do meu controle nesta sessão; o resto é código de baixo risco, reaproveitando componentes já validados.
+
+**Estimativa**: 2–3 dias de código + tempo para a ação manual da migration.
+
+**Impacto no produto**: primeira infraestrutura de histórico de preço de fato operacional, e a primeira fatia do Release 0.5 (Comparação) testável com dados e preços reais.
 
 ### Sprint C — Eliminar dívidas técnicas críticas antes de crescer mais
 - **Prioridade**: 🟡 Média (mas crescente — quanto mais o código cresce, mais caro fica)

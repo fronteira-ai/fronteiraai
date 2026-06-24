@@ -241,3 +241,44 @@ Esta pontuação é a candidata natural a consumir a `store_ranking_summary` pro
 **Vantagens**: ranking de loja vira um `SELECT` simples, sem reagregar `offers` a cada request. **Custo de manutenção**: materialized view exige `REFRESH` periódico (mesma ressalva do ADR-011/0003) — aceitável porque rating/contagem de ofertas não mudam a cada segundo.
 
 **Consequência**: nem `0003` nem `0005` foram aplicadas nesta sprint — ambas seguem como proposta, junto de `0004_proposed_catalog_integrity_and_indexes.sql` (constraints `UNIQUE (slug)` em `products`/`brands`/`categories` + índices em `offers.product_id`/`offers.store_id`/`offers.price_usd`/`products.brand_id`/`products.category_id`, também desta sprint).
+
+---
+
+## ADR-016 — Achado: chave anônima não escreve em `brands`/`categories`/`products`/`offers`; `UPDATE` de `stores` é filtrado silenciosamente por RLS
+
+**Data**: 2026-06-24 (Sprint 3.8 — Seed Execution & Catalog Validation)
+**Status**: Registrado — achado de ambiente/segurança, resolvido operacionalmente nesta sprint (sem alterar policy de RLS)
+
+**Contexto**: a Sprint 3.7 já registrava como risco não verificado (`docs/TECH_DEBT.md`) que `NEXT_PUBLIC_SUPABASE_ANON_KEY` podia não ter permissão de escrita por RLS. A Sprint 3.8 confirmou isso ao vivo, com duas variantes distintas do mesmo problema:
+
+1. **`INSERT` em `brands`/`categories`/`products`** com a chave anônima falhou de forma explícita: `new row violates row-level security policy for table "<tabela>"`. Comportamento esperado de uma policy de RLS bem configurada.
+2. **`UPDATE` de `stores.slug`/`active`** com a chave anônima **não retornou erro nenhum**, mas também não alterou nenhuma linha — a policy de RLS filtrou as linhas pela cláusula `USING` antes do `UPDATE` ser aplicado, e o PostgREST/Supabase não reporta isso como erro quando a chamada não usa `.select()` para confirmar o que foi afetado. `database/seed/index.js` não verifica o resultado da escrita (só a ausência de `error`), então logou `[OK]` para as 5 lojas mesmo sem ter escrito nada — confirmado comparando snapshots antes/depois da tentativa (`stores.slug` continuava `null` em todas).
+
+**Decisão**: resolver adicionando `SUPABASE_SERVICE_ROLE_KEY` a `.env.local` (CTO obteve a chave no painel do Supabase, Settings → API) — `database/seed/lib/client.js` já preferia essa chave quando presente (Sprint 3.7), sem precisar de nenhuma alteração de código. Não alterar policies de RLS das tabelas, que continuam protegendo escrita pública pela chave anônima (correto para a aplicação Next.js, que só lê). A chave de serviço é usada exclusivamente pelo tooling de `database/seed/`, nunca pela aplicação (`lib/supabase.ts` continua só com a chave anônima).
+
+**Alternativas descartadas**: afrouxar as policies de RLS para aceitar `INSERT`/`UPDATE` pela chave anônima — rejeitada por expor a tabela a escrita pública não autenticada, regressão de segurança real para resolver um problema de tooling.
+
+**Achado adicional, não corrigido nesta sprint**: o "falso positivo" de log em `database/seed/index.js` (passo 1, backfill de `stores`) é um bug de tooling — o `UPDATE` deveria confirmar linhas afetadas (ex. `.select("id")` no retorno e checar se veio vazio) antes de logar `[OK]`. Não corrigido porque não era necessário para concluir a carga de dados desta sprint (a causa raiz era a chave, não o script) e a missão pediu para não implementar funcionalidades novas. Registrado em `docs/TECH_DEBT.md` para uma sprint futura de manutenção do seed.
+
+**Consequência**: `SUPABASE_SERVICE_ROLE_KEY` é, a partir de agora, uma variável de ambiente esperada em qualquer ambiente onde `database/seed/` precise escrever (nunca em produção/Vercel da aplicação, só local/CI de quem administra dados) — deve ser tratada com o mesmo cuidado de um segredo de banco, nunca commitada nem exposta como `NEXT_PUBLIC_*`.
+
+---
+
+## ADR-017 — Price Engine v1: schema, caminho único de escrita e bloqueio de DDL
+
+**Data**: 2026-06-24 (Sprint 3.9 — Price Engine v1 + Compare Foundation)
+**Status**: Aceita — código implementado; migration de schema **proposta, não aplicada** (bloqueio de ferramenta, não de aprovação)
+
+**Contexto**: a Sprint 3.7 (ADR-013) descreveu a arquitetura do Price Engine sem implementar nada. A missão da Sprint 3.9 pediu a "primeira versão operacional" — registrar mudança de preço, preservar histórico, calcular menor/maior preço histórico e variação percentual, com dados disponíveis para o futuro `/compare`.
+
+**Decisão — schema** (`database/migrations/0006_proposed_price_history.sql`): tabela `price_history` (`id`, `offer_id` FK para `offers.id` com `ON DELETE CASCADE`, `price_usd`, `price_brl`, `old_price_usd`, `source` (texto livre, validado só no tipo `PriceChangeSource` — mesmo padrão de `offers.condition`/`currency`, sem `CHECK` no banco), `recorded_at`), com índice composto `(offer_id, recorded_at DESC)` — cobre a única consulta real (`getOfferPriceMetrics`, filtra por `offer_id`, ordena por `recorded_at`).
+
+**Decisão — caminho único de escrita** (`services/offer.service.ts`): `updateOfferPrice(offerId, newPriceUSD, newPriceBRL, source)` é a única função que deve alterar `offers.price_usd`/`price_brl` a partir de agora (ver comentário no código). Ela: 1) lê o preço atual; 2) se idêntico ao novo, retorna sem gravar nada (`changed: false`, não é uma "alteração"); 3) grava uma linha em `price_history` com o preço antigo, o novo e a origem; 4) só então atualiza `offers`, com o mesmo padrão de confirmação de linhas afetadas adotado no ADR-016 (`.select("id")`, checando se veio vazio) — para não repetir o mesmo bug de log falso-positivo num caminho de escrita novo.
+
+**Decisão — métricas com degradação graciosa**: `getOfferPriceMetrics(offerId)` lê `offers` (sempre real) e `price_history` (pode não existir ainda). Erro ao consultar `price_history` não propaga — a função retorna `currentPriceUSD` real e `null` nos 4 campos dependentes de histórico, testado e confirmado nesta sprint contra o Supabase real (erro `Could not find the table 'public.price_history'`, capturado, sem crash). Isso significa que o código já é "verdadeiramente operacional" assim que a migration `0006` for aplicada, sem precisar tocar `services/offer.service.ts` de novo.
+
+**Bloqueio real encontrado — DDL não executável com as ferramentas atuais**: diferente de todas as migrations anteriores (`0001`–`0005`), que ficaram propostas por decisão/aprovação pendente, a `0006` ficou proposta por **impossibilidade técnica**: `@supabase/supabase-js` usa PostgREST, que só expõe CRUD via REST sobre tabelas/views/RPCs já existentes — não executa `CREATE TABLE`. Confirmado nesta sprint: não há `pg` (ou qualquer client Postgres) instalado, não há `DATABASE_URL`/connection string em `.env.local`, não há Supabase CLI configurado (sem `.supabase/`), e a introspecção do OpenAPI do PostgREST (`GET /rest/v1/`) não lista nenhuma RPC própria para executar SQL arbitrário. Isso corresponde exatamente a uma das condições de parada definidas pelo CTO para esta sprint ("necessidade de credencial inexistente") — registrado aqui em vez de simulado ou contornado.
+
+**Alternativas descartadas**: instalar `pg` e usar uma `DATABASE_URL` para aplicar a migration via script — rejeitada por exigir uma credencial nova (senha do Postgres) que não foi fornecida nesta sessão, e por introduzir uma segunda forma de conexão ao banco (paralela ao `@supabase/supabase-js`) sem decisão arquitetural prévia sobre quando usar uma ou outra.
+
+**Consequência**: a Sprint 3.9 entrega o Price Engine **code-complete e testado em todos os caminhos que não dependem da tabela existir** (graceful degradation confirmada ao vivo). Para se tornar operacional de fato (gravar histórico real), alguém com acesso ao painel do Supabase precisa colar o conteúdo de `0006_proposed_price_history.sql` no SQL Editor — uma ação humana de poucos minutos, não uma tarefa de código pendente. Ver `docs/TECH_DEBT.md`.

@@ -52,6 +52,20 @@ Contratos de todas as funções de `services/*.service.ts` que têm implementaç
 - **Erro**: loga e retorna `[]`
 - **Consumidores**: `app/store/[slug]/layout.tsx`, `hooks/useStore.ts` → `StoreOffers`
 
+### `updateOfferPrice(offerId: string, newPriceUSD: number, newPriceBRL: number | null, source?: PriceChangeSource): Promise<PriceUpdateResult | null>` — Sprint 3.9 (ADR-017)
+- **Único caminho de escrita permitido para `offers.price_usd`/`price_brl`** — nenhum outro código deve fazer `update` direto nessas colunas
+- **Tabelas**: lê `offers` (preço atual), grava em `price_history` (`insert`), depois `update` em `offers` (`price_usd`, `price_brl`, `old_price`)
+- **No-op**: se `newPriceUSD`/`newPriceBRL` forem idênticos ao preço atual, não grava nada e retorna `{ changed: false }`
+- **Confirmação de escrita**: o `update` final usa `.select("id")` e retorna `null` se 0 linhas forem afetadas (mesmo padrão de detecção do ADR-016, aplicado aqui desde o início)
+- **Erro**: loga e retorna `null` (oferta não encontrada, falha ao gravar histórico, ou `update` sem efeito)
+- **Consumidores**: nenhum hoje — `price_history` ainda não existe no Supabase real (ver `docs/TECH_DEBT.md`), preparado para Admin (Release 0.7)/Crawler (Release 0.8)
+
+### `getOfferPriceMetrics(offerId: string): Promise<OfferPriceMetrics | null>` — Sprint 3.9 (ADR-017)
+- **Tabelas**: lê `offers` (preço atual) e `price_history` (série histórica), calcula `lowestPriceUSD`/`highestPriceUSD`/`priceChangePercent`/`lastPriceChangeAt`
+- **Degradação graciosa**: se `price_history` não existir ou a consulta falhar, retorna `currentPriceUSD` real e `null` nos 4 campos dependentes de histórico — não lança, testado contra o Supabase real nesta sprint
+- **Erro** (oferta não encontrada): loga e retorna `null`
+- **Consumidores**: nenhum hoje — insumo preparado para o futuro `/compare`
+
 ## store.service.ts
 
 ### `getStores(): Promise<Store[]>`

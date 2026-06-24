@@ -151,9 +151,29 @@ Category┘                ├──< Offer >── Store
 - `Favorite` não tem FK real — é uma cópia achatada de dados de `Product`, fora do banco (distinto da tabela real `favorites`, que existe no Supabase mas não é usada pelo código)
 - `profiles` não tem relação conhecida com nenhuma entidade do domínio atual (sem uso no código)
 
+### `PriceHistoryEntry` / `OfferPriceMetrics` / `PriceUpdateResult` (`types/priceHistory.ts`) — Sprint 3.9
+
+```ts
+type PriceChangeSource = "seed" | "manual" | "admin" | "crawler";
+
+interface PriceHistoryEntry {
+  id: string; offer_id: string;
+  price_usd: number; price_brl: number | null; old_price_usd: number | null;
+  source: PriceChangeSource; recorded_at: string;
+}
+
+interface OfferPriceMetrics {
+  offerId: string; currentPriceUSD: number;
+  lowestPriceUSD: number | null; highestPriceUSD: number | null;
+  priceChangePercent: number | null; lastPriceChangeAt: string | null;
+}
+```
+
+Diferente de todo o resto deste documento, `PriceHistoryEntry` descreve um schema **proposto** (`database/migrations/0006_proposed_price_history.sql`), não confirmado por consulta direta ao Supabase — a tabela `price_history` ainda não existe de fato (ver ADR-017, `docs/TECH_DEBT.md`). `services/offer.service.ts` (`updateOfferPrice`/`getOfferPriceMetrics`) já está implementado contra esse schema e degrada graciosamente (campos `null`, sem lançar) enquanto a tabela não existir.
+
 ## Tabelas descritas em `database/DATABASE.md` mas sem tipo TypeScript ainda
 
-`price_history`, `product_images`, `store_images`, `reviews`, `alerts`, `search_logs`, `news`, `coupons`, `restricted_products`, `restricted_categories`, `import_jobs`, `crawler_logs`, `ai_embeddings`, `users`. Nenhuma dessas 14 tabelas existe de fato no Supabase ainda (confirmado, Sprint 3.4.1) — a documentação estava certa, são apenas visão de futuro. Nenhuma tem migration nem tipo. `price_history` ganhou, na Sprint 3.7, uma arquitetura proposta (não implementada) em `docs/DECISIONS.md` ADR-013.
+`product_images`, `store_images`, `reviews`, `alerts`, `search_logs`, `news`, `coupons`, `restricted_products`, `restricted_categories`, `import_jobs`, `crawler_logs`, `ai_embeddings`, `users`. Nenhuma dessas 13 tabelas existe de fato no Supabase ainda (confirmado, Sprint 3.4.1) — a documentação estava certa, são apenas visão de futuro. `price_history` saiu desta lista na Sprint 3.9: ganhou tipo (`types/priceHistory.ts`) e migration proposta (`0006`), embora a tabela em si ainda não exista no banco real.
 
 ## Ferramentas de dados (Sprint 3.7, sem mudança de schema)
 

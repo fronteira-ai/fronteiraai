@@ -87,11 +87,14 @@ async function main() {
       log(`  [DRY-RUN] atualizaria "${store.name}" -> slug=${store.slug}, active=${store.active}`);
       continue;
     }
-    const { error: updateError } = await supabase
+    const { data: updateData, error: updateError } = await supabase
       .from("stores")
       .update({ slug: store.slug, active: store.active })
-      .eq("id", existing.id);
+      .eq("id", existing.id)
+      .select("id");
     if (updateError) log(`  [ERRO] atualizar "${store.name}": ${updateError.message}`);
+    else if (!updateData || updateData.length === 0)
+      log(`  [AVISO] "${store.name}" não foi atualizada — RLS bloqueou a escrita silenciosamente (0 linhas afetadas). Use SUPABASE_SERVICE_ROLE_KEY ou revise a policy de UPDATE da tabela.`);
     else log(`  [OK] "${store.name}" atualizada -> slug=${store.slug}`);
   }
 
