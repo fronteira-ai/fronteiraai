@@ -43,27 +43,44 @@ Diferente do que esta seção propunha anteriormente (duas sprints separadas, "3
 
 Ver `docs/CHANGELOG.md` para o detalhe completo. Validado com `npm run lint`/`typecheck`/`build`.
 
+## Sprint 3.6 (encerrada) — Data Foundation
+
+Diferente do que esta seção propunha anteriormente (uma única sprint bundlando seed de dados + início da Comparação de Produtos), o CTO redefiniu o escopo na missão recebida nesta sessão: Sprint 3.6 ficou só com a auditoria/diagnóstico da camada de dados, sem executar seed e sem tocar UI — mesmo padrão de divergência documentada já visto nas Sprints 3.3 e 3.5. Seed e Comparador ficam para a Sprint 3.7, proposta abaixo.
+
+**Executado**: auditoria do banco (relacionamentos `products↔brands/categories`, `offers↔products/stores` reconfirmados sem erro de FK); auditoria de dados ao vivo via consulta direta ao Supabase (`products: 0`, `offers: 0`, `brands: 0`, `categories: 0`, `stores: 5`, todas com `slug`/`active`/`cover_image` nulos — achado novo: `website`/`opening_hours` já preenchidos nas 5 lojas reais, `address` em 4/5); auditoria dos 6 services implementados contra o schema real (nenhuma divergência nova, nenhuma correção necessária); revisão das 3 migrations propostas (`0001` superada, `0002` fase 1 segura para aplicar, `0003` prematura sem dados reais); plano de seed proposto (não executado). Ver `docs/CHANGELOG.md` e o relatório completo da sprint para o detalhe.
+
+**Não incluído, por instrução explícita**: nenhuma migration foi aplicada, nenhum insert foi executado, nenhuma funcionalidade de interface foi implementada.
+
+## Sprint 3.7 (encerrada) — Data Foundation v2
+
+Diferente do que esta seção propunha (execução do seed + início do Comparador), a missão recebida nesta sessão manteve o foco em fundação de dados, explicitamente sem interface ("Nesta Sprint o foco NÃO será interface") — mesmo padrão de divergência documentada das Sprints 3.3/3.5/3.6. Execução do seed e Comparador ficam para a Sprint 3.8, proposta abaixo.
+
+**Executado**: sistema oficial de seed implementado como código (`database/seed/` — `brands`/`categories`/`stores`/`products`/`offers`/`lib`/`index.js`/`validate.js`, dry-run por padrão, ver ADR-012); `validate.js` rodado ao vivo contra o Supabase real (nenhum problema novo, achado de `slug` reconfirmado); migrations propostas `0004` (constraints `UNIQUE (slug)` + índices de FK/preço) e `0005` (`store_ranking_summary`); arquitetura do Price Engine documentada (ADR-013) e estratégia de Offer Ranking v1 documentada (ADR-014), nenhuma implementada; services revisados de novo (nenhuma divergência). Ver `docs/CHANGELOG.md` e o relatório completo da sprint para o detalhe.
+
+**Não incluído, por instrução explícita/Restrição Absoluta**: nenhum insert real (`--execute` nunca rodado), nenhuma migration aplicada, nenhuma tela do Comparador.
+
 ## Sprint atual (avaliação)
 
-Release 0.2 (Produto + Catálogo), Release 0.3 (Loja) e Release 0.4 parte 1 (Busca) estão concluídos na **arquitetura e no código**, com a camada de tipos agora alinhada ao schema real (ADR-009). O bloqueio que resta para validar qualquer um desses domínios com dados reais é puramente de **conteúdo**, não de código: `stores.slug` nulo e `products` vazia (ADR-007).
+Release 0.2 (Produto + Catálogo), Release 0.3 (Loja) e Release 0.4 parte 1 (Busca) seguem concluídos na **arquitetura e no código**. A partir da Sprint 3.7, a fundação de dados também está pronta no nível de **ferramenta** (seed idempotente e seguro por padrão, migrations de integridade/índices/ranking revisadas, arquitetura de preço e de ranking de oferta já desenhadas) — o único passo que falta para destravar dados reais em todos os domínios é uma decisão humana: aprovar a execução do seed. Não é mais um bloqueio de código nem de planejamento.
 
-**Próxima sprint recomendada**: Sprint 3.6 — ver proposta abaixo (seed de dados + Comparação de Produtos, que reaproveita diretamente o catálogo desta sprint).
+**Próxima sprint recomendada**: Sprint 3.8 — ver proposta abaixo (execução do seed, mediante aprovação explícita, + início da Comparação de Produtos).
 
 ---
 
 ## Roadmap proposto (próximos passos imediatos)
 
-## Sprint 3.6 (proposta) — Seed de dados + início da Comparação de Produtos
+## Sprint 3.8 (proposta) — Execução do Seed + início da Comparação de Produtos
 
-**Objetivo**: com o catálogo e o modelo de dados prontos (Sprint 3.5), tornar os três domínios centrais (Produto/Loja/Catálogo) testáveis com dados reais, e iniciar o Release 0.5 (Comparação), que reaproveita diretamente `ProductCard`/`ProductGrid`/`getProductsCatalog`.
+**Objetivo**: com o sistema de seed já implementado e testado em dry-run (Sprint 3.7) e o catálogo pronto (Sprint 3.5), tornar os domínios centrais (Produto/Loja/Catálogo) testáveis com dados reais, e iniciar o Release 0.5 (Comparação), que reaproveita diretamente `ProductCard`/`ProductGrid`/`getProductsCatalog`.
 
 **Escopo**:
-1. **Proposta de seed de dados** (não aplicada): gerar `database/seed/0001_proposed_demo_data.sql` com `UPDATE stores SET slug = ...` para as 5 lojas reais existentes e alguns `INSERT INTO products`/`offers` de exemplo usando os nomes de coluna reais (`price_usd`/`price_brl`) — documentado para revisão, **não executado** sem aprovação explícita.
-2. **Comparação de produtos (`/compare`)**: tela de seleção (2–4 produtos) com tabela de especificações/preços lado a lado, reaproveitando `services/product.service.ts`/`offer.service.ts` e `ProductCard`.
-3. **Aplicar a migration `0002_revised_store_data_layer.sql`** (`UNIQUE (slug)`) — requer aprovação separada, fora do controle de código.
-4. Avaliar se a materialized view proposta em `0003_proposed_product_catalog_price_view.sql` deve ser aplicada nesta sprint, dependendo do volume de dados real depois do seed.
+1. **Aprovação e execução do seed** (`npm run db:seed:execute`, `database/seed/`, Sprint 3.7) — só após aprovação explícita do CTO para alterar dados de produção. Confirmar se `SUPABASE_SERVICE_ROLE_KEY` precisa ser adicionada a `.env.local` (a chave anônima pode não ter permissão de escrita por RLS — ver `docs/TECH_DEBT.md`).
+2. **Rodar `npm run db:validate`** imediatamente após o seed, antes de qualquer outra etapa — confirma que o dado inserido está limpo antes de construir o Comparador sobre ele.
+3. **Aplicar as migrations `0002` (fase 1) e `0004`** (constraints `UNIQUE (slug)` + índices) — depois do seed confirmado sem duplicata, requer aprovação separada.
+4. **Comparação de produtos (`/compare`)**: tela de seleção (2–4 produtos) com tabela de especificações/preços lado a lado, reaproveitando `services/product.service.ts`/`offer.service.ts` e `ProductCard`.
+5. Reavaliar `0003`/`0005` (views de preço e ranking de loja) só depois que o seed der volume real — não antes (ver Sprint 3.6/3.7).
 
-**Riscos**: 🟡 Médio — a parte de seed/dados e migrations depende de decisão do CTO sobre alterar produção; a parte de código (comparação) é de baixo risco, reaproveitando componentes já validados.
+**Riscos**: 🟡 Médio — a parte de seed/dados e migrations depende de decisão do CTO sobre alterar produção, e de confirmar se a chave de serviço está disponível; a parte de código (comparação) é de baixo risco, reaproveitando componentes já validados.
 
 **Estimativa**: 2–3 dias de código + tempo de decisão/aprovação para a parte de dados.
 

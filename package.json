@@ -12,7 +12,10 @@
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "check": "npm run lint && npm run typecheck && npm run build",
-    "clean": "node -e \"require('fs').rmSync('.next', { recursive: true, force: true })\""
+    "clean": "node -e \"require('fs').rmSync('.next', { recursive: true, force: true })\"",
+    "db:seed": "node database/seed/index.js",
+    "db:seed:execute": "node database/seed/index.js --execute",
+    "db:validate": "node database/seed/validate.js"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.108.2",

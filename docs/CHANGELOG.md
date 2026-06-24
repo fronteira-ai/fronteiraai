@@ -124,3 +124,33 @@ Duas frentes, na ordem decidida com o CTO antes de iniciar (corrigir dados prime
 **Não incluído nesta sprint**: seed de dados real (`stores.slug`, `products`/`offers`) — continua exigindo aprovação separada para alterar produção (ADR-007, ainda sem solução); aplicação da migration de agregação de preço.
 
 Validado com `npm run lint`, `npx tsc --noEmit` e `npm run build` — ver relatório da sprint para o resultado.
+
+## 2026-06-23 — Sprint 3.6: Data Foundation (auditoria, sem código de produção alterado)
+
+Sprint de diagnóstico puro, a pedido explícito do CTO, consolidando o entendimento da camada de dados antes de implementar o Comparador de Produtos. Divergência registrada em relação à proposta anterior de `docs/NEXT_STEPS.md` (que bundlava seed + início do Comparador numa só "Sprint 3.6"): o CTO redefiniu o escopo desta sprint para ser só auditoria, deixando seed e Comparador para a sprint seguinte — mesmo padrão já visto nas Sprints 3.3 e 3.5 (missão recebida divergindo do `NEXT_STEPS.md`, decisão do CTO prevalece, divergência documentada).
+
+- **Banco**: relacionamentos `products↔brands/categories` e `offers↔products/stores` reconfirmados via PostgREST sem erro. Auditoria de índices/constraints reais não foi possível com a chave anônima — registrada como limitação, não inferida.
+- **Dados**: consulta ao vivo ao Supabase confirma `products: 0`, `offers: 0`, `brands: 0`, `categories: 0`, `stores: 5` (todas com `slug`/`active`/`cover_image` nulos). Achado novo: `website` e `opening_hours` já estão preenchidos nas 5 lojas reais; `address` em 4/5; `whatsapp` é string vazia (não nula) em 1 loja.
+- **Services**: `product`/`offer`/`store`/`search`/`category`/`brand` revisados linha a linha contra o schema real — nenhuma divergência nova, nenhuma correção necessária.
+- **Migrations**: `0001` confirmada superada; `0002` fase 1 (`UNIQUE (slug)`) avaliada como segura para aplicar a qualquer momento; `0003` (view de agregação de preço) avaliada como prematura sem dados reais.
+- **Seed**: proposta de estratégia entregue (arquivos, ordem de carga, critérios de qualidade, plano de atualização futura) — nenhum insert executado, conforme instrução explícita.
+
+Nenhum arquivo de código (`types/`, `services/`, `components/`) foi alterado nesta sprint — só documentação. Nenhuma migration aplicada, nenhum dado inserido.
+
+## 2026-06-23 — Sprint 3.7: Data Foundation v2 (Release 0.5, fundação)
+
+Transforma o plano de seed da Sprint 3.6 em código real, propõe constraints/índices/views para escala e documenta (sem implementar) a arquitetura de Price Engine e Offer Ranking — nenhum dado real inserido, nenhuma migration aplicada, nenhuma feature de interface.
+
+- **`database/seed/`** (novo): estrutura modular `brands/`, `categories/`, `stores/`, `products/`, `offers/`, `lib/client.js`, `index.js`, `validate.js`, `README.md` — ver ADR-012 para a decisão de ser JavaScript puro (CommonJS), fora da árvore TypeScript da aplicação, sem dependência nova (`ts-node`/`tsx` não instalados).
+  - `index.js`: orquestrador idempotente (resolve cada entidade por chave natural antes de inserir), **dry-run por padrão** — só escreve com `node database/seed/index.js --execute`. Backfill de `stores.slug`/`active` nas 5 lojas reais (nunca cria loja nova); 5 marcas, 5 categorias, 6 produtos e 9 ofertas de exemplo (deliberadamente incluindo 1 produto sem nenhuma oferta e 1 oferta `in_stock=false`, para validar os estados vazios já implementados na UI).
+  - `validate.js`: auditoria de qualidade de dados somente leitura (slugs duplicados, produtos sem categoria/marca, ofertas sem loja/produto, preços inválidos) — executada nesta sprint contra o banco real: nenhum problema encontrado (tabelas vazias), achado já conhecido reconfirmado (5/5 lojas sem slug).
+  - `package.json`: scripts novos `db:seed`, `db:seed:execute`, `db:validate`.
+  - `eslint.config.mjs`: `database/seed/**` adicionado a `globalIgnores` (CommonJS fora do escopo das regras de import de `eslint-config-next/typescript`).
+- **`database/migrations/0004_proposed_catalog_integrity_and_indexes.sql`** (novo, não aplicada): `UNIQUE (slug)` em `products`/`brands`/`categories`; índices em `offers.product_id`/`offers.store_id`/`offers.price_usd`/`products.brand_id`/`products.category_id`.
+- **`database/migrations/0005_proposed_store_ranking_view.sql`** (novo, não aplicada): `store_ranking_summary` (rating, contagem de ofertas, proporção em estoque, última atualização) — insumo do Offer Ranking. As métricas por produto (menor/maior preço, contagem de ofertas) já são cobertas por `0003` (Sprint 3.5) — não duplicadas.
+- **`docs/DECISIONS.md`**: ADR-012 (seed em JS puro), ADR-013 (arquitetura do Price Engine, futura), ADR-014 (algoritmo de Offer Ranking v1, futuro), ADR-015 (consolidação das views de apoio) — todas documentam direção arquitetural, nenhuma implementada em código/schema.
+- **Services**: `product`/`offer`/`store`/`search` revisados de novo — nenhuma divergência nova, nenhuma correção necessária.
+
+Validado com `npm run lint` (0 erros, 5 warnings pré-existentes — `database/seed/**` excluído do lint por ser tooling fora da árvore TypeScript), `npx tsc --noEmit` (0 erros) e `npm run build` (sucesso, mesmas 6 rotas, sem regressão).
+
+**Não incluído, por instrução explícita/Restrição Absoluta**: nenhum `node database/seed/index.js --execute` foi rodado contra o Supabase real; nenhuma migration (`0002`, `0004`, `0005`) foi aplicada.

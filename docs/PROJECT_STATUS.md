@@ -2,12 +2,12 @@
 
 Auditoria gerada por leitura completa do código-fonte. Substitui o conteúdo anterior deste arquivo.
 
-Última atualização: 2026-06-23 (Sprint 3.5 — Catálogo Premium de Produtos)
-Branch auditada: `main` @ `d4c83ff` + Sprint 3.5 (correção de dados + catálogo) desta atualização
+Última atualização: 2026-06-23 (Sprint 3.7 — Data Foundation v2)
+Branch auditada: `main` @ `e1fc394` + Sprint 3.6 (auditoria) + Sprint 3.7 (sistema de seed, migrations propostas, sem dado inserido) desta atualização
 
 > ✅ **Bugs críticos corrigidos (Sprint 3.5)**: os bugs confirmados na Sprint 3.4.1 (`offer.price`/`stock`/`installments`/`url`, `store.banner_url`/`verified` divergindo do schema real) foram corrigidos antes de construir o catálogo de produtos sobre eles — ver `docs/DECISIONS.md` ADR-009. `types/offer.ts`/`types/store.ts` agora usam os nomes reais (`price_usd`/`price_brl`, `in_stock`, `product_url`, `cover_image`, `is_verified`, mais os 13 campos de contato/horário que já existiam no banco).
 >
-> ⚠️ **Achado de dados (ainda válido, Sprint 3.4)**: as 5 lojas cadastradas continuam com `slug: null` e a tabela `products` continua vazia (0 linhas) — sem dados reais navegáveis hoje em nenhum domínio, incluindo o novo catálogo. Ver ADR-007.
+> ⚠️ **Achado de dados (reconfirmado ao vivo na Sprint 3.7)**: `products: 0`, `offers: 0`, `brands: 0`, `categories: 0`, `stores: 5` — todas as 5 lojas com `slug`/`active`/`cover_image` nulos. Sem dados reais navegáveis hoje em nenhum domínio. O sistema de seed para resolver isso já existe como código (`database/seed/`, Sprint 3.7), em modo dry-run — falta só a aprovação explícita do CTO para rodar `npm run db:seed:execute`. Ver ADR-007 e o relatório completo da Sprint 3.7.
 
 ---
 
@@ -158,6 +158,29 @@ Duas frentes, nesta ordem (decisão tomada com o CTO antes de iniciar a implemen
 2. **Catálogo de produtos** (`/products`): `services/category.service.ts`/`brand.service.ts` implementados (antes vazios); `services/product.service.ts` ganhou `getProductsCatalog` (filtros via PostgREST embedding `offers!inner`/`offers!left`, paginação real via `count: "exact"`, ordenação por preço corrigida em memória por página — limitação documentada, ADR-011); `components/product/ProductGrid.tsx` implementado (antes vazio), `ProductGridSkeleton`/`ProductFilters` novos; `hooks/useProductFilters.ts` novo (URL como fonte de verdade); `components/ui/Breadcrumb.tsx`/`Pagination.tsx`/`Input.tsx`/`Select.tsx` novos/preenchidos; `ProductCard`/`ProductHighlightCard` unificados (ADR-010), `ProductBreadcrumb` substituído pelo `Breadcrumb` genérico; `app/products/{page,loading,error}.tsx` novos, com `generateMetadata`, JSON-LD `CollectionPage`+`ItemList`+`BreadcrumbList` e `<Suspense>`.
 
 Proposta de migration (não aplicada): `database/migrations/0003_proposed_product_catalog_price_view.sql` (materialized view para ordenação de preço escalável). Validado com `npm run lint`/`typecheck`/`build` — ver relatório da sprint para o resultado.
+
+## Sprint 3.6 — Data Foundation (auditoria, sem novas telas, sem código alterado)
+
+Sprint de diagnóstico puro, a pedido explícito do CTO ("não implemente funcionalidades de interface", "não execute migrations", "não realize inserts sem aprovação"), preparando a base de dados para Comparação de Produtos, Histórico de Preços, Favoritos, Alertas e ParaguAI AI.
+
+- **Banco**: relacionamentos `products→brands`, `products→categories`, `offers→products`, `offers→stores` reconfirmados sem erro de FK. Nenhuma constraint `UNIQUE`/`NOT NULL` aplicada hoje em `stores.slug` nem em campos obrigatórios de `products`/`offers` — auditoria de índices/constraints não é possível só com a chave anônima (precisa do painel do Supabase ou de uma chave de serviço), registrado como limitação, não como fato verificado.
+- **Dados (consulta ao vivo)**: `products: 0`, `offers: 0`, `brands: 0`, `categories: 0`, `stores: 5` (todas com `slug`/`active`/`cover_image` nulos; `website`/`opening_hours` já preenchidos nas 5; `address` preenchido em 4/5; `phone`/`email` nulos em todas; `whatsapp` é string vazia em 1 loja, em vez de nulo — pequena inconsistência de dado, não de schema).
+- **Services**: `product.service.ts`, `offer.service.ts`, `store.service.ts`, `search.service.ts`, `category.service.ts`, `brand.service.ts` revisados linha a linha contra o schema real — nenhuma divergência nova encontrada (a correção da Sprint 3.5/ADR-009 segue válida). Nenhuma correção de código necessária antes da Sprint do Comparador.
+- **Migrations**: `0001` confirmada superada (mantida só por histórico); `0002` (fase 1, `UNIQUE (slug)`) revisada como segura para aplicar a qualquer momento; `0003` (view de agregação de preço) avaliada como prematura — sem produtos reais, não há nada para agregar.
+- **Seed**: proposta de estratégia entregue (não executada) — backfill de `slug` a partir do `name` real de cada loja + dados de exemplo para `brands`/`categories`/`products`/`offers`. Ver relatório completo da sprint para o plano detalhado.
+
+## Sprint 3.7 — Data Foundation v2 (Release 0.5, fundação)
+
+Sistema oficial de seed implementado como código (`database/seed/`), constraints/índices e views de apoio propostos, arquitetura de Price Engine e estratégia de Offer Ranking documentadas — nenhum dado real inserido, nenhuma migration aplicada, nenhuma feature de interface.
+
+- **`database/seed/`** (novo): `brands/`, `categories/`, `stores/`, `products/`, `offers/` (dados de exemplo em JavaScript puro, ver ADR-012), `lib/client.js` (cliente Supabase próprio da ferramenta), `index.js` (orquestrador idempotente, **dry-run por padrão**, só escreve com `--execute`), `validate.js` (auditoria de qualidade de dados, somente leitura). Scripts novos em `package.json`: `db:seed`, `db:seed:execute`, `db:validate`.
+- **`eslint.config.mjs`**: `database/seed/**` adicionado a `globalIgnores` (tooling Node fora da árvore TypeScript da aplicação — ADR-012).
+- **Migrations propostas (não aplicadas)**: `0004_proposed_catalog_integrity_and_indexes.sql` (`UNIQUE (slug)` em `products`/`brands`/`categories` + índices em `offers.product_id`/`store_id`/`price_usd`, `products.brand_id`/`category_id`); `0005_proposed_store_ranking_view.sql` (`store_ranking_summary`, insumo do Offer Ranking).
+- **Arquitetura documentada, não implementada**: Price Engine (ADR-013) e algoritmo de Offer Ranking v1 (ADR-014) — ver `docs/DECISIONS.md`.
+- **Validação ao vivo (`db:validate`)**: nenhum problema de qualidade de dado encontrado nas tabelas hoje vazias; achado já conhecido reconfirmado — 5/5 lojas sem `slug`.
+- **Services**: revisados novamente (`product`, `offer`, `store`, `search`) — nenhuma divergência nova, nenhuma correção aplicada.
+
+Validado com `npm run lint` (0 erros, 5 warnings pré-existentes), `npx tsc --noEmit` (0 erros) e `npm run build` (sucesso, mesmas 6 rotas).
 
 ---
 

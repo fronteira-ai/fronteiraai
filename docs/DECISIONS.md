@@ -172,3 +172,72 @@ Registro de decisões arquiteturais (ADR leve). Cada entrada documenta o que foi
 **Alternativas descartadas**: "sobrebuscar" (overfetch) um lote maior de ofertas ordenadas por preço e deduplicar por produto — rejeitada por ser uma solução frágil ("temporária" no sentido que `CLAUDE.md` proíbe), que falha silenciosamente em catálogos com produtos de muitas ofertas duplicadas e não escala para "milhões de produtos" (objetivo explícito da missão); chamar um `rpc()` que ainda não existe no banco e mascarar o erro com fallback silencioso — rejeitada por esconder a limitação em vez de documentá-la.
 
 **Consequência**: filtros (categoria/marca/loja/disponibilidade/faixa de preço) e paginação são 100% corretos e escaláveis hoje, sem depender de nenhuma migration. Apenas a ordenação por preço tem o limite descrito acima, documentado em código (`services/product.service.ts`) e aqui. Ver `docs/TECH_DEBT.md`.
+
+---
+
+## ADR-012 — Seed tooling (`database/seed/`) vive fora da camada da aplicação, em JavaScript puro
+
+**Data**: 2026-06-23 (Sprint 3.7 — Data Foundation v2)
+**Status**: Aceita e aplicada
+
+**Contexto**: a Sprint 3.7 pediu um sistema de seed modular e reexecutável (`database/seed/{brands,categories,stores,products,offers}/`, `index.ts` no enunciado da missão). O projeto não tem `ts-node`/`tsx` instalado, e instalar uma dependência nova exige aprovação explícita (Restrição Absoluta), fora do escopo desta sprint. Além disso, `lib/env.ts` (ADR-001) é a única fonte de `process.env` **dentro da árvore da aplicação Next.js** (`app/`, `components/`, `hooks/`, `services/`, `lib/`) — um script de seed não roda dentro dessa árvore, roda como processo Node standalone, separado do bundle da aplicação.
+
+**Decisão**: `database/seed/` é tooling de infraestrutura, fora do fluxo `types → services → hooks → components → app` que `.ai/ARCHITECTURE_RULES.md` governa. Por isso: (a) escrito em JavaScript puro (CommonJS), executável só com `node`, sem dependência nova; (b) lê `process.env` diretamente (`database/seed/lib/client.js`), não via `lib/env.ts` — o escopo de ADR-001 é a aplicação Next.js, não scripts de banco standalone; (c) `eslint.config.mjs` ganhou `database/seed/**` em `globalIgnores`, pelo mesmo motivo — as regras de import de `eslint-config-next/typescript` (`no-require-imports`) não fazem sentido para tooling Node fora da árvore que esse config foi escrito para governar.
+
+**Alternativas descartadas**: instalar `tsx`/`ts-node` (dependência nova sem necessidade comprovada); escrever em TypeScript e compilar manualmente via `tsc` para um diretório separado antes de rodar (complexidade desproporcional ao tamanho do script); manter os scripts dentro do lint padrão e suprimir o erro linha a linha com `eslint-disable` (rejeitada por escopo errado — o problema não é uma exceção pontual, é uma fronteira arquitetural inteira).
+
+**Consequência**: qualquer ferramenta nova em `database/` (seed, scripts de migração futuros etc.) segue essa mesma convenção — JavaScript puro, `process.env` direto, fora do lint da aplicação — a menos que uma decisão futura justifique adicionar um executor de TypeScript ao projeto.
+
+---
+
+## ADR-013 — Arquitetura do Price Engine (futuro, não implementado)
+
+**Data**: 2026-06-23 (Sprint 3.7 — Data Foundation v2)
+**Status**: Aceita como direção arquitetural — nenhum código/schema novo implementado
+
+**Contexto**: o ParaguAI compara **ofertas**, não produtos — preço vive em `offers.price_usd`/`price_brl`, independentes entre si (ADR-009). Histórico de preços (`price_history`, já prevista em `database/DATABASE.md` como tabela futura), alertas de preço e a ordenação do catálogo (ADR-011) todos vão depender, no futuro, de uma única fonte de verdade para "o preço atual" de uma oferta e de como ele mudou ao longo do tempo. Hoje, nada escreve em `offers.price_usd`/`price_brl` em produção (sem Admin/Crawler implementados) — é o momento certo para definir a arquitetura antes que múltiplos pontos de escrita apareçam.
+
+**Decisão (arquitetura proposta, não implementada nesta sprint)**:
+- **Fluxo de atualização**: toda alteração de `price_usd`/`price_brl` em `offers` é tratada como um evento, não uma sobrescrita silenciosa. Quando o Admin (Release 0.7) ou o Crawler (Release 0.8) existirem, ambos devem escrever através de um único caminho (um futuro `updateOfferPrice()` em `services/offer.service.ts`, não múltiplos call sites) — esse caminho grava a linha anterior em `price_history` antes/junto de atualizar `offers`.
+- **Consistência**: `price_usd`/`price_brl` continuam independentes, nunca derivados um do outro por taxa de conversão fixa (ADR-009 removeu exatamente isso de `utils/currency.ts`) — quando uma fonte fornecer só um dos dois, o outro permanece `null` até ter fonte própria.
+- **Preparação para histórico**: `price_history` (proposta, não criada nesta sprint) teria `offer_id`, `price_usd`, `price_brl`, `old_price`, `recorded_at` — sempre `INSERT`, nunca `UPDATE`. Uma consulta como "preço mais baixo dos últimos 30 dias" (típica de um alerta de preço) vira um `SELECT` simples sobre essa tabela, sem precisar reconstruir histórico a partir de logs.
+
+**Não implementado nesta sprint**: a tabela `price_history` não foi criada (seria uma migration de schema nova, fora do escopo "não implemente histórico ainda" desta missão); `updateOfferPrice()` não existe ainda — não há, hoje, nenhum consumidor real que escreva preço.
+
+**Consequência**: quando Admin/Crawler forem implementados, a primeira tarefa de dados deve ser esta arquitetura, não uma solução ad-hoc por feature — evita repetir, na escrita de preço, o mesmo tipo de divergência silenciosa que o ADR-008/009 já corrigiu na leitura.
+
+---
+
+## ADR-014 — Offer Ranking: algoritmo inicial (estratégia, não implementado)
+
+**Data**: 2026-06-23 (Sprint 3.7 — Data Foundation v2)
+**Status**: Aceita como estratégia — nenhum código novo implementado
+
+**Contexto**: `getOffersByProduct`/`getOffersByStore` (`services/offer.service.ts`) ordenam ofertas só por `price_usd` ascendente. Isso é "best effort" correto para a maioria dos casos, mas não captura confiabilidade da loja nem qualidade do cadastro — uma oferta mais barata de uma loja sem `rating` ou com cadastro incompleto pode não ser, de fato, a "melhor oferta" para o usuário. Achado concreto da Sprint 3.6 que prova o ponto: "Atacado Games" tem `rating: 5.0`, mas `phone`/`email`/`address` nulos e `slug` nulo — rating alto isolado não é suficiente como proxy de confiabilidade.
+
+**Decisão (estratégia, não implementada)**: pontuação composta (0–100), calculada em memória pela camada de aplicação a partir de campos já existentes — sem IA, sem coluna nova:
+- **Preço** (peso 50): normalizado dentro do conjunto de ofertas do mesmo produto — a mais barata recebe 50; as demais decaem proporcionalmente à distância percentual do menor preço.
+- **Disponibilidade** (peso 25): `in_stock=true` → 25; `false` → 0 — esgotado nunca deveria ranquear acima de disponível, mesmo se mais barato.
+- **Confiabilidade da loja** (peso 15): `store.rating` (0–5) normalizado para 0–15. Loja sem rating (`null`) recebe a média do conjunto, não 0 — uma loja nova não deveria ser punida como não confiável só por falta de dado.
+- **Qualidade do cadastro** (peso 10): proporção de campos relevantes preenchidos na oferta/loja (`warranty`, `condition`, `product_url` na oferta; `phone`/`whatsapp`/`email`/`website`/`opening_hours` na loja) — cada campo presente soma uma fração igual do peso total.
+
+Esta pontuação é a candidata natural a consumir a `store_ranking_summary` proposta no ADR-015, e a substituir "menor preço primeiro" por "melhor oferta primeiro" na ordenação default de `getOffersByProduct`/`getProductsCatalog`.
+
+**Alternativas descartadas**: usar só `rating` da loja como proxy de confiabilidade — rejeitada pelo achado "Atacado Games" acima, que prova a métrica isolada enganosa.
+
+**Não implementado nesta sprint** — mudar a ordenação visível do produto/catálogo é uma decisão de produto, não só de código, e fica para quando houver aprovação explícita de mudar esse comportamento.
+
+---
+
+## ADR-015 — Views de apoio: consolidação e Store Ranking View
+
+**Data**: 2026-06-23 (Sprint 3.7 — Data Foundation v2)
+**Status**: Aceita — proposta de migration não aplicada
+
+**Contexto**: a missão da Sprint 3.7 pediu Product Lowest Price View, Product Highest Price View, Product Offer Count View e Store Ranking View. As três primeiras já são cobertas por uma única view já proposta na Sprint 3.5 (`database/migrations/0003_proposed_product_catalog_price_view.sql`, `product_price_summary`: `lowest_price_usd`, `highest_price_usd`, `offer_count`, `has_stock_offer`) — criar três views separadas duplicaria a mesma agregação por produto em três lugares, violando o princípio "um tema, um dono" que o próprio PEF defende.
+
+**Decisão**: não duplicar — `0003` permanece a única fonte para métricas por produto. Uma proposta nova, `database/migrations/0005_proposed_store_ranking_view.sql`, cobre só o que ainda não existe: `store_ranking_summary` (uma linha por loja: `rating`, `offer_count`, `in_stock_offer_count`, `last_offer_updated_at`), insumo direto do Offer Ranking (ADR-014).
+
+**Vantagens**: ranking de loja vira um `SELECT` simples, sem reagregar `offers` a cada request. **Custo de manutenção**: materialized view exige `REFRESH` periódico (mesma ressalva do ADR-011/0003) — aceitável porque rating/contagem de ofertas não mudam a cada segundo.
+
+**Consequência**: nem `0003` nem `0005` foram aplicadas nesta sprint — ambas seguem como proposta, junto de `0004_proposed_catalog_integrity_and_indexes.sql` (constraints `UNIQUE (slug)` em `products`/`brands`/`categories` + índices em `offers.product_id`/`offers.store_id`/`offers.price_usd`/`products.brand_id`/`products.category_id`, também desta sprint).

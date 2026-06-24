@@ -153,4 +153,8 @@ Category┘                ├──< Offer >── Store
 
 ## Tabelas descritas em `database/DATABASE.md` mas sem tipo TypeScript ainda
 
-`price_history`, `product_images`, `store_images`, `reviews`, `alerts`, `search_logs`, `news`, `coupons`, `restricted_products`, `restricted_categories`, `import_jobs`, `crawler_logs`, `ai_embeddings`, `users`. Nenhuma dessas 14 tabelas existe de fato no Supabase ainda (confirmado, Sprint 3.4.1) — a documentação estava certa, são apenas visão de futuro. Nenhuma tem migration nem tipo.
+`price_history`, `product_images`, `store_images`, `reviews`, `alerts`, `search_logs`, `news`, `coupons`, `restricted_products`, `restricted_categories`, `import_jobs`, `crawler_logs`, `ai_embeddings`, `users`. Nenhuma dessas 14 tabelas existe de fato no Supabase ainda (confirmado, Sprint 3.4.1) — a documentação estava certa, são apenas visão de futuro. Nenhuma tem migration nem tipo. `price_history` ganhou, na Sprint 3.7, uma arquitetura proposta (não implementada) em `docs/DECISIONS.md` ADR-013.
+
+## Ferramentas de dados (Sprint 3.7, sem mudança de schema)
+
+`database/seed/` (código) e `database/migrations/0004`/`0005` (propostas, não aplicadas) não alteram nenhuma entidade documentada acima — `0004` adiciona constraints `UNIQUE (slug)` e índices sobre colunas já existentes; `0005` cria uma view derivada (`store_ranking_summary`), não uma tabela nova. Ver `docs/DECISIONS.md` ADR-012/ADR-015.
