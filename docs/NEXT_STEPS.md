@@ -61,9 +61,11 @@ Diferente do que esta seção propunha (execução do seed + início do Comparad
 
 ## Sprint atual (avaliação)
 
-Release 0.2 (Produto + Catálogo), Release 0.3 (Loja) e Release 0.4 parte 1 (Busca) seguem concluídos na **arquitetura e no código**. A fundação de dados está pronta em produção desde a Sprint 3.8 (seed executado, ADR-007 resolvido). A partir da Sprint 3.9, o Price Engine também está **code-complete** (ADR-017) — falta só uma ação humana (aplicar `0006_proposed_price_history.sql` no SQL Editor do Supabase) para ele passar de "testado em degradação graciosa" para "operacional com histórico real".
+🔴 **Achado crítico não resolvido (ADR-019)**: a chave anônima — a única usada pela aplicação inteira — não lê `brands`/`categories`/`products`/`offers`/`price_history`. O catálogo provavelmente está vazio para usuários reais agora, apesar de todo o trabalho de seed/Price Engine das Sprints 3.8/3.9. Isso é a prioridade #1, antes de qualquer outra entrega de produto.
 
-**Próxima sprint recomendada**: Sprint 4.0 — ver proposta abaixo (aplicar a migration `0006` + tela `/compare`).
+Release 0.2 (Produto + Catálogo), Release 0.3 (Loja) e Release 0.4 parte 1 (Busca) seguem concluídos na **arquitetura e no código**. A fundação de dados existe no banco desde a Sprint 3.8 (ADR-007 resolvido a nível de banco) e o Price Engine está validado e correto (ADR-018) — mas nenhum dos dois é visível para um usuário real até `0007_proposed_public_read_policies.sql` ser aplicada.
+
+**Próxima sprint recomendada**: Sprint 4.0 — ver proposta abaixo, começando pela correção crítica de leitura pública.
 
 ---
 
@@ -96,22 +98,28 @@ Diferente do que esta seção propunha (Price Engine + início da tela de Compar
 
 **Não incluído, por instrução explícita**: nenhuma tela `/compare`; nenhuma migration aplicada; nenhuma alteração de RLS; nenhuma autenticação/scraping/IA.
 
-## Sprint 4.0 (proposta) — Aplicar Price Engine + Comparação de Produtos
+### Adendo (mesmo dia) — Price Engine validado + achado crítico de leitura pública
 
-**Objetivo**: tornar o Price Engine (Sprint 3.9) operacional de fato e entregar a primeira tela do Release 0.5.
+O CTO aplicou `0006` manualmente. Validação fim a fim contra a tabela real encontrou e corrigiu um bug de cálculo em `getOfferPriceMetrics` (ADR-018) e revelou um achado crítico não relacionado a preço: a chave anônima — a única usada pela aplicação inteira — não lê nenhuma linha de `brands`/`categories`/`products`/`offers`/`price_history` (ADR-019). Isso significa que o catálogo provavelmente está vazio para usuários reais desde a Sprint 3.8, sem que nenhuma auditoria anterior tivesse pegado isso (elas usavam, sem intenção, a chave de serviço). Correção proposta: `database/migrations/0007_proposed_public_read_policies.sql`. Classificação final do Price Engine: **"Backend Production Ready"**, não "Production Ready" de ponta a ponta.
 
-**Escopo proposto**:
-1. **Aplicar `0006_proposed_price_history.sql`** no SQL Editor do Supabase (ação humana — CTO ou alguém com acesso ao painel) — depois disso, `updateOfferPrice`/`getOfferPriceMetrics` já funcionam sem nenhuma mudança de código.
-2. **Comparação de produtos (`/compare`)**: tela de seleção (2–4 produtos) com tabela de especificações/preços lado a lado, reaproveitando `ProductCard`/`ProductGrid`/`getProductsCatalog` e `getOfferPriceMetrics` para mostrar variação de preço por oferta.
-3. **Aplicar as migrations `0002` (fase 1) e `0004`** (constraints `UNIQUE (slug)` + índices) — agora que o seed confirmou 0 duplicata, requer aprovação separada para aplicar contra produção.
-4. Avaliar se `updateOfferPrice` precisa de uma policy de RLS dedicada (ou credencial própria) antes do Admin/Crawler existirem de fato — a chave anônima provavelmente não tem permissão de escrita em `offers`/`price_history`, pelo mesmo padrão confirmado em `brands`/`categories`/`products` (ADR-016), mas isso não foi testado nesta sprint.
-5. Reavaliar `0003`/`0005` (views de preço e ranking de loja) — agora há volume real (6 produtos, 9 ofertas, 5 lojas) para validar a agregação, mas ainda pequeno; decisão do CTO se aplica agora ou espera mais volume.
+## Sprint 4.0 (proposta, reordenada pelo achado crítico) — Corrigir leitura pública + Comparação de Produtos
 
-**Riscos**: 🟡 Médio — aplicar `0006` é uma ação humana fora do meu controle nesta sessão; o resto é código de baixo risco, reaproveitando componentes já validados.
+**Objetivo**: destravar o catálogo real para usuários reais (prioridade máxima) e, só depois, entregar a primeira tela do Release 0.5.
 
-**Estimativa**: 2–3 dias de código + tempo para a ação manual da migration.
+**Escopo proposto, em ordem**:
+1. 🔴 **Aplicar `0007_proposed_public_read_policies.sql`** no SQL Editor do Supabase — **antes de qualquer outra coisa desta lista**. Sem isso, `/products`, `/product/[slug]`, `/search` e as ofertas de `/store/[slug]` continuam exibindo catálogo vazio para usuários reais, independentemente de qualquer outro trabalho.
+2. Confirmar ao vivo (navegador real ou nova consulta com a chave anônima) que a correção do item 1 realmente restaurou a visibilidade do catálogo — não assumir apenas pela policy ter sido criada.
+3. **Aplicar `0006_proposed_price_history.sql`** se ainda não tiver sido (já aplicada nesta sessão, ver adendo acima) — depois disso, `updateOfferPrice`/`getOfferPriceMetrics` já funcionam sem nenhuma mudança de código.
+4. **Comparação de produtos (`/compare`)**: tela de seleção (2–4 produtos) com tabela de especificações/preços lado a lado, reaproveitando `ProductCard`/`ProductGrid`/`getProductsCatalog` e `getOfferPriceMetrics` para mostrar variação de preço por oferta.
+5. **Aplicar as migrations `0002` (fase 1) e `0004`** (constraints `UNIQUE (slug)` + índices) — agora que o seed confirmou 0 duplicata, requer aprovação separada para aplicar contra produção.
+6. Avaliar se `updateOfferPrice`/`insert` em `price_history` precisam de uma policy de RLS dedicada (ou credencial própria) antes do Admin/Crawler existirem de fato — confirmado nesta sprint que a chave anônima não escreve em nenhuma das duas (ADR-018).
+7. Reavaliar `0003`/`0005` (views de preço e ranking de loja) — agora há volume real (6 produtos, 9 ofertas, 5 lojas) para validar a agregação, mas ainda pequeno; decisão do CTO se aplica agora ou espera mais volume.
 
-**Impacto no produto**: primeira infraestrutura de histórico de preço de fato operacional, e a primeira fatia do Release 0.5 (Comparação) testável com dados e preços reais.
+**Riscos**: 🔴 Alto até o item 1 ser resolvido (catálogo real inacessível); 🟢 Baixo no restante — código reaproveitando componentes já validados.
+
+**Estimativa**: poucos minutos para o item 1 (ação humana) + 2–3 dias de código para o restante.
+
+**Impacto no produto**: o item 1 é, possivelmente, a correção de maior impacto do projeto até agora — sem ela, todo o trabalho de catálogo/seed permanece invisível para usuários reais.
 
 ### Sprint C — Eliminar dívidas técnicas críticas antes de crescer mais
 - **Prioridade**: 🟡 Média (mas crescente — quanto mais o código cresce, mais caro fica)

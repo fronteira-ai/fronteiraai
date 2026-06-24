@@ -52,19 +52,21 @@ Contratos de todas as funções de `services/*.service.ts` que têm implementaç
 - **Erro**: loga e retorna `[]`
 - **Consumidores**: `app/store/[slug]/layout.tsx`, `hooks/useStore.ts` → `StoreOffers`
 
-### `updateOfferPrice(offerId: string, newPriceUSD: number, newPriceBRL: number | null, source?: PriceChangeSource): Promise<PriceUpdateResult | null>` — Sprint 3.9 (ADR-017)
+### `updateOfferPrice(offerId: string, newPriceUSD: number, newPriceBRL: number | null, source?: PriceChangeSource): Promise<PriceUpdateResult | null>` — Sprint 3.9 (ADR-017/018)
 - **Único caminho de escrita permitido para `offers.price_usd`/`price_brl`** — nenhum outro código deve fazer `update` direto nessas colunas
 - **Tabelas**: lê `offers` (preço atual), grava em `price_history` (`insert`), depois `update` em `offers` (`price_usd`, `price_brl`, `old_price`)
-- **No-op**: se `newPriceUSD`/`newPriceBRL` forem idênticos ao preço atual, não grava nada e retorna `{ changed: false }`
+- **No-op**: se `newPriceUSD`/`newPriceBRL` forem idênticos ao preço atual, não grava nada e retorna `{ changed: false }` — confirmado contra dados reais (ADR-018)
 - **Confirmação de escrita**: o `update` final usa `.select("id")` e retorna `null` se 0 linhas forem afetadas (mesmo padrão de detecção do ADR-016, aplicado aqui desde o início)
 - **Erro**: loga e retorna `null` (oferta não encontrada, falha ao gravar histórico, ou `update` sem efeito)
-- **Consumidores**: nenhum hoje — `price_history` ainda não existe no Supabase real (ver `docs/TECH_DEBT.md`), preparado para Admin (Release 0.7)/Crawler (Release 0.8)
+- **Validado (ADR-018)**: testado fim a fim com a chave de serviço contra `price_history` real — histórico gravado corretamente, no-op detectado, múltiplas mudanças encadeadas corretas. **Confirmado bloqueado pela chave anônima** (a que a aplicação usa) — `INSERT` em `price_history` recusado explicitamente, `UPDATE` em `offers` filtrado silenciosamente. Sem nenhuma policy de RLS de escrita para `anon`, esta função só funciona hoje com a chave de serviço.
+- **Consumidores**: nenhum hoje — preparado para Admin (Release 0.7)/Crawler (Release 0.8)
 
-### `getOfferPriceMetrics(offerId: string): Promise<OfferPriceMetrics | null>` — Sprint 3.9 (ADR-017)
+### `getOfferPriceMetrics(offerId: string): Promise<OfferPriceMetrics | null>` — Sprint 3.9 (ADR-017/018)
 - **Tabelas**: lê `offers` (preço atual) e `price_history` (série histórica), calcula `lowestPriceUSD`/`highestPriceUSD`/`priceChangePercent`/`lastPriceChangeAt`
-- **Degradação graciosa**: se `price_history` não existir ou a consulta falhar, retorna `currentPriceUSD` real e `null` nos 4 campos dependentes de histórico — não lança, testado contra o Supabase real nesta sprint
-- **Erro** (oferta não encontrada): loga e retorna `null`
-- **Consumidores**: nenhum hoje — insumo preparado para o futuro `/compare`
+- **Degradação graciosa**: se a consulta a `price_history` falhar (erro de fato, ex. tabela não existir), retorna `currentPriceUSD` real e `null` nos 4 campos dependentes de histórico — não lança
+- **Validado (ADR-018)**: testado contra `price_history` real com a chave de serviço — `lowestPriceUSD`/`highestPriceUSD`/`priceChangePercent` corretos em cenários de 1 e 2 mudanças de preço encadeadas, incluindo o ponto de partida (preço original, antes da primeira mudança rastreada)
+- **🔴 Achado crítico (ADR-019)**: com a chave anônima (a que a aplicação usa), a consulta a `price_history` **não retorna erro, mas também não vê nenhuma linha** (`{ error: null, data: [] }`) mesmo havendo histórico real — RLS sem policy de `SELECT` pública. Isso não aciona a degradação graciosa (que só trata erro explícito); a função processa silenciosamente como se não houvesse histórico, mostrando `lowest = highest = currentPriceUSD` mesmo quando o histórico real diz outra coisa. Correção: `database/migrations/0007_proposed_public_read_policies.sql`.
+- **Consumidores**: nenhum hoje — insumo preparado para o futuro `/compare`, mas inútil para usuários reais até `0007` ser aplicada
 
 ## store.service.ts
 

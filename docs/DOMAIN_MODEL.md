@@ -169,7 +169,7 @@ interface OfferPriceMetrics {
 }
 ```
 
-Diferente de todo o resto deste documento, `PriceHistoryEntry` descreve um schema **proposto** (`database/migrations/0006_proposed_price_history.sql`), não confirmado por consulta direta ao Supabase — a tabela `price_history` ainda não existe de fato (ver ADR-017, `docs/TECH_DEBT.md`). `services/offer.service.ts` (`updateOfferPrice`/`getOfferPriceMetrics`) já está implementado contra esse schema e degrada graciosamente (campos `null`, sem lançar) enquanto a tabela não existir.
+`PriceHistoryEntry` descreve o schema de `database/migrations/0006_proposed_price_history.sql`, **aplicado manualmente em produção** na Sprint 3.9 (adendo) — a tabela existe de fato e foi validada com 27 asserções contra dados reais (ADR-018). `services/offer.service.ts` (`updateOfferPrice`/`getOfferPriceMetrics`) está correto e testado, mas **só funciona hoje com a chave de serviço**: a chave anônima (a que a aplicação usa) não escreve em `price_history`/`offers` (ADR-018) nem lê `price_history` (ADR-019, achado que também afeta `brands`/`categories`/`products`/`offers` — ver `docs/TECH_DEBT.md`).
 
 ## Tabelas descritas em `database/DATABASE.md` mas sem tipo TypeScript ainda
 

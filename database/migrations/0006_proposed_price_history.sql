@@ -1,20 +1,23 @@
--- PROPOSTA DE MIGRATION — NÃO APLICADA
+-- APLICADA MANUALMENTE EM PRODUÇÃO — 2026-06-24 (Sprint 3.9, adendo)
 --
 -- Gerada na Sprint 3.9 (Price Engine v1), implementando o schema descrito
 -- na arquitetura proposta na Sprint 3.7 (ADR-013). Ver docs/DECISIONS.md
--- ADR-017 para a decisão completa.
+-- ADR-017/ADR-018 para a decisão completa e o histórico do bloqueio.
 --
--- Bloqueio conhecido (ADR-017): nenhuma ferramenta disponível neste projeto
--- executa DDL contra o Supabase — `@supabase/supabase-js`/PostgREST só fazem
--- CRUD via REST, não há `pg`/Postgres connection string em `.env.local`, não
--- há Supabase CLI configurado (sem pasta `.supabase/`), e não existe nenhuma
--- RPC já exposta para rodar SQL arbitrário (confirmado lendo o OpenAPI do
--- PostgREST). Aplicar esta migration exige uma ação humana no SQL Editor do
--- painel do Supabase (ou configurar a CLI/conexão direta numa sprint futura).
+-- Bloqueio original (ADR-017, resolvido por ação humana): nenhuma ferramenta
+-- disponível neste projeto executa DDL contra o Supabase — `@supabase/
+-- supabase-js`/PostgREST só fazem CRUD via REST, não há `pg`/Postgres
+-- connection string em `.env.local`, não há Supabase CLI configurado (sem
+-- pasta `.supabase/`), e não existe nenhuma RPC já exposta para rodar SQL
+-- arbitrário. O CTO aplicou este SQL manualmente no SQL Editor do painel do
+-- Supabase; a tabela `price_history` existe de fato desde então, confirmada
+-- por consulta direta e por teste funcional completo de `updateOfferPrice`/
+-- `getOfferPriceMetrics` (ADR-018).
 --
--- Depois de aplicada, nenhuma mudança de código é necessária —
--- `services/offer.service.ts` (`updateOfferPrice`/`getOfferPriceMetrics`)
--- já está escrito contra este schema exato.
+-- Nome do arquivo mantido com o prefixo `_proposed_` por convenção de
+-- histórico (mesmo padrão de `0001`, mantida mesmo "superada") — o estado
+-- real (aplicada) está registrado aqui e em `docs/DECISIONS.md`, não no
+-- nome do arquivo.
 
 CREATE TABLE IF NOT EXISTS price_history (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),

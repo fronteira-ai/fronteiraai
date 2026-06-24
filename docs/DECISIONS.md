@@ -282,3 +282,61 @@ Esta pontuação é a candidata natural a consumir a `store_ranking_summary` pro
 **Alternativas descartadas**: instalar `pg` e usar uma `DATABASE_URL` para aplicar a migration via script — rejeitada por exigir uma credencial nova (senha do Postgres) que não foi fornecida nesta sessão, e por introduzir uma segunda forma de conexão ao banco (paralela ao `@supabase/supabase-js`) sem decisão arquitetural prévia sobre quando usar uma ou outra.
 
 **Consequência**: a Sprint 3.9 entrega o Price Engine **code-complete e testado em todos os caminhos que não dependem da tabela existir** (graceful degradation confirmada ao vivo). Para se tornar operacional de fato (gravar histórico real), alguém com acesso ao painel do Supabase precisa colar o conteúdo de `0006_proposed_price_history.sql` no SQL Editor — uma ação humana de poucos minutos, não uma tarefa de código pendente. Ver `docs/TECH_DEBT.md`.
+
+---
+
+## ADR-018 — Price Engine v1: validado fim a fim contra `price_history` real; bug de métrica encontrado e corrigido; classificação "backend Production Ready"
+
+**Data**: 2026-06-24 (Sprint 3.9, adendo — após o CTO aplicar `0006` manualmente)
+**Status**: Aceita
+
+**Contexto**: o CTO aplicou `database/migrations/0006_proposed_price_history.sql` manualmente no SQL Editor do Supabase, removendo o bloqueio registrado no ADR-017. Isso permitiu, pela primeira vez, testar `updateOfferPrice`/`getOfferPriceMetrics` contra a tabela real em vez de só validar a degradação graciosa na ausência dela.
+
+**Bug real encontrado durante a validação** (antes de qualquer escrita real): `getOfferPriceMetrics` calculava `lowestPriceUSD`/`highestPriceUSD`/`priceChangePercent` usando apenas `entries[].price_usd` (o preço **novo** de cada mudança registrada) e o preço atual — nunca o preço **original** (anterior à primeira mudança), que só existe em `firstEntry.old_price_usd`. Resultado: se o preço só caísse desde o início do histórico, o "maior preço" real (o original, mais alto) nunca apareceria no cálculo — `highestPriceUSD` ficaria igual a `lowestPriceUSD`/`currentPriceUSD`, silenciosamente errado, sem nenhum erro de tipo ou de runtime que o denunciasse. Só apareceria testando com dados reais de mudança de preço — exatamente o que esta validação fez.
+
+**Correção**: `prices` passou a incluir `firstEntry.old_price_usd` (quando existe) além de `entries[].price_usd` e do preço atual; `firstPrice` (base do cálculo de `priceChangePercent`) passou a ser `firstEntry.old_price_usd`, não `firstEntry.price_usd` — captura corretamente "a variação desde o primeiro preço já visto", não "desde a primeira vez que o preço mudou".
+
+**Validação executada** (chave de serviço, contra a oferta real `iphone-16-pro-256gb-titanio-preto@cellshop`, preço original 999 USD):
+1. Leitura de `price_history` vazia para a oferta — confirmado.
+2. Métricas baseline (sem histórico): `current=lowest=highest=999`, variação `null` — confirmado.
+3. `updateOfferPrice` 999→949: histórico grava 1 linha (`price_usd=949`, `old_price_usd=999`, `source=manual`); métricas pós-mudança: `current=949`, `lowest=949`, `highest=999` (correto, pico original capturado), `change≈-5.005%` — confirmado.
+4. `updateOfferPrice` 949→1050 (2ª mudança real): métricas: `current=1050`, `lowest=949`, `highest=1050` (correto, mínimo e máximo entre os 3 pontos 999/949/1050), `change≈+5.105%` desde o preço original — confirmado.
+5. `updateOfferPrice` chamado com o preço **já vigente** (1050): retornou `changed: false`, nenhuma linha nova de histórico — confirmado (no-op funciona).
+6. `updateOfferPrice` 1050→999 (restaura o preço original): 3ª linha real de histórico; oferta volta a `price_usd=999` (preço de catálogo da Sprint 3.8 preservado); métricas finais: `current=999`, `lowest=949`, `highest=1050`, `change=0%` (voltou ao ponto de partida) — confirmado.
+7. `npm run db:validate` depois de tudo: 0 problemas — nenhuma regressão na integridade dos dados de catálogo.
+
+**Achado de segurança, não corrigido nesta sprint**: a chave anônima (`NEXT_PUBLIC_SUPABASE_ANON_KEY`, usada pela aplicação via `lib/supabase.ts`) foi testada e **confirmada bloqueada** tanto para `INSERT` em `price_history` (erro explícito de RLS) quanto para `UPDATE` em `offers` (bloqueio silencioso, 0 linhas, mesmo padrão do ADR-016) — consistente com o mesmo modelo de RLS já confirmado em `brands`/`categories`/`products`. Isso significa que `updateOfferPrice()`, chamado pelo client público da aplicação hoje, retornaria `null` de forma segura (sem crash), mas **não escreveria de fato**. Não é um bug — é o comportamento de segurança esperado de uma tabela que só Admin/Crawler (com credencial própria, ainda não implementados) devem poder escrever. Registrado como pré-requisito da Sprint 4.0/Release 0.7/0.8, não corrigido agora (decisão de RLS é de segurança/produto, não unilateral).
+
+**Correção registrada após verificação adicional (ver ADR-019)**: a frase original desta entrada afirmava que a leitura (`SELECT`) de `price_history` "já funciona com a chave anônima". **Isso estava errado** — verificado e corrigido minutos depois, ainda nesta sessão: a chave anônima também não lê nenhuma linha de `price_history` (nem de `brands`/`categories`/`products`/`offers`). Mantido aqui, tachado, em vez de editado silenciosamente, para que o processo de verificação fique visível — ver ADR-019 para o achado completo e a causa.
+
+**Decisão de classificação (revisada pelo ADR-019)**: o **Price Engine v1 é "Backend Production Ready"** — schema real, lógica testada e correta contra dados reais, sem regressão. **Não pode ser classificado como "Production Ready" de ponta a ponta** — não só por Admin/Crawler não existirem ainda, mas porque a leitura pública (`getOfferPriceMetrics` via `lib/supabase.ts`) está bloqueada pelo mesmo problema de RLS descrito no ADR-019, que afeta todo o catálogo, não só preço.
+
+---
+
+## ADR-019 — CRÍTICO: a chave anônima não lê `brands`/`categories`/`products`/`offers`/`price_history` — o catálogo real provavelmente está vazio para usuários reais desde a Sprint 3.8
+
+**Data**: 2026-06-24 (Sprint 3.9, adendo)
+**Status**: **Achado crítico, não corrigido** — requer ação humana urgente (RLS é decisão de segurança/produto, e eu não tenho ferramenta para aplicar DDL/DCL mesmo se autorizado, ver ADR-017)
+
+**Contexto**: ao validar a leitura de `price_history` com a chave anônima (a única que `lib/supabase.ts` usa, em qualquer ambiente — confirmado lendo o arquivo), o resultado foi `{ error: null, data: [] }` mesmo para uma oferta com 3 linhas reais de histórico (visíveis e confirmadas com a chave de serviço). Isso motivou verificar as outras tabelas do domínio com a mesma chave:
+
+| Tabela | Linhas reais (chave de serviço) | Linhas visíveis (chave anônima) |
+|---|---|---|
+| `stores` | 5 | **5** (leitura pública funciona) |
+| `brands` | 5 | **0** |
+| `categories` | 5 | **0** |
+| `products` | 6 | **0** (confirmado também por busca direta de 1 produto por `slug`, retornou `null`) |
+| `offers` | 9 | **0** |
+| `price_history` | 3 | **0** |
+
+`stores` é a única tabela com leitura pública funcionando para a chave anônima. Todas as outras retornam vazio silenciosamente — sem erro, então nenhum log de erro jamais teria denunciado isso.
+
+**Por que isso passou despercebido até agora**: `brands`/`categories`/`products`/`offers` estavam genuinamente vazias antes da Sprint 3.8 — "0 linhas reais" e "0 linhas visíveis por RLS" são indistinguíveis quando a tabela está vazia de qualquer forma. A partir da Sprint 3.8 (seed real), as tabelas passaram a ter linhas reais, mas todas as auditorias que rodei desde então (`npm run db:validate`, os snapshots `node .../snapshot.js`, a auditoria de anti-join real) usam `database/seed/lib/client.js`, que **prefere `SUPABASE_SERVICE_ROLE_KEY` quando presente** (ela passou a existir nesta mesma sessão, Sprint 3.8) — ou seja, toda validação "0 problemas" feita desde então enxergava o banco através da chave de serviço, que ignora RLS, não através da chave que a aplicação real usa. Isso mascarou completamente o problema: eu reportei "dados reais navegáveis em produção" (Sprint 3.8) sem nunca ter confirmado isso com a chave que o site de fato usa.
+
+**Impacto concreto**: `lib/supabase.ts` (cliente único de toda a aplicação Next.js, local e Vercel) usa exclusivamente `NEXT_PUBLIC_SUPABASE_ANON_KEY`. Por dedução direta (mesma configuração de cliente, mesma chave pública): `/products`, `/product/[slug]`, `/search`, e a seção de ofertas de `/store/[slug]` muito provavelmente retornam catálogo vazio para qualquer usuário real agora — apesar dos dados existirem de fato no banco desde a Sprint 3.8. Não tenho acesso de navegador para confirmar isso ao vivo no site implantado, mas a inferência é direta a partir do código-fonte e dos testes acima, não uma suposição.
+
+**Decisão**: registrar como achado crítico e propor a correção (`database/migrations/0007_proposed_public_read_policies.sql`) — policies de `SELECT` público para `anon`/`authenticated` em `brands`/`categories`/`products`/`offers`/`price_history`, mirando o padrão que já funciona em `stores`. **Não aplicado nesta sessão**: é uma mudança de RLS em produção (decisão de segurança, Restrição Absoluta do projeto) e, mesmo que autorizada, eu não tenho ferramenta para executar DDL/DCL (mesmo bloqueio do ADR-017). Não alterei nenhuma policy.
+
+**Alternativas descartadas**: não há alternativa de código — isso não é algo que `services/*.service.ts` possa contornar (a única forma de uma `SELECT` ver uma linha bloqueada por RLS é a policy mudar; cache, retry ou outra chave pública não resolvem sem reintroduzir o mesmo risco de expor uma chave privada no client).
+
+**Consequência**: este é o item de maior prioridade do projeto agora — maior que qualquer trabalho do Price Engine ou do Compare Engine, porque o catálogo inteiro pode estar invisível para usuários reais. Recomendo aplicar `0007` antes de qualquer outra coisa, incluindo antes de abrir a Sprint 4.0. Ver `docs/PROJECT_STATUS.md`/`docs/TECH_DEBT.md`/`docs/NEXT_STEPS.md` para a correção da reivindicação da Sprint 3.8.

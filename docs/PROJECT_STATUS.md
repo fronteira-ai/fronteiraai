@@ -2,12 +2,16 @@
 
 Auditoria gerada por leitura completa do código-fonte. Substitui o conteúdo anterior deste arquivo.
 
-Última atualização: 2026-06-24 (Sprint 3.9 — Price Engine v1 + Compare Foundation)
-Branch auditada: `main` @ `d093589` + Sprint 3.8 (seed real) + Sprint 3.9 (Price Engine v1, code-complete; migration de `price_history` proposta, não aplicada) desta atualização
+Última atualização: 2026-06-24 (Sprint 3.9, adendo — Price Engine v1 validado + achado crítico de RLS)
+Branch auditada: `main` @ `d093589` + Sprint 3.8 (seed real) + Sprint 3.9 (Price Engine v1, validado contra dados reais) + adendo (achado crítico de leitura pública) desta atualização
 
+> 🔴 **CRÍTICO, NÃO CORRIGIDO (achado do adendo da Sprint 3.9, ADR-019)**: a chave anônima (`NEXT_PUBLIC_SUPABASE_ANON_KEY`, a única que `lib/supabase.ts`/toda a aplicação usa) **não lê nenhuma linha** de `brands`/`categories`/`products`/`offers`/`price_history` — `SELECT` retorna `{ error: null, data: [] }` mesmo havendo linhas reais (confirmado com a chave de serviço). Só `stores` tem leitura pública funcionando. Por dedução direta do código (mesmo client em qualquer ambiente): **o catálogo, a página de produto, a busca e as ofertas provavelmente aparecem vazios para qualquer usuário real agora**, apesar dos dados existirem desde a Sprint 3.8. Isso invalida a afirmação anterior de "dados reais navegáveis em produção" — válida só do ponto de vista do banco, nunca verificada com a chave que a aplicação de fato usa (as auditorias anteriores usavam, sem eu perceber, a chave de serviço — ver ADR-019). Correção proposta, não aplicada: `database/migrations/0007_proposed_public_read_policies.sql`. **Maior prioridade do projeto agora.**
+>
 > ✅ **Bugs críticos corrigidos (Sprint 3.5)**: os bugs confirmados na Sprint 3.4.1 (`offer.price`/`stock`/`installments`/`url`, `store.banner_url`/`verified` divergindo do schema real) foram corrigidos antes de construir o catálogo de produtos sobre eles — ver `docs/DECISIONS.md` ADR-009. `types/offer.ts`/`types/store.ts` agora usam os nomes reais (`price_usd`/`price_brl`, `in_stock`, `product_url`, `cover_image`, `is_verified`, mais os 13 campos de contato/horário que já existiam no banco).
 >
-> ✅ **Achado de dados resolvido (Sprint 3.8)**: `npm run db:seed:execute` rodou com sucesso contra o Supabase real, usando `SUPABASE_SERVICE_ROLE_KEY` (a chave anônima não tem permissão de escrita por RLS em `brands`/`categories`/`products` — confirmado ao vivo, ver ADR-016). Estado real hoje: `stores: 5` (todas com `slug`/`active` preenchidos), `brands: 5`, `categories: 5`, `products: 6`, `offers: 9`. Os domínios Produto/Loja/Busca/Catálogo agora têm dados reais navegáveis em produção. ADR-007 está resolvido. Ver ADR-016 e o relatório completo da Sprint 3.8.
+> ⚠️ **Achado de dados (Sprint 3.8) — corrigido pelo ADR-019**: `npm run db:seed:execute` rodou com sucesso contra o Supabase real (`stores: 5`, `brands: 5`, `categories: 5`, `products: 6`, `offers: 9`) e ADR-007 (dados ausentes) está resolvido **a nível de banco**. A afirmação original de que isso tornava os domínios "navegáveis em produção" estava incompleta — não havia sido verificada com a chave anônima (ver alerta crítico acima).
+>
+> ✅ **Price Engine v1 validado (Sprint 3.9, adendo, ADR-018)**: `updateOfferPrice`/`getOfferPriceMetrics` testados fim a fim contra `price_history` real (criada manualmente pelo CTO) — histórico, no-op, métricas (`lowest`/`highest`/variação %) todos corretos após um bug de cálculo ser encontrado e corrigido durante a validação. Classificação: **"Backend Production Ready"** — correto e testado, mas sem nenhum caminho de chamada real ainda, e a leitura pública (`getOfferPriceMetrics` via app) está sujeita ao mesmo bloqueio de RLS do ADR-019.
 
 ---
 
@@ -208,6 +212,17 @@ Implementa a primeira versão de código (não só arquitetura) do Price Engine 
 Validado com `npm run lint` (0 erros, 5 warnings pré-existentes), `npx tsc --noEmit` (0 erros), `npm run build` (sucesso, mesmas 6 rotas), `npm run db:validate` (0 problemas) e reexecução de `npm run db:seed:execute` (idempotência confirmada, tudo `[SKIP]`).
 
 **Não incluído, por instrução explícita**: nenhuma UI/página nova (`/compare` segue sem interface); nenhuma autenticação; nenhuma migration aplicada (`0002`/`0004`/`0005`/`0006` continuam propostas); nenhuma alteração de RLS.
+
+### Adendo (mesmo dia) — Price Engine validado contra dados reais + achado crítico de RLS
+
+O CTO aplicou `0006_proposed_price_history.sql` manualmente no SQL Editor do Supabase. Isso permitiu validar o Price Engine de ponta a ponta contra a tabela real, em vez de só a degradação graciosa.
+
+- **Bug real encontrado e corrigido** (antes de qualquer escrita real): `getOfferPriceMetrics` calculava `highestPriceUSD`/`priceChangePercent` sem considerar o preço original (capturado só em `old_price_usd` da primeira entrada de histórico) — se o preço só tivesse caído, o pico original nunca apareceria. Corrigido em `services/offer.service.ts`. Ver ADR-018.
+- **27 asserções passaram** num teste funcional completo contra a oferta real `iphone-16-pro-256gb-titanio-preto@cellshop`: leitura de histórico vazio, métricas baseline, duas mudanças reais de preço (999→949→1050), no-op corretamente detectado, restauração ao preço original (999, preservando 3 entradas reais de histórico), métricas finais corretas (`lowest=949`, `highest=1050`).
+- **Classificação**: Price Engine v1 é **"Backend Production Ready"** — não "Production Ready" de ponta a ponta.
+- **Achado crítico, não corrigido (ADR-019)**: testando a leitura com a chave anônima (a que a aplicação usa), confirmou-se que ela não vê nenhuma linha de `price_history` — nem de `brands`/`categories`/`products`/`offers`. Só `stores` tem leitura pública funcionando. Isso significa que o catálogo real provavelmente está vazio para usuários reais desde a Sprint 3.8, e nenhuma auditoria anterior pegou isso porque passou a usar, sem essa intenção, a chave de serviço (presente em `.env.local` desde a Sprint 3.8) em vez da chave anônima. Correção proposta, não aplicada: `database/migrations/0007_proposed_public_read_policies.sql`.
+
+Validado de novo: `npm run lint`/`tsc --noEmit`/`npm run build` (sem regressão) e `npm run db:validate` (0 problemas).
 
 ---
 

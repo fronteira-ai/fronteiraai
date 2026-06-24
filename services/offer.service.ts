@@ -126,7 +126,7 @@ export async function getOfferPriceMetrics(offerId: string): Promise<OfferPriceM
 
   const { data: history, error: historyError } = await supabase
     .from("price_history")
-    .select("price_usd, recorded_at")
+    .select("price_usd, old_price_usd, recorded_at")
     .eq("offer_id", offerId)
     .order("recorded_at", { ascending: true });
 
@@ -143,9 +143,20 @@ export async function getOfferPriceMetrics(offerId: string): Promise<OfferPriceM
   }
 
   const entries = history ?? [];
-  const prices = [...entries.map((entry) => entry.price_usd), offer.price_usd];
-  const firstPrice = entries[0]?.price_usd ?? null;
+  const firstEntry = entries[0] ?? null;
   const lastEntry = entries[entries.length - 1] ?? null;
+
+  // `entries[].price_usd` só registra o preço NOVO de cada mudança — o
+  // preço original (antes da primeira mudança rastreada) só existe em
+  // `firstEntry.old_price_usd`. Sem incluí-lo, lowest/highest ignoram o
+  // ponto de partida (ex.: preço só caiu desde então, e o "maior preço"
+  // real nunca aparece em nenhum `price_usd` de `price_history`).
+  const prices = [
+    ...(firstEntry?.old_price_usd != null ? [firstEntry.old_price_usd] : []),
+    ...entries.map((entry) => entry.price_usd),
+    offer.price_usd,
+  ];
+  const firstPrice = firstEntry?.old_price_usd ?? null;
 
   return {
     offerId,
