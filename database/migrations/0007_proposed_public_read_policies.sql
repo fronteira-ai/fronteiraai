@@ -1,42 +1,81 @@
--- PROPOSTA DE MIGRATION — NÃO APLICADA — URGENTE
+-- ============================================================
+-- 0007 — Leitura pública para o catálogo ParaguAI
+-- Status: REVISADO E PRONTO PARA EXECUÇÃO (Sprint 4.1)
+-- ============================================================
 --
--- Achado crítico do adendo da Sprint 3.9 (ver docs/DECISIONS.md ADR-019):
--- com dados reais existentes desde a Sprint 3.8, confirmou-se que a chave
--- anônima (NEXT_PUBLIC_SUPABASE_ANON_KEY, a única usada por toda a
--- aplicação via lib/supabase.ts) NÃO consegue ler nenhuma linha de
--- `brands`/`categories`/`products`/`offers`/`price_history` — SELECT
--- retorna sempre `{ error: null, data: [] }` (RLS filtra silenciosamente,
--- sem erro), mesmo havendo linhas reais visíveis com a chave de serviço.
--- `stores` é a única tabela do domínio confirmada com leitura pública
--- funcionando para a chave anônima.
+-- Contexto (ADR-019):
+-- A chave anônima (NEXT_PUBLIC_SUPABASE_ANON_KEY), única usada por
+-- lib/supabase.ts e por toda a aplicação Next.js, não lê nenhuma linha
+-- de brands/categories/products/offers/price_history. SELECT retorna
+-- sempre { error: null, data: [] } silenciosamente, mesmo havendo linhas
+-- reais (confirmado com a chave de serviço nas Sprints 3.8/3.9).
+-- `stores` é a única tabela do domínio com leitura pública funcionando.
 --
--- Impacto: o catálogo, a página de produto/loja, a busca e as ofertas
--- provavelmente aparecem vazios para qualquer usuário real hoje, mesmo após
--- o seed da Sprint 3.8 ter inserido dados reais — porque a aplicação nunca
--- usa outra chave além da anônima. Isso não foi causado pela Sprint 3.8/3.9
--- (a falha de policy já existia, só ficou invisível enquanto as tabelas
--- estavam vazias — 0 linhas reais com RLS bloqueando looks exactly like 0
--- linhas reais sem RLS nenhuma).
+-- Impacto: catálogo, página de produto, busca, compare e ofertas de
+-- loja aparecem vazios para qualquer usuário real até esta migration
+-- ser executada.
 --
--- Esta migration só adiciona policies de LEITURA pública (SELECT) — nunca
--- INSERT/UPDATE/DELETE, que devem continuar restritos à chave de serviço
--- (ADR-016/017/018). `ENABLE ROW LEVEL SECURITY` é idempotente (no-op se já
--- estiver habilitado); ajuste os nomes de policy se já existir uma com o
--- mesmo nome em alguma destas tabelas.
+-- Segurança:
+-- * FOR SELECT = nunca INSERT/UPDATE/DELETE.
+-- * TO anon, authenticated = visitante e usuário logado podem ler.
+-- * USING (true) = todas as linhas visíveis, sem filtro por linha.
+-- * Sem WITH CHECK = impossível usar esta policy para escrever.
+-- * Sem policy INSERT/UPDATE/DELETE para anon/authenticated = RLS
+--   bloqueia qualquer tentativa de escrita com erro explícito.
+-- * service_role bypassa RLS por design — seed scripts mantêm acesso
+--   total de escrita independente desta migration.
+--
+-- Como executar:
+-- 1. Abra Supabase Dashboard -> SQL Editor
+-- 2. Cole este arquivo inteiro
+-- 3. Clique Run
+-- 4. Confirme que a query de verificação no final retorna 5 linhas
+--    com cmd = 'r' e roles = {anon,authenticated}
+--
+-- Idempotente: CREATE OR REPLACE POLICY (PostgreSQL 15+, compatível
+-- com Supabase) substitui silenciosamente se a policy já existir com
+-- o mesmo nome — seguro para re-executar sem erro.
+--
+-- Tabelas não incluídas intencionalmente:
+-- * stores       — já tem leitura pública funcionando
+-- * profiles     — não deve ser lida publicamente
+-- * favorites    — não deve ser lida publicamente
+-- ============================================================
 
-ALTER TABLE brands ENABLE ROW LEVEL SECURITY;
-ALTER TABLE categories ENABLE ROW LEVEL SECURITY;
-ALTER TABLE products ENABLE ROW LEVEL SECURITY;
-ALTER TABLE offers ENABLE ROW LEVEL SECURITY;
+-- Garante que RLS está ativo em cada tabela.
+-- Idempotente: no-op se já habilitado.
+ALTER TABLE brands        ENABLE ROW LEVEL SECURITY;
+ALTER TABLE categories    ENABLE ROW LEVEL SECURITY;
+ALTER TABLE products      ENABLE ROW LEVEL SECURITY;
+ALTER TABLE offers        ENABLE ROW LEVEL SECURITY;
 ALTER TABLE price_history ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "Public read access" ON brands FOR SELECT TO anon, authenticated USING (true);
-CREATE POLICY "Public read access" ON categories FOR SELECT TO anon, authenticated USING (true);
-CREATE POLICY "Public read access" ON products FOR SELECT TO anon, authenticated USING (true);
-CREATE POLICY "Public read access" ON offers FOR SELECT TO anon, authenticated USING (true);
-CREATE POLICY "Public read access" ON price_history FOR SELECT TO anon, authenticated USING (true);
+CREATE OR REPLACE POLICY "Public read access"
+  ON brands FOR SELECT TO anon, authenticated USING (true);
 
--- Não incluído: policy de escrita para `anon`/`authenticated` em nenhuma
--- destas tabelas — permanece exclusivo da chave de serviço (ferramentas de
--- dados) até existir Admin (Release 0.7)/Crawler (Release 0.8) com a própria
--- estratégia de autenticação/autorização.
+CREATE OR REPLACE POLICY "Public read access"
+  ON categories FOR SELECT TO anon, authenticated USING (true);
+
+CREATE OR REPLACE POLICY "Public read access"
+  ON products FOR SELECT TO anon, authenticated USING (true);
+
+CREATE OR REPLACE POLICY "Public read access"
+  ON offers FOR SELECT TO anon, authenticated USING (true);
+
+CREATE OR REPLACE POLICY "Public read access"
+  ON price_history FOR SELECT TO anon, authenticated USING (true);
+
+-- ============================================================
+-- Verificação pós-execução
+-- Resultado esperado: 5 linhas, todas com cmd = 'r' e
+-- roles = {anon,authenticated}. Nenhuma linha com cmd = 'w'.
+-- ============================================================
+SELECT
+  tablename,
+  policyname,
+  cmd,
+  roles,
+  qual
+FROM pg_policies
+WHERE tablename IN ('brands','categories','products','offers','price_history')
+ORDER BY tablename;
