@@ -15,7 +15,9 @@
     "clean": "node -e \"require('fs').rmSync('.next', { recursive: true, force: true })\"",
     "db:seed": "node database/seed/index.js",
     "db:seed:execute": "node database/seed/index.js --execute",
-    "db:validate": "node database/seed/validate.js"
+    "db:validate": "node database/seed/validate.js",
+    "db:validate:43": "node database/seed/validate_sprint43.js",
+    "storage:init": "node database/storage/init.js"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.108.2",

@@ -36,15 +36,16 @@ Ver `docs/DECISIONS.md` ADR-009 para o detalhe completo da correção.
 
 ## Performance
 
-- `ProductCard`, `ProductGallery` (×2), `StoreCard` usam `<img>` nativo em vez de `next/image` — perda de otimização automática de imagem (lazy loading nativo do Next, `srcset`, dimensionamento). Mesmos warnings de lint de antes; a unificação `ProductCard`/`ProductHighlightCard` (Sprint 3.5, ADR-010) não mudou esse ponto, só reduziu para um componente em vez de dois.
+- ~~`ProductCard`, `ProductGallery` (×2), `StoreCard` usam `<img>` nativo~~ — **resolvido na Sprint 4.2**: todos os 5 `<img>` substituídos por `next/image` (fill + sizes + priority no LCP). 0 warnings de lint.
 - ~~Fetch duplicado de produto entre `layout.tsx` e `page.tsx`~~ — **resolvido na Sprint 4.1** (ADR-021): `app/product/[slug]/_cache.ts` e `app/store/[slug]/_cache.ts` exportam funções com `React.cache()`; tanto layout quanto page importam do mesmo módulo, compartilhando o escopo de cache dentro de uma requisição — apenas 1 fetch por entidade por visita.
 - ~~`app/product/[slug]/page.tsx` e `app/store/[slug]/page.tsx` inteiramente `"use client"`~~ — **resolvido na Sprint 4.1**: convertidos para Server Components `async`. `FavoriteButton`/`ShareButton` continuam como ilhas `"use client"` (estado local necessário), o restante da página renderiza no servidor.
 
 ## SEO
 
 - ~~`app/layout.tsx` com metadata padrão do `create-next-app`~~ — **resolvido na Sprint 3.3**: título/descrição reais + JSON-LD `WebSite`/`SearchAction`.
-- ~~Só `/product/[slug]` tinha `generateMetadata`~~ — **resolvido parcialmente na Sprint 3.3**: `/search` ganhou `generateMetadata` (canonical/OG/robots). Home ainda não tem Open Graph nem canonical próprios.
-- Sem `sitemap.xml`/`robots.txt` (não existem em `app/`).
+- ~~Só `/product/[slug]` tinha `generateMetadata`~~ — **resolvido na Sprint 3.3** (`/search`) e **Sprint 4.2** (Home com OG/Twitter/canonical, root layout com Organization JSON-LD e robots).
+- ~~Sem `sitemap.xml`/`robots.txt`~~ — **resolvido na Sprint 4.2**: `app/sitemap.ts` (dinâmico, Supabase) e `app/robots.ts`.
+- ~~Sem 404 global com design de marca~~ — **resolvido na Sprint 4.2**: `app/not-found.tsx`.
 
 ## Busca (Sprint 3.3) — limitações conhecidas
 
@@ -74,13 +75,9 @@ Ver `docs/DECISIONS.md` ADR-009 para o detalhe completo da correção.
 - **Detecção de oferta "órfã" em `validate.js` é por `IS NULL`, não por anti-join real** — agora com 5/5/6/9 linhas, a Sprint 3.8 fez uma auditoria complementar em memória (anti-join real, com a chave de serviço) e confirmou 0 FKs órfãs hoje; `validate.js` em si continua sem essa verificação (não escala para volume real via fetch-and-diff). Quando houver mais volume, precisa de uma consulta dedicada (ou um RPC).
 - **Offer Ranking (ADR-014) continua arquitetura, não código** — nenhuma ordenação nova implementada; `getOffersByProduct`/`getOffersByStore` continuam ordenando só por `price_usd`.
 
-## 🔴 CRÍTICO — leitura pública bloqueada em quase todo o domínio (achado do adendo da Sprint 3.9, ADR-019)
+## ✅ RESOLVIDO — leitura pública desbloqueada (ADR-019, 2026-06-25)
 
-- **A chave anônima (`NEXT_PUBLIC_SUPABASE_ANON_KEY`, a única que `lib/supabase.ts`/toda a aplicação usa) não lê nenhuma linha de `brands`/`categories`/`products`/`offers`/`price_history`** — `SELECT` retorna `{ error: null, data: [] }` silenciosamente, mesmo havendo linhas reais (confirmado comparando com a chave de serviço: 5/5/6/9/3 linhas reais vs. 0/0/0/0/0 visíveis para a chave anônima). Só `stores` tem leitura pública funcionando.
-- **Impacto**: por dedução direta do código (mesmo client em qualquer ambiente, local ou Vercel), o catálogo (`/products`), a página de produto (`/product/[slug]`), a busca (`/search`) e as ofertas de `/store/[slug]` provavelmente retornam vazio para qualquer usuário real **agora**, apesar dos dados existirem desde a Sprint 3.8.
-- **Por que passou despercebido**: as tabelas estavam genuinamente vazias antes da Sprint 3.8 — "bloqueado por RLS" e "vazio de verdade" são indistinguíveis nesse caso. Desde que `SUPABASE_SERVICE_ROLE_KEY` passou a existir em `.env.local` (Sprint 3.8), toda ferramenta de auditoria (`db:validate`, snapshots) usa `database/seed/lib/client.js`, que **prefere a chave de serviço quando presente** — ou seja, toda validação "0 problemas" rodada desde então via essas ferramentas nunca usou a chave que a aplicação real usa.
-- **Correção proposta, não aplicada**: `database/migrations/0007_proposed_public_read_policies.sql` — policies de `SELECT` público (`anon`, `authenticated`) nas 5 tabelas, mirando o padrão que já funciona em `stores`. Não inclui nenhuma policy de escrita (continuam exclusivas da chave de serviço). Requer ação humana no SQL Editor do Supabase, com o mesmo bloqueio de ferramenta do ADR-017 (sem `pg`/CLI/RPC para aplicar diretamente).
-- **Prioridade**: maior que qualquer item abaixo — afeta o produto inteiro, não só preço.
+- ~~`brands`/`categories`/`products`/`offers`/`price_history` retornavam `[]` para a chave anônima~~ — **resolvido na Sprint 4.1, hotfix (ADR-019)**: `0007_proposed_public_read_policies.sql` aplicada no SQL Editor pelo CTO. Validação com `validate_adr019.js`: 22/22 OK usando exclusivamente a chave anônima. Todas as 6 tabelas públicas são legíveis; escrita continua bloqueada para `anon`/`authenticated`.
 
 ## Price Engine v1 (Sprint 3.9, validado no adendo) — limitações conhecidas
 
@@ -95,6 +92,12 @@ Ver `docs/DECISIONS.md` ADR-009 para o detalhe completo da correção.
 - **Compare Engine compara um produto de cada vez**: a missão do Release 0.5 previa "tela de seleção (2–4 produtos) com tabela de especificações lado a lado" para comparar N produtos. O que foi entregue é `/compare/[slug]` (um produto, todas as lojas). A comparação lado a lado de N produtos distintos fica para a Sprint 4.1 ou posterior, quando a leitura pública estiver desbloqueada e houver mais dados reais.
 - ~~**Sem link "Comparar" nos cards de produto**~~ — **resolvido na Sprint 4.1**: botão "Comparar preços" adicionado em `app/product/[slug]/page.tsx` (ao lado dos botões Favoritar e Compartilhar), linkando para `comparePath(product.slug)`.
 - **Ranking de loja sem view materializada**: o score usa `store.rating` da query de ofertas (campo existe e é atualizado pelo seed). A `store_ranking_summary` proposta em `0005_proposed_store_ranking_view.sql` aumentaria a precisão do score com `offer_count`/`in_stock_offer_count` — não necessária agora, mas candidata quando o volume crescer.
+
+## Data Integrity & Storage (Sprint 4.3)
+
+- **`0008_data_integrity.sql` criada, não aplicada**: 4 UNIQUE constraints em slugs + 6 índices de performance aguardam aplicação no SQL Editor do Supabase. Banco já íntegro (0 duplicatas confirmadas), mas sem garantia de esquema em DDL enquanto a migration não for aplicada. Não automatizável sem DATABASE_URL ou PAT. Ver ADR-023.
+- **Imagens reais ausentes**: bucket `catalog` criado e URL strategy definida (ADR-022), mas `image_url`/`cover_image`/`logo_url` no banco continuam nulos. A UI exibe estado vazio (`<div className="flex h-full w-full items-center justify-center">`) para todas as imagens até o upload acontecer. `utils/storage.ts` → `resolveImageUrl` está pronto para quando as imagens existirem.
+- **`utils/storage.ts` não é usado por nenhum componente ainda**: o utilitário foi criado, mas nenhum `ProductCard`/`StoreCard`/`ProductGallery` usa `resolveImageUrl` como fallback ainda — a integração fica para quando o bucket tiver conteúdo real.
 
 ## Acessibilidade
 

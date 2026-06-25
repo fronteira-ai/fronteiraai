@@ -12,10 +12,11 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
-    // database/seed/ é tooling Node standalone (CommonJS), fora da árvore
-    // da aplicação Next.js/TypeScript — não governado pelas regras de
-    // import deste config. Ver docs/DECISIONS.md, ADR-012.
+    // database/seed/ e database/storage/ são tooling Node standalone
+    // (CommonJS), fora da árvore da aplicação Next.js/TypeScript.
+    // Ver docs/DECISIONS.md, ADR-012.
     "database/seed/**",
+    "database/storage/**",
   ]),
 ]);
 

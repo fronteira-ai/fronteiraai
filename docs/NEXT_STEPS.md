@@ -144,15 +144,28 @@ Entregou o Compare Engine v1 completo: `services/compare.service.ts`, `app/api/c
 - ✅ Compare: double-fetch eliminado via `cache(getProductComparisonBySlug)`
 - ✅ Build 10 rotas, lint 0, tsc 0, db:validate 0
 
-## Sprint 4.3 (proposta) — Dados Reais e Integridade
+## Sprint 4.3 (encerrada) — Data Integrity & Media Foundation
+
+**Executado**:
+1. **Auditoria pré-migração**: 0 slugs duplicados, 0 slugs nulos, 0 orphans, 0 preços inválidos — banco íntegro, seguro para aplicar constraints
+2. **`database/migrations/0008_data_integrity.sql`** criada: consolida 0002 + 0004 num SQL idempotente — 4 UNIQUE constraints em slugs + 6 índices de performance
+3. **Storage Foundation**: bucket `catalog` criado (público, webp/jpeg/png/avif, 5 MB); `utils/storage.ts` com builders de URL; `database/storage/init.js` (`npm run storage:init`); ADR-022
+4. **`database/seed/validate_sprint43.js`** (`npm run db:validate:43`): 23/23 OK
+5. **Documentação**: ADR-022 + ADR-023, CHANGELOG Sprint 4.3, PROJECT_STATUS 83%
+6. **Validações**: lint 0, tsc 0, build 10 rotas, db:validate 0, db:validate:43 23/23
+
+**Pendência manual** (ação no Supabase — não automatizável sem DATABASE_URL ou PAT):
+- Aplicar `database/migrations/0008_data_integrity.sql` no SQL Editor
+- Upload de imagens reais no bucket `catalog` seguindo convenção do ADR-022
+
+## Sprint 4.4 (proposta) — Release 0.8 Foundation
 
 **Escopo proposto**:
-1. **Aplicar `0002` e `0004`** (constraints `UNIQUE(slug)` + índices de FK/preço) no SQL Editor — seguro, 0 duplicatas confirmadas.
-2. **Imagens reais**: fazer upload de imagens de produto e loja para o Supabase Storage e atualizar `image_url`/`cover_image` no banco.
-3. Avaliar `0003` (materialized view de preço) se ordenação por preço no catálogo mostrar lentidão com mais dados.
-4. Avaliar `0005` (store_ranking_summary view) para o algoritmo de Offer Ranking.
-
-**Dependência**: ações manuais no Supabase — não automatizáveis sem DATABASE_URL ou PAT.
+1. **Upload de imagens**: carregar imagens reais de produtos, lojas e marcas no bucket `catalog` e atualizar `image_url`/`cover_image`/`logo_url` no banco via script seed.
+2. Avaliar `0003` (materialized view de preço para ordenação escalável no catálogo).
+3. Avaliar `0005` (store_ranking_summary view para o algoritmo de Offer Ranking).
+4. CI básico: GitHub Actions com `npm run check` em PRs.
+5. Preparação para autenticação (Supabase Auth, Release 0.8).
 
 ### Sprint C — Eliminar dívidas técnicas críticas antes de crescer mais
 - **Prioridade**: 🟡 Média (mas crescente — quanto mais o código cresce, mais caro fica)

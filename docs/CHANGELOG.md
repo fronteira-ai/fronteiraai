@@ -327,3 +327,53 @@ Score composto 0–100 calculado em memória para cada oferta:
 **Dependência crítica não resolvida (ADR-019)**: a chave anônima (`NEXT_PUBLIC_SUPABASE_ANON_KEY`), única usada por `lib/supabase.ts`, não lê `products`/`offers`/`price_history` — o Compare Engine retorna `null` para qualquer usuário real até que `0007_proposed_public_read_policies.sql` seja aplicado no SQL Editor do Supabase. Isso é o bloqueador #1 de todo o catálogo, não só do comparador — pré-existe a esta sprint (ADR-019, sprint 3.9). O endpoint `/api/compare` e a rota `/compare/[slug]` **estão corretos e completos**; só precisam que o dado seja visível pela chave pública.
 
 Validado com `npm run lint` (0 erros, 5 warnings pré-existentes — nenhum novo), `npx tsc --noEmit` (0 erros), `npm run build` (sucesso — 8 rotas: as 6 anteriores + `/api/compare` + `/compare/[slug]`), `npm run db:validate` (0 problemas).
+
+---
+
+## 2026-06-25 — Sprint 4.3: Data Integrity & Media Foundation (Release 0.7 — fase final)
+
+Última etapa técnica antes de declarar o Release 0.7 concluído. Foco: integridade estrutural do banco, fundação de imagens/storage, qualidade de código.
+
+**Auditoria pré-migração (chave de serviço)**:
+- 0 slugs duplicados em `stores`, `products`, `brands`, `categories`
+- 0 slugs nulos em qualquer tabela
+- 0 ofertas órfãs (offers.product_id / offers.store_id)
+- 0 produtos com brand_id ou category_id inválidos
+- 0 preços ≤ 0 ou nulos em `offers.price_usd`
+- Contagem: `brands:5`, `categories:5`, `products:6`, `offers:9`, `price_history:3`, `stores:5`
+
+**Migration `0008_data_integrity.sql`** (criada, aguarda aplicação no SQL Editor — mesmo fluxo de 0006/0007):
+- Supersede `0002_revised_store_data_layer.sql` e `0004_proposed_catalog_integrity_and_indexes.sql`
+- Idempotente: `DO $$ IF NOT EXISTS ... $$` para UNIQUE constraints; `CREATE INDEX IF NOT EXISTS` para índices
+- UNIQUE constraints: `stores_slug_unique`, `products_slug_unique`, `brands_slug_unique`, `categories_slug_unique`
+- Índices: `offers_product_id_idx`, `offers_store_id_idx`, `offers_price_usd_idx`, `products_brand_id_idx`, `products_category_id_idx`, `price_history_offer_id_recorded_at_idx`
+- Inclui query de verificação no final (constraints + índices esperados)
+- Ver ADR-023
+
+**Storage Foundation** (aplicado programaticamente com chave de serviço):
+- Bucket `catalog` criado no Supabase Storage: `public: true`, mimeTypes `webp/jpeg/png/avif`, limite 5 MB
+- URL base: `https://acairzpzsklctaqjsukw.supabase.co/storage/v1/object/public/catalog/`
+- Estrutura de pastas: `products/{slug}/main.webp`, `products/{slug}/gallery/{n}.webp`, `stores/{slug}/cover.webp`, `stores/{slug}/logo.webp`, `brands/{slug}/logo.webp`
+- Ver ADR-022
+
+**Arquivos criados**:
+- **`database/migrations/0008_data_integrity.sql`**: migration final idempotente (0002 + 0004 consolidadas)
+- **`database/storage/init.js`**: script Node que cria o bucket via service role key (`npm run storage:init`)
+- **`database/seed/validate_sprint43.js`**: 23 asserções — contagem, slugs, FKs, preços, Storage (`npm run db:validate:43`)
+- **`utils/storage.ts`**: utilitário TypeScript com `catalogStorage.*` (builders de URL por entidade) e `resolveImageUrl` (fallback automático para Storage quando `image_url` está nulo)
+
+**Arquivos alterados**:
+- **`package.json`**: scripts `db:validate:43` e `storage:init` adicionados
+- **`eslint.config.mjs`**: `database/storage/**` adicionado ao `globalIgnores` (tooling Node, fora da árvore TS/Next.js)
+- **`docs/DECISIONS.md`**: ADR-022 (Storage Foundation) + ADR-023 (Migration 0008) adicionados
+
+**Validações executadas**:
+- `npm run lint`: 0 erros, 0 warnings
+- `npx tsc --noEmit`: 0 erros
+- `npm run build`: 10 rotas — idêntico ao Sprint 4.2 (sem regressão)
+- `npm run db:validate:43`: 23 OK | 0 falhas (catálogo, slugs, FKs, preços, Storage)
+- `npm run storage:init`: bucket `catalog` criado com sucesso
+
+**Pendência restante (ação manual no Supabase)**:
+1. Aplicar `database/migrations/0008_data_integrity.sql` no SQL Editor → confirmação esperada: 4 UNIQUE constraints + 6 índices
+2. Upload de imagens reais no bucket `catalog` seguindo a convenção de nomenclatura definida no ADR-022

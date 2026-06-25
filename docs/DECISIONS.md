@@ -382,3 +382,70 @@ A computação de métricas por oferta (`lowestPriceUSD`, `highestPriceUSD`, `pr
 - Aceitar o double-fetch — descartado porque é a dívida técnica que a sprint veio resolver.
 
 **Consequência**: qualquer rota dinâmica que precise compartilhar fetches entre `layout.tsx` e `page.tsx` deve seguir este padrão. O prefixo `_` no nome do arquivo sinalize que é um módulo interno da rota, não um componente/page exportável pelo Next.js.
+
+---
+
+## ADR-022 — Supabase Storage: bucket único `catalog` público, estrutura de pastas por tipo de entidade
+
+**Data**: 2026-06-25 (Sprint 4.3 — Data Integrity & Media Foundation)
+**Status**: Aceita e aplicada
+
+**Contexto**: o projeto precisa de infraestrutura de imagens para servir fotos de produtos, capas de loja e logos de marca. As opções eram: (a) hospedar em Supabase Storage, (b) CDN externo (Cloudflare Images, Cloudinary), (c) manter URLs externas no banco sem hospedar. A Sprint 4.3 delimitou o objetivo como "fundação — não subir milhares de imagens".
+
+**Decisão**: criar um único bucket público `catalog` no Supabase Storage, com estrutura de pastas por tipo de entidade e slug:
+```
+catalog/
+  products/{slug}/main.webp
+  products/{slug}/gallery/{0..n}.webp
+  stores/{slug}/cover.webp
+  stores/{slug}/logo.webp
+  brands/{slug}/logo.webp
+```
+
+Bucket criado programaticamente via `database/storage/init.js` (chave de serviço). URL pública:
+`{SUPABASE_URL}/storage/v1/object/public/catalog/{path}`
+
+Utilitário `utils/storage.ts` exporta `catalogStorage.*` (builders de URL tipados) e `resolveImageUrl` (fallback automático para Storage quando a coluna do banco está nula).
+
+**Alternativas descartadas**:
+- Múltiplos buckets (`products`, `stores`, `brands`) — descartado por não simplificar o modelo de permissões (um bucket público é suficiente) e aumentar superfície de configuração.
+- CDN externo — descartado para não introduzir dependência de terceiro não necessária nesta fase; Supabase Storage está no mesmo projeto/conta.
+- Aceitar `image_url: null` para sempre — descartado; a experiência sem imagens é inferior.
+
+**Restrições**:
+- `allowedMimeTypes`: `image/webp`, `image/jpeg`, `image/png`, `image/avif`
+- `fileSizeLimit`: 5 MB por arquivo
+- Escrita: somente via chave de serviço (Admin/Crawler) ou painel do Supabase — a chave anônima não escreve (política RLS de Storage, default do Supabase para buckets públicos)
+- Leitura: pública sem autenticação (bucket `public: true`)
+
+**Consequência**: `next/image` já tem `remotePatterns` para `*.supabase.co` (adicionado na Sprint 4.2). Imagens reais precisam ser carregadas no bucket seguindo a convenção de nomenclatura — não há validação de nome em runtime, a convenção é a única garantia.
+
+---
+
+## ADR-023 — Migration 0008: constraints UNIQUE em slugs + índices de performance
+
+**Data**: 2026-06-25 (Sprint 4.3 — Data Integrity & Media Foundation)
+**Status**: Proposta — aguardando aplicação no SQL Editor (mesma dinâmica de 0006/0007)
+
+**Contexto**: `0002_revised_store_data_layer.sql` (Sprint 3.4.1) propôs `UNIQUE(slug)` em `stores`; `0004_proposed_catalog_integrity_and_indexes.sql` (Sprint 3.7) estendeu a mesma constraint para `products`/`brands`/`categories` e propôs índices nas FKs e em `offers.price_usd`. Ambas estão propostas há mais de 2 semanas sem aplicação, porque nenhuma ferramenta do projeto executava DDL diretamente.
+
+**Pré-condições verificadas** antes de gerar a migration final (auditoria 2026-06-25):
+- 0 slugs duplicados em `stores`, `products`, `brands`, `categories`
+- 0 slugs nulos em qualquer tabela
+- 0 ofertas órfãs (product_id / store_id)
+
+**Decisão**: consolidar 0002 e 0004 em uma única migration `0008_data_integrity.sql`, idempotente (DO blocks com verificação em `pg_constraint` para UNIQUE, `CREATE INDEX IF NOT EXISTS` para índices). Constraints criadas:
+- `stores_slug_unique`, `products_slug_unique`, `brands_slug_unique`, `categories_slug_unique`
+
+Índices criados:
+- `offers_product_id_idx`, `offers_store_id_idx`, `offers_price_usd_idx`
+- `products_brand_id_idx`, `products_category_id_idx`
+- `price_history_offer_id_recorded_at_idx`
+
+**Por que não `NOT NULL`**: com 6 produtos / 9 ofertas / 5 entidades por tabela, não há volume suficiente para validar que 100% de linhas futuras sempre virão preenchidas. Reavaliar quando o seed engine ou Admin escreverem em escala.
+
+**Alternativas descartadas**:
+- `CREATE OR REPLACE POLICY` — não existe em PostgreSQL para UNIQUE constraint (aprendido no hotfix de ADR-019); `DO block + IF NOT EXISTS` é o padrão idiomático.
+- Manter 0002 e 0004 separadas — descartado para reduzir o número de passos manuais no SQL Editor.
+
+**Consequência**: após a aplicação, o banco recusa inserções de slug duplicado mesmo fora do seed engine; queries de catálogo/oferta usam índices em vez de full-table scan; o validador `npm run db:validate:43` inclui instruções SQL de verificação pós-execução.

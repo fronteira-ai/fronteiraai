@@ -263,6 +263,17 @@ Lapidação completa da experiência existente antes do primeiro lançamento pú
 - **Performance**: double-fetch eliminado em `/compare/[slug]` via `cache(getProductComparisonBySlug)`.
 - **Validações**: lint 0 erros/warnings, tsc 0 erros, build 10 rotas, db:validate 0 problemas.
 
-## Status Geral: **75%**
+## Sprint 4.3 — Data Integrity & Media Foundation (Release 0.7 — fase final) — 2026-06-25
 
-6 domínios visíveis com dados reais (Home, Produto, Busca, Loja, Catálogo, Compare). SEO base implementado. Navegação sem links mortos. 0 warnings de lint. Próximas prioridades: `0002`+`0004` (constraints + índices), imagens reais no banco, autenticação.
+Última etapa técnica antes da declaração do Release 0.7.
+
+- **Migration `0008_data_integrity.sql`** (criada, aguarda SQL Editor): consolida 0002 + 0004 num único SQL idempotente. UNIQUE constraints em `slug` para todas as 4 tabelas de catálogo + 6 índices de performance (FKs + price_usd + price_history). Auditoria pré-migração: 0 duplicatas, 0 orphans, 0 nulos — banco já íntegro, migration só formaliza as garantias.
+- **Storage Foundation**: bucket `catalog` criado no Supabase Storage (público, webp/jpeg/png/avif, 5 MB/arquivo). `utils/storage.ts` novo — builders de URL tipados + `resolveImageUrl` com fallback automático para Storage. `database/storage/init.js` (`npm run storage:init`). ADR-022.
+- **Validação Sprint 4.3**: `database/seed/validate_sprint43.js` (`npm run db:validate:43`) — 23 asserções: contagem, slugs, FKs, preços, Storage. 23 OK | 0 falhas.
+- **ESLint**: `database/storage/**` adicionado ao `globalIgnores` (tooling Node).
+- **Documentação**: ADR-022 + ADR-023 em DECISIONS.md; Sprint 4.3 no CHANGELOG.md.
+- **Validações**: lint 0, tsc 0, build 10 rotas (sem regressão), db:validate 0, db:validate:43 23/23 OK.
+
+## Status Geral: **83%**
+
+Release 0.7 tecnicamente entregue: 6 domínios com dados reais, SEO completo, Storage fundado, integridade de catálogo auditada. Pendência manual: aplicar `0008` no SQL Editor + upload de imagens reais no bucket. Próximo passo de código: Release 0.8 (autenticação).
