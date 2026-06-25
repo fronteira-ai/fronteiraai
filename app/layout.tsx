@@ -20,11 +20,15 @@ export const metadata: Metadata = {
     template: "%s | ParaguAI",
   },
   description:
-    "Pesquise produtos, compare preços entre centenas de lojas e descubra as melhores ofertas no Paraguai com o ParaguAI.",
+    "Pesquise produtos, compare preços entre lojas e descubra as melhores ofertas no Paraguai com o ParaguAI.",
+  robots: { index: true, follow: true },
+  openGraph: {
+    siteName: "ParaguAI",
+    locale: "pt_BR",
+    type: "website",
+  },
 };
 
-// JSON-LD WebSite + SearchAction: habilita a "sitelinks search box" do Google
-// e dá a base estrutural de busca para futuras integrações de IA.
 const websiteJsonLd = {
   "@context": "https://schema.org",
   "@type": "WebSite",
@@ -34,6 +38,19 @@ const websiteJsonLd = {
     "@type": "SearchAction",
     target: `${searchUrl()}?q={search_term_string}`,
     "query-input": "required name=search_term_string",
+  },
+};
+
+const organizationJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "Organization",
+  name: "ParaguAI",
+  url: SITE_URL,
+  description:
+    "A maior plataforma de comparação de preços do Paraguai. Encontre os melhores negócios em Ciudad del Este.",
+  areaServed: {
+    "@type": "Country",
+    name: "Paraguai",
   },
 };
 
@@ -52,6 +69,12 @@ export default function RootLayout({
           type="application/ld+json"
           dangerouslySetInnerHTML={{
             __html: JSON.stringify(websiteJsonLd).replace(/</g, "\\u003c"),
+          }}
+        />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify(organizationJsonLd).replace(/</g, "\\u003c"),
           }}
         />
         {children}

@@ -252,6 +252,17 @@ Entrega o Compare Engine v1: compara um produto entre todas as lojas disponívei
 
 ---
 
-## Status Geral: **70%**
+## Sprint 4.2 — MVP Público (Release 0.7) — 2026-06-25
 
-Critério: dos domínios do roadmap original (Home, Produto, Loja, Busca, Catálogo/Listagem, Comparação, IA, Admin, Crawler), 6 estão completos no código **e visíveis para usuários reais** com dados reais do Supabase: Produto, Busca, Loja, Catálogo, Comparação, Home. O bloqueador crítico ADR-019 foi resolvido em 2026-06-25 com a aplicação da migration `0007`. Próximas prioridades: `0002`+`0004` (constraints + índices), `sitemap.xml`, `next/image`.
+Lapidação completa da experiência existente antes do primeiro lançamento público. Nenhuma funcionalidade nova — foco em qualidade, SEO, navegação e performance.
+
+- **`next/image` completo**: todos os 5 `<img>` substituídos (ProductCard, ProductGallery, StoreCard, store/[slug]/page) — 0 warnings de lint. `next.config.ts` com `remotePatterns` para Supabase Storage + HTTPS genérico.
+- **Navegação sem links mortos**: Navbar simplificada (Início / Produtos / Buscar / IA); Footer converte links inexistentes em badges "em breve" — nenhum link aponta para 404.
+- **SEO**: `app/sitemap.ts` (dinâmico, busca produtos + lojas do Supabase em paralelo → `/sitemap.xml`), `app/robots.ts` → `/robots.txt`. JSON-LD `Organization` no root layout. Metadata completa (OG + Twitter) na Home.
+- **UX**: `app/not-found.tsx` (404 global com design de marca).
+- **Performance**: double-fetch eliminado em `/compare/[slug]` via `cache(getProductComparisonBySlug)`.
+- **Validações**: lint 0 erros/warnings, tsc 0 erros, build 10 rotas, db:validate 0 problemas.
+
+## Status Geral: **75%**
+
+6 domínios visíveis com dados reais (Home, Produto, Busca, Loja, Catálogo, Compare). SEO base implementado. Navegação sem links mortos. 0 warnings de lint. Próximas prioridades: `0002`+`0004` (constraints + índices), imagens reais no banco, autenticação.

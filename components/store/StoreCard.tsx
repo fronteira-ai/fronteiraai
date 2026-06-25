@@ -1,4 +1,5 @@
 import { memo } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { Star, MapPin } from "lucide-react";
 import { Store } from "@/types/store";
@@ -16,14 +17,14 @@ function StoreCard({ store, productCount }: Props) {
       href={storePath(store.slug)}
       className={`group flex flex-col overflow-hidden rounded-3xl border border-slate-800 bg-slate-900 ${animations.cardHover}`}
     >
-      <div className="flex h-48 w-full items-center justify-center overflow-hidden bg-slate-950">
+      <div className="relative flex h-48 w-full items-center justify-center overflow-hidden bg-slate-950">
         {store.cover_image ? (
-          <img
+          <Image
             src={store.cover_image}
             alt={store.name}
-            loading="lazy"
-            decoding="async"
-            className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
+            fill
+            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+            className="object-cover transition duration-300 group-hover:scale-105"
           />
         ) : (
           <span className="text-4xl font-black text-slate-700">

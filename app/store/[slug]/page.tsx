@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import Image from "next/image";
 import { Star } from "lucide-react";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
@@ -32,19 +33,22 @@ export default async function StorePage({ params }: { params: Params }) {
       <div className="mx-auto max-w-7xl px-6 pt-32 pb-24">
         <Breadcrumb items={[{ label: store.name }]} />
 
-        <div className="mt-10 flex aspect-[3/1] w-full items-center justify-center overflow-hidden rounded-3xl border border-slate-800 bg-slate-950">
+        <div className="relative mt-10 aspect-[3/1] w-full overflow-hidden rounded-3xl border border-slate-800 bg-slate-950">
           {store.cover_image ? (
-            <img
+            <Image
               src={store.cover_image}
               alt={store.name}
-              loading="lazy"
-              decoding="async"
-              className="h-full w-full object-cover"
+              fill
+              priority
+              sizes="100vw"
+              className="object-cover"
             />
           ) : (
-            <span className="text-6xl font-black text-slate-700">
-              {store.name.charAt(0)}
-            </span>
+            <div className="flex h-full w-full items-center justify-center">
+              <span className="text-6xl font-black text-slate-700">
+                {store.name.charAt(0)}
+              </span>
+            </div>
           )}
         </div>
 

@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import Navbar from "@/components/layout/Navbar";
@@ -11,13 +12,15 @@ import { getProductComparisonBySlug } from "@/services/compare.service";
 import { getRelatedProducts } from "@/services/product.service";
 import { compareUrl, productPath } from "@/constants/routes";
 
+const getCachedComparison = cache(getProductComparisonBySlug);
+
 type Props = {
   params: Promise<{ slug: string }>;
 };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
-  const result = await getProductComparisonBySlug(slug);
+  const result = await getCachedComparison(slug);
   if (!result) return {};
 
   const { product, summary } = result;
@@ -38,7 +41,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 export default async function ComparePage({ params }: Props) {
   const { slug } = await params;
 
-  const result = await getProductComparisonBySlug(slug);
+  const result = await getCachedComparison(slug);
   if (!result) notFound();
 
   const { product, offers, summary } = result;

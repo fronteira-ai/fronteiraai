@@ -7,10 +7,9 @@ import Logo from "@/components/ui/Logo";
 import Button from "@/components/ui/Button";
 
 const menu = [
-  { name: "Categorias", href: "/#categorias" },
-  { name: "Lojas", href: "/stores" },
+  { name: "Início", href: "/" },
   { name: "Produtos", href: "/products" },
-  { name: "Comparar", href: "/compare" },
+  { name: "Buscar", href: "/search" },
   { name: "IA", href: "/#ia" },
 ];
 

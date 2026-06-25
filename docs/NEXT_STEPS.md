@@ -129,19 +129,30 @@ Entregou o Compare Engine v1 completo: `services/compare.service.ts`, `app/api/c
 
 **ADR-019 não existe mais como bloqueador.** O catálogo inteiro é visível para usuários reais.
 
-## Sprint 4.2 (proposta) — Estabilização e SEO
+## Sprint 4.2 (encerrada) — MVP Público (Release 0.7)
 
-O único bloqueador crítico foi resolvido. A Sprint 4.2 pode focar em qualidade e preparação para crescimento.
+**Executado**:
+- ✅ `next/image` em todos os 5 componentes com `<img>` — 0 warnings de lint (era 5)
+- ✅ `next.config.ts` com `remotePatterns` para Supabase Storage + HTTPS
+- ✅ Navbar: links mortos `/stores` e `/compare` removidos. Menu: Início / Produtos / Buscar / IA
+- ✅ Footer: links para páginas inexistentes convertidos para `<span>` com badge "em breve"
+- ✅ `app/sitemap.ts` → `/sitemap.xml` (dinâmico: produtos + compare + lojas + estáticas)
+- ✅ `app/robots.ts` → `/robots.txt` (Allow: /, Disallow: /api/ /_next/)
+- ✅ `app/not-found.tsx` — 404 global com design de marca
+- ✅ Home: metadata OG + Twitter + keywords + canonical
+- ✅ Root layout: JSON-LD Organization + robots + openGraph base
+- ✅ Compare: double-fetch eliminado via `cache(getProductComparisonBySlug)`
+- ✅ Build 10 rotas, lint 0, tsc 0, db:validate 0
+
+## Sprint 4.3 (proposta) — Dados Reais e Integridade
 
 **Escopo proposto**:
-1. **Aplicar `0002` e `0004`** (constraints `UNIQUE(slug)` + índices de FK/preço) — seguro, 0 duplicatas confirmadas na Sprint 3.8. Protege o banco de dados duplicados futuros e melhora performance de queries filtradas.
-2. **Trocar `<img>` por `next/image`** nos 4 componentes apontados pelo lint (ProductCard, ProductGallery, StoreCard, StoreDetails) — resolve os 5 warnings de lint restantes e habilita otimização automática de imagens pelo Vercel.
-3. **Adicionar `sitemap.xml`** em `app/sitemap.ts` (Next.js App Router) com rotas de produto/loja/catálogo — impacto direto no crawl do Google.
-4. **Adicionar `robots.txt`** em `app/robots.ts` — convênção mínima para SEO.
-5. Avaliar `0003`/`0005` (views de preço e ranking) se o catálogo com dados reais mostrar lentidão na ordenação por preço.
+1. **Aplicar `0002` e `0004`** (constraints `UNIQUE(slug)` + índices de FK/preço) no SQL Editor — seguro, 0 duplicatas confirmadas.
+2. **Imagens reais**: fazer upload de imagens de produto e loja para o Supabase Storage e atualizar `image_url`/`cover_image` no banco.
+3. Avaliar `0003` (materialized view de preço) se ordenação por preço no catálogo mostrar lentidão com mais dados.
+4. Avaliar `0005` (store_ranking_summary view) para o algoritmo de Offer Ranking.
 
-**Riscos**: todos 🟢 Baixo — nenhuma mudança de schema destrutiva, nenhum dado existente afetado.
-**Impacto**: qualidade de SEO, performance de imagens, proteção de integridade do banco.
+**Dependência**: ações manuais no Supabase — não automatizáveis sem DATABASE_URL ou PAT.
 
 ### Sprint C — Eliminar dívidas técnicas críticas antes de crescer mais
 - **Prioridade**: 🟡 Média (mas crescente — quanto mais o código cresce, mais caro fica)

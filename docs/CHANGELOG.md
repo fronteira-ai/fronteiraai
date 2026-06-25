@@ -201,6 +201,41 @@ Revalidado: `npm run lint`/`npx tsc --noEmit`/`npm run build` (sem regressão), 
 
 **Classificação final do Price Engine v1**: "Backend Production Ready" — não "Production Ready" de ponta a ponta, porque a leitura pública está bloqueada pelo achado do ADR-019 (mais amplo que só preço) e nenhum caminho de escrita real (Admin/Crawler) existe ainda.
 
+## 2026-06-25 — Sprint 4.2: MVP Público (Release 0.7)
+
+Lapidar a experiência existente para o primeiro lançamento público. Nenhuma funcionalidade nova — só qualidade, SEO, navegação e performance.
+
+**`<img>` → `next/image` (0 warnings — era 5)**:
+- `next.config.ts`: `images.remotePatterns` configurado (Supabase Storage + HTTPS genérico para MVP).
+- `components/product/ProductCard.tsx`: `<img fill sizes>` com `relative` no container.
+- `components/product/ProductGallery.tsx`: imagem principal com `priority` (LCP); thumbnails com `fill sizes="80px"`.
+- `components/store/StoreCard.tsx`: cover image com `fill sizes`.
+- `app/store/[slug]/page.tsx`: hero da loja com `fill priority sizes="100vw"`.
+
+**Navegação — links mortos eliminados**:
+- `components/layout/Navbar.tsx`: removidos `/stores` e `/compare` (rotas inexistentes). Novo menu: Início, Produtos, Buscar, IA.
+- `components/layout/Footer.tsx`: links para páginas inexistentes convertidos em `<span>` com badge "em breve". Apenas links reais continuam clicáveis.
+
+**SEO**:
+- `app/sitemap.ts` (novo): sitemap dinâmico com rotas estáticas + todas as páginas de produto, compare e loja buscadas do Supabase. Exposto como `/sitemap.xml`.
+- `app/robots.ts` (novo): robots.txt com `Allow: /`, `Disallow: /api/ /_next/` e ponteiro para sitemap. Exposto como `/robots.txt`.
+- `app/page.tsx`: `export const metadata` adicionado com title, description, keywords, canonical, openGraph (locale pt_BR) e twitter:card.
+- `app/layout.tsx`: adicionado JSON-LD `Organization` (nome, URL, descrição, areaServed Paraguay); `robots: index/follow` e `openGraph` base no metadata do layout.
+
+**UX**:
+- `app/not-found.tsx` (novo): página 404 global com design consistente (fundo `#050816`, Navbar, Footer, 3 CTAs: Início, Catálogo, Buscar). Qualquer rota inexistente agora exibe UI de marca em vez do fallback genérico do Next.js.
+
+**Performance**:
+- `app/compare/[slug]/page.tsx`: double-fetch eliminado — `getCachedComparison = cache(getProductComparisonBySlug)` compartilhado entre `generateMetadata` e a função de página (mesmo padrão do ADR-021 aplicado em produto/loja).
+
+**Validações**:
+- Lint: 0 erros, 0 warnings (era 5).
+- TypeScript: 0 erros.
+- Build: 10 rotas (+ `/robots.txt` ○, `/sitemap.xml` ƒ, `/_not-found` ○ customizado).
+- db:validate: 0 problemas.
+
+---
+
 ## 2026-06-25 — ADR-019 ENCERRADO: migration 0007 aplicada + validação completa com chave anônima
 
 **Hotfix da migration `0007_proposed_public_read_policies.sql`**:

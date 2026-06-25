@@ -1,6 +1,7 @@
 "use client";
 
 import { memo, useState } from "react";
+import Image from "next/image";
 
 type Props = {
   images: string[];
@@ -21,14 +22,14 @@ function ProductGallery({ images, alt }: Props) {
   return (
     <div className="w-full">
 
-      <div className="aspect-square w-full overflow-hidden rounded-3xl border border-slate-800 bg-slate-900/60">
-        <img
+      <div className="relative aspect-square w-full overflow-hidden rounded-3xl border border-slate-800 bg-slate-900/60">
+        <Image
           src={images[active]}
           alt={alt}
-          loading="eager"
-          fetchPriority="high"
-          decoding="async"
-          className="h-full w-full object-cover"
+          fill
+          priority
+          sizes="(max-width: 1024px) 100vw, 50vw"
+          className="object-cover"
         />
       </div>
 
@@ -38,18 +39,18 @@ function ProductGallery({ images, alt }: Props) {
             <button
               key={image}
               onClick={() => setActive(index)}
-              className={`h-20 w-20 overflow-hidden rounded-2xl border transition ${
+              className={`relative h-20 w-20 overflow-hidden rounded-2xl border transition ${
                 index === active
                   ? "border-blue-500"
                   : "border-slate-800 hover:border-slate-600"
               }`}
             >
-              <img
+              <Image
                 src={image}
                 alt={`${alt} - ${index + 1}`}
-                loading="lazy"
-                decoding="async"
-                className="h-full w-full object-cover"
+                fill
+                sizes="80px"
+                className="object-cover"
               />
             </button>
           ))}

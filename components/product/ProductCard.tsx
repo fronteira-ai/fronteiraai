@@ -1,4 +1,5 @@
 import { memo } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { formatUSD, discountPercentage } from "@/utils/currency";
@@ -36,12 +37,12 @@ function ProductCard({
     >
       <div className="relative flex aspect-square w-full items-center justify-center overflow-hidden bg-slate-950">
         {imageUrl ? (
-          <img
+          <Image
             src={imageUrl}
             alt={name}
-            loading="lazy"
-            decoding="async"
-            className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
+            fill
+            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+            className="object-cover transition duration-300 group-hover:scale-105"
           />
         ) : (
           <span className="text-slate-600">Sem imagem</span>

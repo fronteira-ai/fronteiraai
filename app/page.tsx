@@ -1,5 +1,7 @@
 export const dynamic = "force-dynamic";
 
+import type { Metadata } from "next";
+import { SITE_URL } from "@/constants/routes";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import Hero from "@/components/home/Hero";
@@ -16,6 +18,29 @@ import { getBrands } from "@/services/brand.service";
 import { getCategories } from "@/services/category.service";
 import { getProductsCatalog } from "@/services/product.service";
 import { ProductHighlight } from "@/types/product";
+
+export const metadata: Metadata = {
+  title: "ParaguAI — Compare preços e descubra as melhores lojas do Paraguai",
+  description:
+    "Pesquise produtos, compare preços entre lojas e descubra as melhores ofertas no Paraguai. Celulares, notebooks, drones, TVs e muito mais.",
+  keywords: ["Paraguai", "Ciudad del Este", "comparador de preços", "eletrônicos", "importados"],
+  alternates: { canonical: SITE_URL },
+  openGraph: {
+    title: "ParaguAI — Compare preços no Paraguai",
+    description:
+      "A maior plataforma de comparação de preços do Paraguai. Encontre os melhores negócios em Ciudad del Este.",
+    url: SITE_URL,
+    siteName: "ParaguAI",
+    type: "website",
+    locale: "pt_BR",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "ParaguAI — Compare preços no Paraguai",
+    description:
+      "A maior plataforma de comparação de preços do Paraguai. Encontre os melhores negócios em Ciudad del Este.",
+  },
+};
 
 export default async function Home() {
   const [stores, brands, categories, catalogResult] = await Promise.all([

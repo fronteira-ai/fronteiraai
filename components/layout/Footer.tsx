@@ -2,38 +2,38 @@ import Link from "next/link";
 import Logo from "@/components/ui/Logo";
 import Container from "@/components/ui/Container";
 
-const columns = [
+type FooterLink = { name: string; href: string } | { name: string; soon: true };
+
+const columns: { title: string; links: FooterLink[] }[] = [
   {
     title: "Plataforma",
     links: [
-      { name: "Produtos", href: "/products" },
-      { name: "Lojas", href: "/stores" },
-      { name: "Comparador", href: "/compare" },
+      { name: "Catálogo", href: "/products" },
+      { name: "Buscar", href: "/search" },
       { name: "Categorias", href: "/#categorias" },
+      { name: "Lojas", soon: true },
     ],
   },
   {
     title: "Recursos",
     links: [
       { name: "IA de Compras", href: "/#ia" },
-      { name: "Pesquisar", href: "/search" },
-      { name: "Favoritos", href: "/favorites" },
-      { name: "Histórico de Preços", href: "/price-history" },
+      { name: "Favoritos", soon: true },
+      { name: "Histórico de Preços", soon: true },
+      { name: "Alertas de Preço", soon: true },
     ],
   },
   {
     title: "ParaguAI",
     links: [
-      { name: "Sobre", href: "/about" },
-      { name: "Contato", href: "/contact" },
-      { name: "Privacidade", href: "/privacy" },
-      { name: "Termos", href: "/terms" },
+      { name: "Sobre nós", soon: true },
+      { name: "Contato", soon: true },
+      { name: "Privacidade", soon: true },
+      { name: "Termos de Uso", soon: true },
     ],
   },
 ];
 
-// Sem URLs reais de redes sociais ainda; mantidas como texto não-clicavel
-// para nao linkar para enderecos inexistentes.
 const socials = ["Instagram", "LinkedIn", "WhatsApp"];
 
 export default function Footer() {
@@ -63,16 +63,25 @@ export default function Footer() {
               </h3>
 
               <ul className="space-y-3 text-slate-400">
-                {column.links.map((link) => (
-                  <li key={link.name}>
-                    <Link
-                      href={link.href}
-                      className="inline-block transition-all duration-300 hover:translate-x-1 hover:text-white"
-                    >
-                      {link.name}
-                    </Link>
-                  </li>
-                ))}
+                {column.links.map((link) =>
+                  "soon" in link ? (
+                    <li key={link.name} className="flex items-center gap-2">
+                      <span className="opacity-50">{link.name}</span>
+                      <span className="rounded-full bg-slate-800 px-1.5 py-0.5 text-[10px] text-slate-500">
+                        em breve
+                      </span>
+                    </li>
+                  ) : (
+                    <li key={link.name}>
+                      <Link
+                        href={link.href}
+                        className="inline-block transition-all duration-300 hover:translate-x-1 hover:text-white"
+                      >
+                        {link.name}
+                      </Link>
+                    </li>
+                  )
+                )}
               </ul>
             </div>
           ))}
