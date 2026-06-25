@@ -364,3 +364,21 @@ A computação de métricas por oferta (`lowestPriceUSD`, `highestPriceUSD`, `pr
 **Consequência**: o Compare Engine escala horizontalmente sem degradação de latência para qualquer número de ofertas por produto — o gargalo passa a ser o número de produtos comparados em paralelo (não implementado nesta sprint), não o número de ofertas por produto.
 
 **Limitação conhecida (ADR-019)**: as 3 queries usam `lib/supabase.ts` (chave anônima). `products`/`offers`/`price_history` não são visíveis pela chave anônima enquanto `0007_proposed_public_read_policies.sql` não for aplicada — o compare engine retorna `null` para usuários reais até lá. Isso não é uma limitação do design, é uma pré-condição de dados.
+
+---
+
+## ADR-021 — Módulo `_cache.ts` compartilhado por `layout.tsx` e `page.tsx` na mesma rota
+
+**Data**: 2026-06-25 (Sprint 4.1 — Public Release Readiness)
+**Status**: Aceita e aplicada
+
+**Contexto**: em `app/product/[slug]/` e `app/store/[slug]/`, o `layout.tsx` (server) já buscava a entidade principal para `generateMetadata` e JSON-LD, mas o `page.tsx` era `"use client"` e chamava o mesmo serviço novamente via hook (`useProduct`/`useStore`), causando um double-fetch: dois round-trips ao Supabase por visita. A Sprint 4.1 converteu esses pages para server components, criando o risco de um novo double-fetch se layout e page instanciassem `React.cache()` separadamente (cada arquivo com `const cached = cache(fn)` cria um escopo de cache diferente).
+
+**Decisão**: criar um módulo `_cache.ts` por rota dinâmica (`app/product/[slug]/_cache.ts`, `app/store/[slug]/_cache.ts`) que exporta as funções cacheadas com `React.cache()`. Tanto `layout.tsx` quanto `page.tsx` importam do mesmo módulo, garantindo que compartilham o mesmo escopo de cache dentro de uma requisição. Resultado: a entidade principal (produto/loja) é buscada uma única vez por render, mesmo sendo usada em dois arquivos.
+
+**Alternativas descartadas**:
+- Exportar as funções cacheadas do `layout.tsx` e importá-las no `page.tsx` — descartada porque Next.js não garante que exports de arquivos de route (`layout`, `page`, `error`, etc.) sejam importáveis como módulos regulares; cria dependência circular implícita.
+- Usar `unstable_cache` do Next.js — descartado por ser uma API instável ainda, com semântica diferente (cache persistente entre requisições, não apenas dentro de uma).
+- Aceitar o double-fetch — descartado porque é a dívida técnica que a sprint veio resolver.
+
+**Consequência**: qualquer rota dinâmica que precise compartilhar fetches entre `layout.tsx` e `page.tsx` deve seguir este padrão. O prefixo `_` no nome do arquivo sinalize que é um módulo interno da rota, não um componente/page exportável pelo Next.js.

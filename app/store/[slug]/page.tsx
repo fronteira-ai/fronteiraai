@@ -1,6 +1,4 @@
-"use client";
-
-import { notFound, useParams } from "next/navigation";
+import { notFound } from "next/navigation";
 import { Star } from "lucide-react";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
@@ -9,29 +7,23 @@ import StoreOffers from "@/components/store/StoreOffers";
 import StoreGrid from "@/components/store/StoreGrid";
 import EmptyState from "@/components/ui/EmptyState";
 import Breadcrumb from "@/components/ui/Breadcrumb";
-import { useStore } from "@/hooks/useStore";
-import Loading from "./loading";
+import { getCachedStore, getCachedStoreOffers, getCachedRelatedStores } from "./_cache";
 
-export default function StorePage() {
-  const params = useParams<{ slug: string }>();
-  const {
-    store,
-    offers,
-    relatedStores,
-    loading,
-    notFound: storeNotFound,
-  } = useStore(params.slug);
+type Params = Promise<{ slug: string }>;
 
-  // Renderizado durante o fluxo de render (não em efeito), para que o
-  // notFound() seja capturado corretamente pelo not-found.tsx da rota
-  // (mesmo padrão de app/product/[slug]/page.tsx).
-  if (!loading && (storeNotFound || !store)) {
+export default async function StorePage({ params }: { params: Params }) {
+  const { slug } = await params;
+
+  const store = await getCachedStore(slug);
+
+  if (!store) {
     notFound();
   }
 
-  if (loading || !store) {
-    return <Loading />;
-  }
+  const [offers, relatedStores] = await Promise.all([
+    getCachedStoreOffers(store.id),
+    getCachedRelatedStores(store.id),
+  ]);
 
   return (
     <main className="min-h-screen bg-[#050816] text-white">

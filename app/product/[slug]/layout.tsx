@@ -1,15 +1,8 @@
-import { cache } from "react";
 import type { Metadata } from "next";
-import { getProductBySlug } from "@/services/product.service";
-import { getOffersByProduct } from "@/services/offer.service";
 import { productUrl } from "@/constants/routes";
+import { getCachedProduct, getCachedOffers } from "./_cache";
 
 type Params = Promise<{ slug: string }>;
-
-// generateMetadata e este layout precisam do mesmo produto/ofertas; cache()
-// evita buscar duas vezes na mesma requisição de servidor.
-const getCachedProduct = cache(getProductBySlug);
-const getCachedOffers = cache(getOffersByProduct);
 
 export async function generateMetadata({
   params,

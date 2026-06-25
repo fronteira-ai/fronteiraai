@@ -13,6 +13,14 @@ Branch auditada: `main` @ `d093589` + Sprint 3.8 (seed real) + Sprint 3.9 (Price
 >
 > ✅ **Price Engine v1 validado (Sprint 3.9, adendo, ADR-018)**: `updateOfferPrice`/`getOfferPriceMetrics` testados fim a fim contra `price_history` real (criada manualmente pelo CTO) — histórico, no-op, métricas (`lowest`/`highest`/variação %) todos corretos após um bug de cálculo ser encontrado e corrigido durante a validação. Classificação: **"Backend Production Ready"** — correto e testado, mas sem nenhum caminho de chamada real ainda, e a leitura pública (`getOfferPriceMetrics` via app) está sujeita ao mesmo bloqueio de RLS do ADR-019.
 
+## Sprint 4.1 — Public Release Readiness (Release 0.6)
+
+**Home dinâmica** com dados reais do Supabase (stores, brands, categories, catalog) — `app/page.tsx` convertida de dados hardcoded para `async` server component com `force-dynamic`. **Double-fetch eliminado** em `/product/[slug]` e `/store/[slug]`: pages convertidas de `"use client"` + hook para server components com `React.cache()` compartilhado via `app/...[slug]/_cache.ts` (ADR-021). **Botão "Comparar preços"** adicionado ao produto, linkando para `/compare/[slug]`. `constants/categories.ts` esvaziado (mock substituído por `getCategories()` real). `ProductHighlight.priceUSD`/`storeName` tornados opcionais para compatibilidade com `ProductCatalogItem`.
+
+**ADR-019 (leitura pública) — ainda não resolvido**: requer ação humana no Supabase SQL Editor (aplicar `0007`). Investigação confirmou que não há mecanismo programático disponível (sem DATABASE_URL, sem PAT da Management API). Todo o código está pronto; a Home mostrará apenas `stores` até que `0007` seja aplicado.
+
+Build: 8 rotas (`/` agora `ƒ Dynamic`). Lint: 0 erros. TypeScript: 0 erros. db:validate: 0 problemas.
+
 ---
 
 ## Visão geral
@@ -44,8 +52,8 @@ Ver `docs/ARCHITECTURE.md` para o mapeamento completo, incluindo o novo fluxo do
 
 ## Funcionalidades implementadas
 
-- **Home (`/`)** — todas as seções renderizadas com **dados de exemplo hardcoded** em `app/page.tsx`/`constants/categories.ts`, não com dados reais do Supabase.
-- **Página de Produto (`/product/[slug]`)** — integração real ponta-a-ponta: `product.service` + `offer.service` → `useProduct`/layout server-side → componentes. `generateMetadata`, JSON-LD (Product), estados `loading`/`error`/`not-found`. Breadcrumb agora via `components/ui/Breadcrumb.tsx` genérico (Sprint 3.5).
+- **Home (`/`)** — **Sprint 4.1**: agora busca dados reais do Supabase em paralelo (`getStores`, `getBrands`, `getCategories`, `getProductsCatalog`) com `force-dynamic`. Até `0007` ser aplicado, apenas a seção de lojas exibe dados reais (única tabela com leitura pública).
+- **Página de Produto (`/product/[slug]`)** — integração real ponta-a-ponta. **Sprint 4.1**: convertida de `"use client"` + `useProduct` para Server Component com `React.cache()` via `_cache.ts` — eliminando o double-fetch. Botão "Comparar preços" adicionado, linkando para `/compare/[slug]`. `generateMetadata`, JSON-LD (Product), estados `loading`/`error`/`not-found`. Breadcrumb via `components/ui/Breadcrumb.tsx`.
 - **Favoritos** — `useFavorites` funcional via `localStorage`, sem dependência de Supabase/autenticação.
 - **Navbar/Footer** — completos, estáticos. `/products` deixou de ser link morto (Sprint 3.5).
 - **Sistema de motion/animação** — `styles/animations.ts` + keyframes, usado na maioria dos componentes, respeitando `prefers-reduced-motion`.
@@ -70,11 +78,13 @@ Nenhuma nesta auditoria — `ProductGrid.tsx` (única pendência apontada na aud
 
 | Rota | Tipo | Status |
 |---|---|---|
-| `/` | Server Component | Completa (dados estáticos) |
+| `/` | Server Component (`force-dynamic`) | **Sprint 4.1**: dados reais (stores visíveis; brands/categories/products aguardam ADR-019) |
 | `/search` | Server Component (com `<Suspense>`) | Completa, integrada ao Supabase |
-| `/products` | Server Component (com `<Suspense>`) | **Nova (Sprint 3.5)**, integrada ao Supabase |
-| `/product/[slug]` | Client page + Server layout | Completa, integrada ao Supabase |
-| `/store/[slug]` | Client page + Server layout | Completa, integrada ao Supabase |
+| `/products` | Server Component (com `<Suspense>`) | Completa, integrada ao Supabase |
+| `/product/[slug]` | **Server Component** + Server layout | **Sprint 4.1**: double-fetch eliminado; botão "Comparar preços" |
+| `/store/[slug]` | **Server Component** + Server layout | **Sprint 4.1**: double-fetch eliminado |
+| `/compare/[slug]` | Server Component | Sprint 4.0, integrada ao Supabase |
+| `/api/compare` | Route Handler | Sprint 4.0, integrada ao Supabase |
 
 ## Componentes existentes
 
@@ -242,6 +252,6 @@ Entrega o Compare Engine v1: compara um produto entre todas as lojas disponívei
 
 ---
 
-## Status Geral: **60%**
+## Status Geral: **65%**
 
-Critério: dos 8 domínios do roadmap original (Home, Produto, Loja, Busca, Catálogo/Listagem, Comparação, IA, Admin, Crawler), 5 estão completos no código com integração real ao Supabase (Produto, Busca, Loja, Catálogo, **Comparação — novo**), 1 está com UI pronta mas dados mockados (Home), e os demais 2 não foram iniciados. **Caveat crítico (ADR-019)**: os 5 domínios com código completo **não são visíveis para usuários reais** enquanto `0007_proposed_public_read_policies.sql` não for aplicado — a chave anônima não lê `products`/`offers`/`price_history`. A arquitetura e o código estão corretos; o bloqueador é de segurança/configuração, não de engenharia.
+Critério: dos 8 domínios do roadmap original (Home, Produto, Loja, Busca, Catálogo/Listagem, Comparação, IA, Admin, Crawler), 6 estão completos no código com integração real ao Supabase (Produto, Busca, Loja, Catálogo, Comparação, **Home — agora dinâmica**). **Caveat crítico (ADR-019)**: a Home mostrará apenas `stores` (única tabela com leitura pública) até que `0007_proposed_public_read_policies.sql` seja aplicado; os demais 5 domínios igualmente invisíveis para usuários reais. A arquitetura e o código estão corretos; o bloqueador é de configuração Supabase, não de engenharia.

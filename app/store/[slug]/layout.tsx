@@ -1,14 +1,8 @@
-import { cache } from "react";
 import type { Metadata } from "next";
-import { getStoreBySlug } from "@/services/store.service";
 import { storeUrl } from "@/constants/routes";
+import { getCachedStore } from "./_cache";
 
 type Params = Promise<{ slug: string }>;
-
-// generateMetadata e este layout precisam da mesma loja; cache() evita
-// buscar duas vezes na mesma requisicao de servidor (mesmo padrao de
-// app/product/[slug]/layout.tsx).
-const getCachedStore = cache(getStoreBySlug);
 
 export async function generateMetadata({
   params,

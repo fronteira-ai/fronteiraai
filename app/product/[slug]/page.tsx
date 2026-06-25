@@ -1,6 +1,6 @@
-"use client";
-
-import { notFound, useParams } from "next/navigation";
+import { notFound } from "next/navigation";
+import Link from "next/link";
+import { Scale } from "lucide-react";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import Breadcrumb from "@/components/ui/Breadcrumb";
@@ -11,28 +11,24 @@ import ProductOffers from "@/components/product/ProductOffers";
 import RelatedProducts from "@/components/product/RelatedProducts";
 import FavoriteButton from "@/components/product/FavoriteButton";
 import ShareButton from "@/components/product/ShareButton";
-import { useProduct } from "@/hooks/useProduct";
-import Loading from "./loading";
+import { comparePath } from "@/constants/routes";
+import { getCachedProduct, getCachedOffers, getCachedRelatedProducts } from "./_cache";
 
-export default function ProductPage() {
-  const params = useParams<{ slug: string }>();
-  const {
-    product,
-    offers,
-    relatedProducts,
-    loading,
-    notFound: productNotFound,
-  } = useProduct(params.slug);
+type Params = Promise<{ slug: string }>;
 
-  // Renderizado durante o fluxo de render (não em efeito), para que o
-  // notFound() seja capturado corretamente pelo not-found.tsx da rota.
-  if (!loading && (productNotFound || !product)) {
+export default async function ProductPage({ params }: { params: Params }) {
+  const { slug } = await params;
+
+  const product = await getCachedProduct(slug);
+
+  if (!product) {
     notFound();
   }
 
-  if (loading || !product) {
-    return <Loading />;
-  }
+  const [offers, relatedProducts] = await Promise.all([
+    getCachedOffers(product.id),
+    getCachedRelatedProducts(product.category_id, product.id),
+  ]);
 
   return (
     <main className="min-h-screen bg-[#050816] text-white">
@@ -61,6 +57,14 @@ export default function ProductPage() {
             <ProductHeader product={product} />
 
             <div className="mt-6 flex flex-wrap gap-3">
+              <Link
+                href={comparePath(product.slug)}
+                className="inline-flex items-center gap-2 rounded-full bg-blue-600 px-6 py-3 text-sm font-semibold text-white transition hover:bg-blue-500"
+              >
+                <Scale size={16} />
+                Comparar preços
+              </Link>
+
               <FavoriteButton product={product} />
               <ShareButton slug={product.slug} title={product.name} />
             </div>

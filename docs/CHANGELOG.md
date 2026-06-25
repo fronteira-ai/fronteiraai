@@ -201,6 +201,33 @@ Revalidado: `npm run lint`/`npx tsc --noEmit`/`npm run build` (sem regressão), 
 
 **Classificação final do Price Engine v1**: "Backend Production Ready" — não "Production Ready" de ponta a ponta, porque a leitura pública está bloqueada pelo achado do ADR-019 (mais amplo que só preço) e nenhum caminho de escrita real (Admin/Crawler) existe ainda.
 
+## 2026-06-25 — Sprint 4.1: Public Release Readiness (Release 0.6)
+
+Transição do ParaguAI de uma plataforma tecnicamente funcional para um MVP navegável: Home dinâmica com dados reais, double-fetch resolvido nas páginas de produto e loja, botão "Comparar preços" adicionado ao produto. ADR-019 (leitura pública bloqueada) permanece como único bloqueador restante — requer ação manual no Supabase SQL Editor.
+
+**Arquivos criados**:
+- **`app/product/[slug]/_cache.ts`** (novo): módulo compartilhado com funções `React.cache()` para produto e suas relações — eliminando double-fetch entre `layout.tsx` (metadata/JSON-LD) e `page.tsx` (renderização). Ver ADR-021.
+- **`app/store/[slug]/_cache.ts`** (novo): equivalente para o domínio de Loja.
+
+**Arquivos alterados**:
+- **`app/page.tsx`** (Home): convertida de componente síncrono com dados hardcoded para `async` server component com `export const dynamic = "force-dynamic"` — busca `getStores()`, `getBrands()`, `getCategories()`, `getProductsCatalog({ perPage: 4 })` em paralelo via `Promise.all`. Todos os arrays `sampleStores`/`sampleProducts`/`sampleBrands` e o import de `sampleCategories` foram removidos. Dados reais fluem diretamente para os componentes sem alterar suas props.
+- **`app/product/[slug]/page.tsx`**: convertido de `"use client"` + `useProduct()` para Server Component `async` — passa `params: Promise<{ slug: string }>`, chama `getCachedProduct`/`getCachedOffers`/`getCachedRelatedProducts` do `_cache.ts`, chama `notFound()` quando o produto não existe. Adicionado botão "Comparar preços" com ícone `Scale` (lucide-react), linkando para `comparePath(product.slug)`.
+- **`app/product/[slug]/layout.tsx`**: refatorado para importar `getCachedProduct`/`getCachedOffers` do `_cache.ts` em vez de instanciar `React.cache()` localmente — remove as importações diretas de `getProductBySlug`/`getOffersByProduct`/`cache`.
+- **`app/store/[slug]/page.tsx`**: convertido de `"use client"` + `useStore()` para Server Component `async` — mesmo padrão de produto.
+- **`app/store/[slug]/layout.tsx`**: refatorado para importar `getCachedStore` do `_cache.ts`.
+- **`types/product.ts`**: `ProductHighlight.priceUSD` e `storeName` tornados opcionais (`number | undefined` e `string | undefined`) — permite mapear `ProductCatalogItem` (onde `lowestPriceUSD` pode ser `null` e não há campo `storeName`) para `ProductHighlight` sem forçar dados falsos.
+- **`constants/categories.ts`**: conteúdo substituído por comentário — os dados de exemplo (`sampleCategories`) foram migrados para `getCategories()` real via `category.service.ts`. O arquivo é preservado (sem `git rm`) por convenção do projeto.
+- **`docs/DECISIONS.md`**: ADR-021 adicionado (módulo `_cache.ts` compartilhado).
+
+**Performance obtida**:
+- Double-fetch eliminado em `/product/[slug]` e `/store/[slug]`: de 2 fetches por entidade principal por visita para 1 (compartilhado via `React.cache()` entre layout e page).
+- Home: de 0 queries ao Supabase (dados hardcoded) para 4 queries em paralelo por visita (stores, brands, categories, catalog).
+- Nenhuma N+1 introduzida: `getProductsCatalog` usa `offers!left` (1 query com join); `Promise.all` paraleliza as 4 queries da Home.
+
+**ADR-019 — status inalterado**: a chave anônima continua sem leitura pública em `brands`/`categories`/`products`/`offers`/`price_history`. As consultas da Home retornarão `[]` para tudo exceto stores até que `0007_proposed_public_read_policies.sql` seja aplicado. O código está correto — é um bloqueador de configuração, não de engenharia. Investigado durante a sprint: a Supabase Management API requer um Personal Access Token (PAT) diferente da service role key; a service role key não executa DDL via PostgREST; não há DATABASE_URL no projeto. A ação humana de colar o SQL no Supabase SQL Editor permanece o único caminho.
+
+Validado: `npm run lint` (0 erros, 5 warnings pré-existentes), `npx tsc --noEmit` (0 erros), `npm run build` (sucesso — 8 rotas, `/` agora `ƒ Dynamic`), `npm run db:validate` (0 problemas).
+
 ## 2026-06-25 — Sprint 4.0: Compare Engine v1 (Release 0.5)
 
 Entrega o primeiro Compare Engine totalmente funcional do ParaguAI: compara um produto entre todas as lojas disponíveis usando dados reais do Supabase, com Price Engine integrado (histórico de preço por oferta), algoritmo de ranking de ofertas (ADR-014) e endpoint de API estruturado. Primeiro MVP visível da plataforma.

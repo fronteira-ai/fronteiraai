@@ -108,20 +108,34 @@ Entregou o Compare Engine v1 completo: `services/compare.service.ts`, `app/api/c
 
 **Pendência crítica remanescente (ADR-019, pré-existe à sprint)**: a chave anônima não lê `products`/`offers`/`price_history`. O Compare Engine está correto e testado com a chave de serviço, mas retorna `null` para usuários reais até `0007_proposed_public_read_policies.sql` ser aplicado. Isso afeta todo o catálogo, não só o comparador.
 
-## Sprint 4.1 (proposta) — Destravar leitura pública + consolidação
+## Sprint 4.1 (encerrada) — Public Release Readiness (Release 0.6)
 
-**Prioridade máxima**: aplicar `0007_proposed_public_read_policies.sql` no SQL Editor do Supabase.
+**Executado**:
+- ✅ Home convertida para `async` server component com dados reais do Supabase (`force-dynamic`)
+- ✅ Double-fetch eliminado em `/product/[slug]` e `/store/[slug]` via `_cache.ts` compartilhado (ADR-021)
+- ✅ Pages de produto e loja convertidas de `"use client"` para Server Components
+- ✅ Botão "Comparar preços" adicionado à página de produto
+- ✅ `constants/categories.ts` esvaziado (mock substituído por `getCategories()` real)
+- ✅ Build, lint, TypeScript, db:validate — todos limpos
 
-**Escopo proposto, em ordem**:
-1. 🔴 **Aplicar `0007_proposed_public_read_policies.sql`** no SQL Editor do Supabase — **antes de qualquer outra coisa**. Sem isso, `/products`, `/product/[slug]`, `/compare/[slug]`, `/search` e as ofertas de `/store/[slug]` continuam exibindo vazio para usuários reais.
-2. **Confirmar ao vivo** (navegador real ou consulta com a chave anônima) que o catálogo e o comparador estão visíveis — não assumir pela policy ter sido criada.
-3. **Aplicar `0002` (fase 1) e `0004`** (constraints `UNIQUE (slug)` + índices) — o seed confirmou 0 duplicata; seguro para aplicar.
-4. **Conectar a Home ao Supabase**: substituir os dados de exemplo hardcoded em `app/page.tsx` por chamadas reais a `getStores()`/`getProductsCatalog()`/`getProductComparisonBySlug()` — usar `getProductsCatalog` com `limit=4` para a vitrine de ofertas.
-5. **Resolver o double-fetch de produto e de loja**: mover o fetch principal para o server component (como já é feito em `/products` e agora em `/compare/[slug]`), reduzindo `app/product/[slug]/page.tsx` e `app/store/[slug]/page.tsx` a ilhas client para state/events apenas.
-6. Reavaliar `0003`/`0005` (views de agregação de preço e ranking de loja) — com volume real visível pela chave anônima, vale validar se a performance atual é aceitável ou se as views já são necessárias.
+**Não resolvido (bloqueador de configuração, não de código)**:
+- 🔴 **ADR-019**: `0007_proposed_public_read_policies.sql` ainda não aplicado. Investigação confirmou: sem DATABASE_URL e sem Supabase Management API PAT, não é possível aplicar DDL programaticamente. A ação humana de colar o SQL no Supabase SQL Editor permanece o único caminho. A Home mostra apenas lojas até lá; catálogo/produto/compare/busca retornam vazios para usuários reais.
 
-**Riscos**: 🔴 Alto até o item 1 ser resolvido; 🟢 Baixo no restante.
-**Impacto**: o item 1 é a correção de maior impacto do projeto — sem ela, 5 domínios completos são invisíveis para usuários reais.
+## Sprint 4.2 (proposta) — Destravar leitura pública + estabilização
+
+**Pré-condição**: aplicar `0007_proposed_public_read_policies.sql` no SQL Editor do Supabase antes de iniciar.
+
+**Escopo proposto**:
+1. 🔴 **[Ação humana] Aplicar `0007`** no SQL Editor do Supabase. SQL disponível em `database/migrations/0007_proposed_public_read_policies.sql`.
+2. **Confirmar ao vivo** com a chave anônima que produtos/ofertas/categorias/marcas são visíveis.
+3. **Aplicar `0002` e `0004`** (constraints UNIQUE(slug) + índices) — seguro, 0 duplicatas confirmadas.
+4. **Testar o fluxo completo** no navegador: Home → Produto → Comparar preços → Loja → Voltar → Nova pesquisa.
+5. Avaliar performance real: se catálogo com dados reais visíveis mostrar N+1 ou lentidão, aplicar `0003`/`0005` (views de preço e ranking).
+6. Adicionar `sitemap.xml`/`robots.txt` (ausentes em `app/`).
+7. Trocar `<img>` por `next/image` nos 4 componentes apontados pelo lint (ProductCard, ProductGallery, StoreCard, StorePage).
+
+**Riscos**: 🔴 Alto apenas no item 1; 🟢 Baixo no restante.
+**Impacto**: o item 1 é a única mudança que torna o produto visível para usuários reais — sem ela, 6 domínios completos são invisíveis.
 
 ### Sprint C — Eliminar dívidas técnicas críticas antes de crescer mais
 - **Prioridade**: 🟡 Média (mas crescente — quanto mais o código cresce, mais caro fica)

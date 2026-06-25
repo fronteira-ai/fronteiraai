@@ -37,8 +37,8 @@ Ver `docs/DECISIONS.md` ADR-009 para o detalhe completo da correção.
 ## Performance
 
 - `ProductCard`, `ProductGallery` (×2), `StoreCard` usam `<img>` nativo em vez de `next/image` — perda de otimização automática de imagem (lazy loading nativo do Next, `srcset`, dimensionamento). Mesmos warnings de lint de antes; a unificação `ProductCard`/`ProductHighlightCard` (Sprint 3.5, ADR-010) não mudou esse ponto, só reduziu para um componente em vez de dois.
-- Fetch duplicado de produto entre `layout.tsx` (server) e `page.tsx` (client via `useProduct`) — toda visita à página de produto consulta o Supabase ao menos duas vezes para os mesmos dados (ver `ARCHITECTURE.md`). **O mesmo padrão foi replicado deliberadamente em `app/store/[slug]/`** (Sprint 3.4, para manter consistência arquitetural com Produto, conforme pedido) — `layout.tsx` busca a loja para metadata/JSON-LD, `page.tsx` busca de novo via `useStore`. Resolver os dois ao mesmo tempo é candidato a uma sprint futura de performance.
-- `app/product/[slug]/page.tsx` e (desde a Sprint 3.4) `app/store/[slug]/page.tsx` são inteiramente `"use client"` — perdem os benefícios de streaming/SSR do App Router para o conteúdo principal, que poderia ser Server Component com apenas os botões de ação como ilhas client.
+- ~~Fetch duplicado de produto entre `layout.tsx` e `page.tsx`~~ — **resolvido na Sprint 4.1** (ADR-021): `app/product/[slug]/_cache.ts` e `app/store/[slug]/_cache.ts` exportam funções com `React.cache()`; tanto layout quanto page importam do mesmo módulo, compartilhando o escopo de cache dentro de uma requisição — apenas 1 fetch por entidade por visita.
+- ~~`app/product/[slug]/page.tsx` e `app/store/[slug]/page.tsx` inteiramente `"use client"`~~ — **resolvido na Sprint 4.1**: convertidos para Server Components `async`. `FavoriteButton`/`ShareButton` continuam como ilhas `"use client"` (estado local necessário), o restante da página renderiza no servidor.
 
 ## SEO
 
@@ -93,7 +93,7 @@ Ver `docs/DECISIONS.md` ADR-009 para o detalhe completo da correção.
 
 - **Chave anônima bloqueada (ADR-019)**: `/compare/[slug]` e `/api/compare` retornam vazio/404 para usuários reais até `0007_proposed_public_read_policies.sql` ser aplicado. Bloqueio pré-existe à sprint — afeta todo o catálogo, não só o comparador.
 - **Compare Engine compara um produto de cada vez**: a missão do Release 0.5 previa "tela de seleção (2–4 produtos) com tabela de especificações lado a lado" para comparar N produtos. O que foi entregue é `/compare/[slug]` (um produto, todas as lojas). A comparação lado a lado de N produtos distintos fica para a Sprint 4.1 ou posterior, quando a leitura pública estiver desbloqueada e houver mais dados reais.
-- **Sem link "Comparar" nos cards de produto**: `ProductCard.tsx` e `ProductHeader.tsx` ainda não têm link para `/compare/[slug]`. Um botão "Comparar preços" no `ProductHeader` seria o ponto de entrada mais natural — pode ser adicionado na Sprint 4.1.
+- ~~**Sem link "Comparar" nos cards de produto**~~ — **resolvido na Sprint 4.1**: botão "Comparar preços" adicionado em `app/product/[slug]/page.tsx` (ao lado dos botões Favoritar e Compartilhar), linkando para `comparePath(product.slug)`.
 - **Ranking de loja sem view materializada**: o score usa `store.rating` da query de ofertas (campo existe e é atualizado pelo seed). A `store_ranking_summary` proposta em `0005_proposed_store_ranking_view.sql` aumentaria a precisão do score com `offer_count`/`in_stock_offer_count` — não necessária agora, mas candidata quando o volume crescer.
 
 ## Acessibilidade

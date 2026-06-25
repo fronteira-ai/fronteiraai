@@ -28,16 +28,15 @@ export interface ProductCatalogItem extends ProductWithRelations {
 }
 
 // Forma resumida de produto + melhor oferta, usada em vitrines (ex: Home).
-// Hoje preenchida com dados de exemplo; no futuro deve ser o retorno de uma
-// consulta combinando products + offers, sem precisar alterar os componentes
-// que a consomem.
+// Mapeado a partir de ProductCatalogItem em app/page.tsx — priceUSD e
+// storeName são opcionais porque um produto pode ainda não ter ofertas.
 export interface ProductHighlight {
   id: string;
   slug: string;
   name: string;
   imageUrl: string | null;
-  storeName: string;
-  priceUSD: number;
+  storeName?: string;
+  priceUSD?: number;
   originalPriceUSD?: number;
   inStock: boolean;
 }
