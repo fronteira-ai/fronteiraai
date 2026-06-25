@@ -1,15 +1,27 @@
-import { memo } from "react";
+"use client";
+
+import { memo, useCallback } from "react";
 import { RankedOffer } from "@/types/compare";
 import { formatUSD, formatBRL } from "@/utils/currency";
+import { analytics } from "@/utils/analytics";
 
 type Props = {
   rankedOffer: RankedOffer;
 };
 
-function CompareOfferCard({ rankedOffer }: Props) {
+function CompareOfferCard({ rankedOffer, productSlug }: Props & { productSlug?: string }) {
   const { offer, rank, rankScore, priceMetrics } = rankedOffer;
   const store = offer.store;
   const isBest = rank === 1;
+
+  const handleOfferClick = useCallback(() => {
+    if (!offer.product_url) return;
+    analytics.clickExternalOffer(
+      productSlug ?? "",
+      store?.name ?? "Loja",
+      offer.product_url
+    );
+  }, [offer.product_url, productSlug, store?.name]);
 
   return (
     <div
@@ -142,6 +154,7 @@ function CompareOfferCard({ rankedOffer }: Props) {
               href={offer.product_url}
               target="_blank"
               rel="noopener noreferrer"
+              onClick={handleOfferClick}
               className={`mt-4 inline-block rounded-full px-6 py-2.5 text-sm font-semibold text-white transition ${
                 isBest
                   ? "bg-blue-600 hover:bg-blue-500"

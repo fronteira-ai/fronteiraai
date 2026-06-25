@@ -158,14 +158,36 @@ Entregou o Compare Engine v1 completo: `services/compare.service.ts`, `app/api/c
 - Aplicar `database/migrations/0008_data_integrity.sql` no SQL Editor
 - Upload de imagens reais no bucket `catalog` seguindo convenção do ADR-022
 
-## Sprint 4.4 (proposta) — Release 0.8 Foundation
+## Release 0.8 (encerrado) — Go Live Foundation
+
+**Executado**:
+- ✅ Imagens: `database/seed/update_images.js` popula 16 URLs no banco (`npm run db:images`)
+- ✅ Favicon: `app/icon.tsx` (512px) + `app/apple-icon.tsx` (180px) via ImageResponse
+- ✅ Manifesto PWA: `app/manifest.ts` → `/manifest.webmanifest`
+- ✅ Analytics: `components/analytics/Analytics.tsx` (GA4 + Clarity) + `utils/analytics.ts`
+- ✅ Eventos: `CompareOfferCard` + `StoreCard` com rastreamento de interação
+- ✅ SEO: viewport themeColor, preconnect Supabase, Search Console + Bing via env vars
+- ✅ Segurança: 6 security headers em next.config.ts
+- ✅ `.env.example` completo com todas as variáveis documentadas
+- ✅ Build 13 rotas, lint 0, tsc 0, db:validate 23/23
+
+**Pendências manuais** (para Go Live 100%):
+1. Aplicar `database/migrations/0008_data_integrity.sql` no Supabase SQL Editor
+2. Configurar `NEXT_PUBLIC_GA_MEASUREMENT_ID` no painel Vercel
+3. Configurar `NEXT_PUBLIC_CLARITY_PROJECT_ID` no painel Vercel
+4. Registrar em Google Search Console → copiar código para `NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION`
+5. Registrar em Bing Webmaster Tools → copiar código para `NEXT_PUBLIC_BING_SITE_VERIFICATION`
+6. Atualizar `NEXT_PUBLIC_SITE_URL` no painel Vercel para o domínio de produção
+
+## Release 0.9 (proposta) — Escala e Autenticação
 
 **Escopo proposto**:
-1. **Upload de imagens**: carregar imagens reais de produtos, lojas e marcas no bucket `catalog` e atualizar `image_url`/`cover_image`/`logo_url` no banco via script seed.
-2. Avaliar `0003` (materialized view de preço para ordenação escalável no catálogo).
-3. Avaliar `0005` (store_ranking_summary view para o algoritmo de Offer Ranking).
-4. CI básico: GitHub Actions com `npm run check` em PRs.
-5. Preparação para autenticação (Supabase Auth, Release 0.8).
+1. **Autenticação**: Supabase Auth (login com e-mail/Google/Apple), perfil de usuário.
+2. **Favoritos reais**: migrar `localStorage` para tabela `favorites` no Supabase (com sincronização de dados locais existentes).
+3. **Upload de imagens reais**: carregar fotos reais no bucket `catalog` e substituir as URLs do placehold.co.
+4. Avaliar `0003` (materialized view de preço para ordenação escalável no catálogo).
+5. Avaliar `0005` (store_ranking_summary) para melhorar o algoritmo de Offer Ranking.
+6. CI básico: GitHub Actions com `npm run check` em PRs.
 
 ### Sprint C — Eliminar dívidas técnicas críticas antes de crescer mais
 - **Prioridade**: 🟡 Média (mas crescente — quanto mais o código cresce, mais caro fica)

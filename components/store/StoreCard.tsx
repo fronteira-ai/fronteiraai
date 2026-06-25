@@ -1,10 +1,13 @@
-import { memo } from "react";
+"use client";
+
+import { memo, useCallback } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { Star, MapPin } from "lucide-react";
 import { Store } from "@/types/store";
 import { animations } from "@/styles/animations";
 import { storePath } from "@/constants/routes";
+import { analytics } from "@/utils/analytics";
 
 type Props = {
   store: Store;
@@ -12,9 +15,14 @@ type Props = {
 };
 
 function StoreCard({ store, productCount }: Props) {
+  const handleClick = useCallback(() => {
+    analytics.viewStore(store.slug, store.name);
+  }, [store.slug, store.name]);
+
   return (
     <Link
       href={storePath(store.slug)}
+      onClick={handleClick}
       className={`group flex flex-col overflow-hidden rounded-3xl border border-slate-800 bg-slate-900 ${animations.cardHover}`}
     >
       <div className="relative flex h-48 w-full items-center justify-center overflow-hidden bg-slate-950">

@@ -236,6 +236,47 @@ Lapidar a experiência existente para o primeiro lançamento público. Nenhuma f
 
 ---
 
+## 2026-06-25 — Release 0.8: Go Live Foundation
+
+Transformação do MVP técnico em produto pronto para receber usuários reais.
+
+**Imagens reais (placehold.co)**:
+- `database/seed/update_images.js` (novo, `npm run db:images`): atualiza `image_url` (products), `cover_image` (stores) e `logo_url` (brands) com 16 URLs de placehold.co por entidade — o catálogo agora exibe imagens representativas em vez de estados vazios. URLs geradas com cor/nome da entidade, estáveis e gratuitas. Suportadas pelo `next/image` via `remotePatterns: "**"` já configurado.
+
+**Favicon e PWA**:
+- `app/icon.tsx` (novo): gera `/icon` PNG (512×512) via `ImageResponse` — ícone azul com "P" branco, borderRadius arredondado.
+- `app/apple-icon.tsx` (novo): gera `/apple-icon` PNG (180×180) — mesmo design adaptado para iOS.
+- `app/manifest.ts` (novo): `manifest.webmanifest` via `MetadataRoute.Manifest` — nome "ParaguAI", `theme_color: #3b82f6`, `background_color: #050816`, `display: standalone`, ícones apontando para `/icon` e `/apple-icon`.
+
+**Analytics**:
+- `components/analytics/Analytics.tsx` (novo): componente `"use client"` com `next/script strategy="afterInteractive"` para **Google Analytics 4** (`NEXT_PUBLIC_GA_MEASUREMENT_ID`) e **Microsoft Clarity** (`NEXT_PUBLIC_CLARITY_PROJECT_ID`). Renderiza nada se nem um nem outro estiver configurado — 0 ruído em desenvolvimento.
+- `utils/analytics.ts` (novo): utilitários tipados: `analytics.search()`, `analytics.viewProduct()`, `analytics.clickOffer()`, `analytics.compare()`, `analytics.viewStore()`, `analytics.clickExternalOffer()` — enviam para GA4 (`window.gtag`) e Clarity (`window.clarity`) sem acoplamento.
+
+**Rastreamento de eventos**:
+- `components/compare/CompareOfferCard.tsx` → `"use client"` + `analytics.clickExternalOffer()` no botão "Ver oferta" (evento de maior valor de negócio).
+- `components/store/StoreCard.tsx` → `"use client"` + `analytics.viewStore()` no clique da loja.
+
+**SEO — Search Console e Bing**:
+- `app/layout.tsx` atualizado: `viewport` exportado separadamente (`themeColor: #3b82f6`, `colorScheme: dark`); fontes Geist com `display: "swap"`; `<link rel="preconnect">` para domínio do Supabase; suporte a `NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION` e `NEXT_PUBLIC_BING_SITE_VERIFICATION` (meta tags de verificação injetadas via metadata quando presentes); `<Analytics />` adicionado antes de `</body>`.
+- `twitter.site: "@paraguai"` adicionado ao root metadata.
+
+**Segurança**:
+- `next.config.ts` atualizado: `async headers()` com 6 headers de segurança para todas as rotas: `X-DNS-Prefetch-Control`, `Strict-Transport-Security (HSTS)`, `X-Frame-Options: SAMEORIGIN`, `X-Content-Type-Options: nosniff`, `Referrer-Policy: strict-origin-when-cross-origin`, `Permissions-Policy`.
+
+**Configuração**:
+- `.env.example` reescrito: seções documentadas — Supabase, SITE_URL, Analytics (GA4 + Clarity), Webmaster Tools (Google + Bing), service role key.
+- `package.json`: scripts `db:images` e `db:images:dry-run` adicionados.
+
+**Validações**:
+- Lint: 0 erros, 0 warnings.
+- TypeScript: 0 erros.
+- Build: 13 rotas (+ `/icon ○`, `/apple-icon ○`, `/manifest.webmanifest ○`).
+- db:validate: 11 OK.
+- db:validate:43: 23 OK.
+- HTTP: `/icon` 200 image/png, `/apple-icon` 200 image/png, `/manifest.webmanifest` 200.
+
+---
+
 ## 2026-06-25 — ADR-019 ENCERRADO: migration 0007 aplicada + validação completa com chave anônima
 
 **Hotfix da migration `0007_proposed_public_read_policies.sql`**:

@@ -274,6 +274,16 @@ Lapidação completa da experiência existente antes do primeiro lançamento pú
 - **Documentação**: ADR-022 + ADR-023 em DECISIONS.md; Sprint 4.3 no CHANGELOG.md.
 - **Validações**: lint 0, tsc 0, build 10 rotas (sem regressão), db:validate 0, db:validate:43 23/23 OK.
 
-## Status Geral: **83%**
+## Release 0.8 — Go Live Foundation — 2026-06-25
 
-Release 0.7 tecnicamente entregue: 6 domínios com dados reais, SEO completo, Storage fundado, integridade de catálogo auditada. Pendência manual: aplicar `0008` no SQL Editor + upload de imagens reais no bucket. Próximo passo de código: Release 0.8 (autenticação).
+- **Imagens**: 16 URLs de placehold.co inseridas no banco (products, stores, brands) via `database/seed/update_images.js`. Catálogo agora exibe imagens representativas.
+- **Favicon + PWA**: `app/icon.tsx` (512×512 PNG) + `app/apple-icon.tsx` (180×180) via `ImageResponse` + `app/manifest.ts` (manifest.webmanifest). 3 novas rotas estáticas.
+- **Analytics**: `components/analytics/Analytics.tsx` (GA4 + Clarity, graceful degradation) + `utils/analytics.ts` (event helpers tipados). `CompareOfferCard` + `StoreCard` rastreiam cliques. Layout inclui `<Analytics />`.
+- **SEO**: `viewport` com `themeColor` + `colorScheme`. Suporte a Google Search Console e Bing Webmaster via env vars. `<link rel="preconnect">` para Supabase. Twitter card com `site`.
+- **Segurança**: 6 security headers em `next.config.ts` (HSTS, X-Frame-Options, nosniff, Referrer-Policy, Permissions-Policy).
+- **Scripts**: `db:images`, `db:images:dry-run`.
+- **Validações**: lint 0, tsc 0, build 13 rotas, db:validate 11 OK, db:validate:43 23/23.
+
+## Status Geral: **90%**
+
+Release 0.8 entregue: site com imagens, favicon, manifesto, analytics, headers de segurança, SEO avançado. Pendência para 100%: (1) aplicar `0008_data_integrity.sql` no SQL Editor, (2) configurar `NEXT_PUBLIC_GA_MEASUREMENT_ID` e `NEXT_PUBLIC_CLARITY_PROJECT_ID` em produção, (3) registrar em Google Search Console e Bing Webmaster.

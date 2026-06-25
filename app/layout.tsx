@@ -1,17 +1,27 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { SITE_URL, searchUrl } from "@/constants/routes";
+import Analytics from "@/components/analytics/Analytics";
 import "./globals.css";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
+  display: "swap",
 });
 
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
+  display: "swap",
 });
+
+export const viewport: Viewport = {
+  themeColor: "#3b82f6",
+  colorScheme: "dark",
+  width: "device-width",
+  initialScale: 1,
+};
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
@@ -21,12 +31,35 @@ export const metadata: Metadata = {
   },
   description:
     "Pesquise produtos, compare preços entre lojas e descubra as melhores ofertas no Paraguai com o ParaguAI.",
+  keywords: [
+    "Paraguai",
+    "Ciudad del Este",
+    "comparador de preços",
+    "eletrônicos",
+    "importados",
+    "lojas Paraguai",
+  ],
   robots: { index: true, follow: true },
   openGraph: {
     siteName: "ParaguAI",
     locale: "pt_BR",
     type: "website",
   },
+  twitter: {
+    card: "summary_large_image",
+    site: "@paraguai",
+  },
+  // Preenchido pelo CTO após registro no Google Search Console
+  ...(process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION && {
+    verification: {
+      google: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION,
+      ...(process.env.NEXT_PUBLIC_BING_SITE_VERIFICATION && {
+        other: {
+          "msvalidate.01": process.env.NEXT_PUBLIC_BING_SITE_VERIFICATION,
+        },
+      }),
+    },
+  }),
 };
 
 const websiteJsonLd = {
@@ -64,6 +97,10 @@ export default function RootLayout({
       lang="pt-BR"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
+      <head>
+        <link rel="preconnect" href="https://acairzpzsklctaqjsukw.supabase.co" />
+        <link rel="dns-prefetch" href="https://acairzpzsklctaqjsukw.supabase.co" />
+      </head>
       <body className="min-h-full flex flex-col">
         <script
           type="application/ld+json"
@@ -78,6 +115,7 @@ export default function RootLayout({
           }}
         />
         {children}
+        <Analytics />
       </body>
     </html>
   );
