@@ -102,24 +102,26 @@ Diferente do que esta seção propunha (Price Engine + início da tela de Compar
 
 O CTO aplicou `0006` manualmente. Validação fim a fim contra a tabela real encontrou e corrigiu um bug de cálculo em `getOfferPriceMetrics` (ADR-018) e revelou um achado crítico não relacionado a preço: a chave anônima — a única usada pela aplicação inteira — não lê nenhuma linha de `brands`/`categories`/`products`/`offers`/`price_history` (ADR-019). Isso significa que o catálogo provavelmente está vazio para usuários reais desde a Sprint 3.8, sem que nenhuma auditoria anterior tivesse pegado isso (elas usavam, sem intenção, a chave de serviço). Correção proposta: `database/migrations/0007_proposed_public_read_policies.sql`. Classificação final do Price Engine: **"Backend Production Ready"**, não "Production Ready" de ponta a ponta.
 
-## Sprint 4.0 (proposta, reordenada pelo achado crítico) — Corrigir leitura pública + Comparação de Produtos
+## Sprint 4.0 (encerrada) — Compare Engine v1 (Release 0.5)
 
-**Objetivo**: destravar o catálogo real para usuários reais (prioridade máxima) e, só depois, entregar a primeira tela do Release 0.5.
+Entregou o Compare Engine v1 completo: `services/compare.service.ts`, `app/api/compare/route.ts`, `hooks/useCompare.ts`, `components/compare/` e `app/compare/[slug]/` com SSR, `generateMetadata`, todos os estados de UI, validação em 6 cenários contra o Supabase real. Algoritmo de ranking (ADR-014) implementado pela primeira vez em código. Ver `docs/CHANGELOG.md` para o detalhe completo.
+
+**Pendência crítica remanescente (ADR-019, pré-existe à sprint)**: a chave anônima não lê `products`/`offers`/`price_history`. O Compare Engine está correto e testado com a chave de serviço, mas retorna `null` para usuários reais até `0007_proposed_public_read_policies.sql` ser aplicado. Isso afeta todo o catálogo, não só o comparador.
+
+## Sprint 4.1 (proposta) — Destravar leitura pública + consolidação
+
+**Prioridade máxima**: aplicar `0007_proposed_public_read_policies.sql` no SQL Editor do Supabase.
 
 **Escopo proposto, em ordem**:
-1. 🔴 **Aplicar `0007_proposed_public_read_policies.sql`** no SQL Editor do Supabase — **antes de qualquer outra coisa desta lista**. Sem isso, `/products`, `/product/[slug]`, `/search` e as ofertas de `/store/[slug]` continuam exibindo catálogo vazio para usuários reais, independentemente de qualquer outro trabalho.
-2. Confirmar ao vivo (navegador real ou nova consulta com a chave anônima) que a correção do item 1 realmente restaurou a visibilidade do catálogo — não assumir apenas pela policy ter sido criada.
-3. **Aplicar `0006_proposed_price_history.sql`** se ainda não tiver sido (já aplicada nesta sessão, ver adendo acima) — depois disso, `updateOfferPrice`/`getOfferPriceMetrics` já funcionam sem nenhuma mudança de código.
-4. **Comparação de produtos (`/compare`)**: tela de seleção (2–4 produtos) com tabela de especificações/preços lado a lado, reaproveitando `ProductCard`/`ProductGrid`/`getProductsCatalog` e `getOfferPriceMetrics` para mostrar variação de preço por oferta.
-5. **Aplicar as migrations `0002` (fase 1) e `0004`** (constraints `UNIQUE (slug)` + índices) — agora que o seed confirmou 0 duplicata, requer aprovação separada para aplicar contra produção.
-6. Avaliar se `updateOfferPrice`/`insert` em `price_history` precisam de uma policy de RLS dedicada (ou credencial própria) antes do Admin/Crawler existirem de fato — confirmado nesta sprint que a chave anônima não escreve em nenhuma das duas (ADR-018).
-7. Reavaliar `0003`/`0005` (views de preço e ranking de loja) — agora há volume real (6 produtos, 9 ofertas, 5 lojas) para validar a agregação, mas ainda pequeno; decisão do CTO se aplica agora ou espera mais volume.
+1. 🔴 **Aplicar `0007_proposed_public_read_policies.sql`** no SQL Editor do Supabase — **antes de qualquer outra coisa**. Sem isso, `/products`, `/product/[slug]`, `/compare/[slug]`, `/search` e as ofertas de `/store/[slug]` continuam exibindo vazio para usuários reais.
+2. **Confirmar ao vivo** (navegador real ou consulta com a chave anônima) que o catálogo e o comparador estão visíveis — não assumir pela policy ter sido criada.
+3. **Aplicar `0002` (fase 1) e `0004`** (constraints `UNIQUE (slug)` + índices) — o seed confirmou 0 duplicata; seguro para aplicar.
+4. **Conectar a Home ao Supabase**: substituir os dados de exemplo hardcoded em `app/page.tsx` por chamadas reais a `getStores()`/`getProductsCatalog()`/`getProductComparisonBySlug()` — usar `getProductsCatalog` com `limit=4` para a vitrine de ofertas.
+5. **Resolver o double-fetch de produto e de loja**: mover o fetch principal para o server component (como já é feito em `/products` e agora em `/compare/[slug]`), reduzindo `app/product/[slug]/page.tsx` e `app/store/[slug]/page.tsx` a ilhas client para state/events apenas.
+6. Reavaliar `0003`/`0005` (views de agregação de preço e ranking de loja) — com volume real visível pela chave anônima, vale validar se a performance atual é aceitável ou se as views já são necessárias.
 
-**Riscos**: 🔴 Alto até o item 1 ser resolvido (catálogo real inacessível); 🟢 Baixo no restante — código reaproveitando componentes já validados.
-
-**Estimativa**: poucos minutos para o item 1 (ação humana) + 2–3 dias de código para o restante.
-
-**Impacto no produto**: o item 1 é, possivelmente, a correção de maior impacto do projeto até agora — sem ela, todo o trabalho de catálogo/seed permanece invisível para usuários reais.
+**Riscos**: 🔴 Alto até o item 1 ser resolvido; 🟢 Baixo no restante.
+**Impacto**: o item 1 é a correção de maior impacto do projeto — sem ela, 5 domínios completos são invisíveis para usuários reais.
 
 ### Sprint C — Eliminar dívidas técnicas críticas antes de crescer mais
 - **Prioridade**: 🟡 Média (mas crescente — quanto mais o código cresce, mais caro fica)

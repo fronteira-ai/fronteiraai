@@ -126,6 +126,36 @@ Contratos de todas as funções de `services/*.service.ts` que têm implementaç
 - **Retorno**: `{ query, products: Product[], stores: Store[], brands: Brand[], categories: Category[], total, durationMs }` (`types/search.ts`)
 - **Consumidores**: `app/search/page.tsx` (via `React.cache`, dentro de `<Suspense>`)
 
+## compare.service.ts — Sprint 4.0
+
+### `getProductComparisonBySlug(slug: string): Promise<CompareResult | null>`
+- **Tabelas**: `products` JOIN `brands`/`categories` (1 query); `offers` JOIN `stores` (1 query); `price_history` com `.in("offer_id", ids)` (1 query — batch). Total: 3 queries independente do número de ofertas.
+- **Erro**: loga e retorna `null` (produto não encontrado); `price_history` inacessível degrada graciosamente (métricas históricas ficam como `lowest = highest = currentPrice`, `priceChangePercent = null`).
+- **Retorno**: `CompareResult` — `product: ProductWithRelations`, `offers: RankedOffer[]` (ordenados por `rankScore` descendente), `summary: CompareSummary`.
+- **Algoritmo de ranking** (ADR-014, implementado): preço 50% + disponibilidade 25% + confiabilidade da loja 15% + qualidade do cadastro 10%.
+- **Consumidores**: `app/compare/[slug]/page.tsx` (server, direto), `hooks/useCompare.ts` (client), `app/api/compare/route.ts` (API).
+- **🔴 ADR-019**: retorna `null` com a chave anônima (tabelas `products`/`offers`/`price_history` bloqueadas por RLS) até `0007` ser aplicada.
+
+### `getProductComparison(productId: string): Promise<CompareResult | null>`
+- Igual a `getProductComparisonBySlug`, mas aceita o UUID do produto em vez do slug.
+- **Consumidores**: `app/api/compare/route.ts` (quando `?productId=` é fornecido em vez de `?slug=`).
+
+---
+
+## app/api/compare — Sprint 4.0
+
+### GET `/api/compare?slug=<slug>` ou `/api/compare?productId=<uuid>`
+- **Handler**: `app/api/compare/route.ts`
+- **Parâmetros**: `slug` (string, slug do produto) ou `productId` (string, UUID). Exatamente um é obrigatório.
+- **Respostas**:
+  - `400` — nenhum parâmetro fornecido: `{ error: "Forneça slug ou productId como query parameter." }`
+  - `404` — produto não encontrado ou sem dados: `{ error: "Produto não encontrado ou sem dados disponíveis." }`
+  - `200` — `CompareResult` JSON com `product`, `offers` (rankeadas), `summary`
+- **Cache**: `Cache-Control: public, s-maxage=60, stale-while-revalidate=120`
+- **🔴 ADR-019**: retorna 404 para qualquer produto (chave anônima não lê `products`) até `0007` ser aplicada.
+
+---
+
 ## Services sem implementação (apenas placeholder)
 
 `ai.service.ts` — arquivo existe, sem conteúdo. Nenhum contrato a documentar ainda.
@@ -136,8 +166,9 @@ Contratos de todas as funções de `services/*.service.ts` que têm implementaç
 
 | Tabela | Usada por | Colunas referenciadas no código |
 |---|---|---|
-| `products` | `product.service.ts` | `*`, joins `brand:brands(*)`, `category:categories(*)`, `offers(...)` (catálogo); filtros por `slug`, `category_id`, `brand_id`, `id`, `name` |
-| `offers` | `offer.service.ts`, `product.service.ts` | `*`, joins `store:stores(*)`/`product:products(*)`; filtro por `product_id`/`store_id`/`in_stock`/`price_usd`; ordenação por `price_usd`/`created_at` |
+| `products` | `product.service.ts`, `compare.service.ts` | `*`, joins `brand:brands(*)`, `category:categories(*)`, `offers(...)` (catálogo); filtros por `slug`, `category_id`, `brand_id`, `id`, `name` |
+| `offers` | `offer.service.ts`, `product.service.ts`, `compare.service.ts` | `*`, joins `store:stores(*)`/`product:products(*)`; filtro por `product_id`/`store_id`/`in_stock`/`price_usd`; `.in("offer_id", ids)` (batch do compare) |
+| `price_history` | `offer.service.ts`, `compare.service.ts` | `offer_id, price_usd, old_price_usd, recorded_at`; filtro por `offer_id` (individual) ou `.in("offer_id", ids)` (batch do compare) |
 | `stores` | `store.service.ts`, `search.service.ts`, `product.service.ts` | `*`, filtro por `id`, `slug`, `name`; ordenação por `rating` |
 | `brands` | `search.service.ts`, `brand.service.ts` | `*`, filtro por `slug`, `name` |
 | `categories` | `search.service.ts`, `category.service.ts` | `*`, filtro por `slug`, `name` |

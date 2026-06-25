@@ -224,8 +224,24 @@ O CTO aplicou `0006_proposed_price_history.sql` manualmente no SQL Editor do Sup
 
 Validado de novo: `npm run lint`/`tsc --noEmit`/`npm run build` (sem regressão) e `npm run db:validate` (0 problemas).
 
+## Sprint 4.0 — Compare Engine v1 (Release 0.5)
+
+Entrega o Compare Engine v1: compara um produto entre todas as lojas disponíveis usando dados reais, com Price Engine integrado e algoritmo de ranking de ofertas (ADR-014, primeira implementação). Primeiro MVP visível da plataforma.
+
+- **`types/compare.ts`** (novo): `RankedOffer`, `CompareSummary`, `CompareResult`.
+- **`services/compare.service.ts`** (novo): `getProductComparisonBySlug`/`getProductComparison` — motor de comparação com 3 queries (produto + ofertas com loja + batch de price_history via `.in()`), ranking em memória (ADR-014), cálculo de resumo. Ver ADR-020.
+- **`app/api/compare/route.ts`** (novo): GET `/api/compare?slug=` ou `?productId=` — endpoint JSON com headers de cache.
+- **`hooks/useCompare.ts`** (novo): `useCompare(slug)` — hook client-side.
+- **`components/compare/CompareSummary.tsx`** (novo): resumo min/max/savings.
+- **`components/compare/CompareOfferCard.tsx`** (novo): card de oferta rankeada com histórico de preços e score.
+- **`app/compare/[slug]/{page,loading,not-found,error}.tsx`** (novos): rota SSR Server Component, `generateMetadata`, todos os estados de UI.
+- **`constants/routes.ts`**: `comparePath()`/`compareUrl()` adicionados.
+- **`database/seed/validate_compare.js`** (novo): 6 cenários validados contra o Supabase real com a chave de serviço — todos passaram.
+
+**Validação**: lint (0 erros), tsc (0 erros), build (8 rotas — `+/api/compare`, `+/compare/[slug]`), db:validate (0 problemas). Compare Engine validado fim a fim com a chave de serviço (6 cenários, todos OK). Chave anônima confirmada bloqueada (ADR-019, pré-existe à sprint).
+
 ---
 
-## Status Geral: **50%**
+## Status Geral: **60%**
 
-Critério: dos 8 domínios do roadmap original (Home, Produto, Loja, Busca, Catálogo/Listagem, Comparação, IA, Admin, Crawler), 4 estão completos no código com integração real ao Supabase (Produto, Busca, Loja, Catálogo — novo), 1 está com UI pronta mas dados mockados (Home), e os demais 3 não foram iniciados. A correção da camada de tipos (ADR-009) elimina os bugs latentes que impediam considerar Produto/Loja prontos para dados reais; a fundação técnica permanece sólida (arquitetura, convenções, build/lint/TS limpos). **Atualização Sprint 3.8**: o percentual mede completude de código/arquitetura, não dado — por isso não muda aqui apesar do achado de dados (ADR-007) estar resolvido; o impacto real é que os 4 domínios completos agora são **testáveis com dados reais** pela primeira vez.
+Critério: dos 8 domínios do roadmap original (Home, Produto, Loja, Busca, Catálogo/Listagem, Comparação, IA, Admin, Crawler), 5 estão completos no código com integração real ao Supabase (Produto, Busca, Loja, Catálogo, **Comparação — novo**), 1 está com UI pronta mas dados mockados (Home), e os demais 2 não foram iniciados. **Caveat crítico (ADR-019)**: os 5 domínios com código completo **não são visíveis para usuários reais** enquanto `0007_proposed_public_read_policies.sql` não for aplicado — a chave anônima não lê `products`/`offers`/`price_history`. A arquitetura e o código estão corretos; o bloqueador é de segurança/configuração, não de engenharia.

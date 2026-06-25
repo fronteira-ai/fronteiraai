@@ -86,9 +86,15 @@ Ver `docs/DECISIONS.md` ADR-009 para o detalhe completo da correção.
 
 - ~~`price_history` ainda não existe no Supabase real~~ — **resolvido**: o CTO aplicou `0006_proposed_price_history.sql` manualmente no SQL Editor.
 - ~~Bug de cálculo em `getOfferPriceMetrics`~~ — **encontrado e corrigido durante a validação do adendo**: a função ignorava o preço original (só disponível em `old_price_usd` da primeira entrada de histórico) ao calcular `highestPriceUSD`/`priceChangePercent`. Corrigido e testado com 27 asserções contra dados reais. Ver ADR-018.
-- **`updateOfferPrice()`/`getOfferPriceMetrics()` (`services/offer.service.ts`) estão testados e corretos, mas sem nenhum chamador real ainda** — nenhuma página/componente os usa (por instrução explícita da Sprint 3.9: "sem implementar interface final").
-- **`updateOfferPrice()`/`getOfferPriceMetrics()` herdam o bloqueio de RLS** — confirmado (não só inferido) nesta sprint: a chave anônima não escreve em `price_history`/`offers` (ADR-018) nem lê `price_history` (ADR-019, item crítico acima). Quando o Admin (Release 0.7) ou Crawler (Release 0.8) existirem, vão precisar de uma policy de RLS dedicada para escrita — decisão de segurança a tomar naquele momento.
-- **`/compare` não existe** — `getOfferPriceMetrics` é o insumo por oferta; uma agregação por produto (cruzando todas as ofertas) ainda não foi escrita, fica para quando a tela for implementada de fato — e depende de `0007` ser aplicada primeiro para mostrar dados reais.
+- **`updateOfferPrice()`/`getOfferPriceMetrics()` herdam o bloqueio de RLS** — a chave anônima não escreve em `price_history`/`offers` (ADR-018). Quando o Admin (Release 0.7) ou Crawler (Release 0.8) existirem, vão precisar de policy de RLS dedicada para escrita.
+- ~~`/compare` não existe~~ — **resolvido na Sprint 4.0**: `services/compare.service.ts` usa batch de `price_history` (3 queries por comparação) em vez de chamar `getOfferPriceMetrics()` N vezes; `app/compare/[slug]/` e `app/api/compare/` entregues. Ver ADR-020.
+
+## Compare Engine v1 (Sprint 4.0) — limitações conhecidas
+
+- **Chave anônima bloqueada (ADR-019)**: `/compare/[slug]` e `/api/compare` retornam vazio/404 para usuários reais até `0007_proposed_public_read_policies.sql` ser aplicado. Bloqueio pré-existe à sprint — afeta todo o catálogo, não só o comparador.
+- **Compare Engine compara um produto de cada vez**: a missão do Release 0.5 previa "tela de seleção (2–4 produtos) com tabela de especificações lado a lado" para comparar N produtos. O que foi entregue é `/compare/[slug]` (um produto, todas as lojas). A comparação lado a lado de N produtos distintos fica para a Sprint 4.1 ou posterior, quando a leitura pública estiver desbloqueada e houver mais dados reais.
+- **Sem link "Comparar" nos cards de produto**: `ProductCard.tsx` e `ProductHeader.tsx` ainda não têm link para `/compare/[slug]`. Um botão "Comparar preços" no `ProductHeader` seria o ponto de entrada mais natural — pode ser adicionado na Sprint 4.1.
+- **Ranking de loja sem view materializada**: o score usa `store.rating` da query de ofertas (campo existe e é atualizado pelo seed). A `store_ranking_summary` proposta em `0005_proposed_store_ranking_view.sql` aumentaria a precisão do score com `offer_count`/`in_stock_offer_count` — não necessária agora, mas candidata quando o volume crescer.
 
 ## Acessibilidade
 

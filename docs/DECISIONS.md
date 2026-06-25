@@ -340,3 +340,27 @@ Esta pontuação é a candidata natural a consumir a `store_ranking_summary` pro
 **Alternativas descartadas**: não há alternativa de código — isso não é algo que `services/*.service.ts` possa contornar (a única forma de uma `SELECT` ver uma linha bloqueada por RLS é a policy mudar; cache, retry ou outra chave pública não resolvem sem reintroduzir o mesmo risco de expor uma chave privada no client).
 
 **Consequência**: este é o item de maior prioridade do projeto agora — maior que qualquer trabalho do Price Engine ou do Compare Engine, porque o catálogo inteiro pode estar invisível para usuários reais. Recomendo aplicar `0007` antes de qualquer outra coisa, incluindo antes de abrir a Sprint 4.0. Ver `docs/PROJECT_STATUS.md`/`docs/TECH_DEBT.md`/`docs/NEXT_STEPS.md` para a correção da reivindicação da Sprint 3.8.
+
+---
+
+## ADR-020 — Compare Engine v1: 3 queries por comparação, batch de price_history, ranking em memória
+
+**Data**: 2026-06-25 (Sprint 4.0 — Compare Engine v1)
+**Status**: Aceita e aplicada
+
+**Contexto**: a Sprint 4.0 pediu o primeiro Compare Engine funcional, integrando o Price Engine da Sprint 3.9. O design de queries era o ponto mais sensível: uma abordagem ingênua chamaria `getOfferPriceMetrics(offerId)` para cada oferta, gerando 2N queries (N = número de ofertas para o produto). Com 9 ofertas no seed atual, isso são 18 queries; com escala, isso piora proporcionalmente.
+
+**Decisão**: `services/compare.service.ts` implementa o compare engine com **exatamente 3 queries por comparação**, independente do número de ofertas:
+1. `products` JOIN `brands` + `categories` (1 query — produto com relações).
+2. `offers` JOIN `stores` (1 query — todas as ofertas do produto com dados da loja).
+3. `price_history` para **todos os offer_ids** via `.in("offer_id", offerIds)` (1 query — batch completo de histórico de preços).
+
+A computação de métricas por oferta (`lowestPriceUSD`, `highestPriceUSD`, `priceChangePercent`, `lastPriceChangeAt`) e o ranking (ADR-014) são feitos inteiramente em memória, sem query adicional. Isso replica a lógica de `getOfferPriceMetrics()` (testada e validada no ADR-018) para o contexto batch, sem copiar o estado de "offer não encontrado" porque aqui a lista de ofertas já é conhecida.
+
+**Alternativas descartadas**:
+- Chamar `getOfferPriceMetrics()` N vezes via `Promise.all` — descartada por ser O(N) em latência de round-trip mesmo com paralelismo, e por não ser escalável; escolhida como opção de fallback apenas se o batch não funcionar.
+- Materializar a comparação em uma view ou RPC do Supabase — descartada por exigir DDL (bloqueado, ADR-017) e por ser overengineering para o volume atual (6 produtos, 9 ofertas).
+
+**Consequência**: o Compare Engine escala horizontalmente sem degradação de latência para qualquer número de ofertas por produto — o gargalo passa a ser o número de produtos comparados em paralelo (não implementado nesta sprint), não o número de ofertas por produto.
+
+**Limitação conhecida (ADR-019)**: as 3 queries usam `lib/supabase.ts` (chave anônima). `products`/`offers`/`price_history` não são visíveis pela chave anônima enquanto `0007_proposed_public_read_policies.sql` não for aplicada — o compare engine retorna `null` para usuários reais até lá. Isso não é uma limitação do design, é uma pré-condição de dados.

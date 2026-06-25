@@ -200,3 +200,42 @@ O CTO aplicou `0006_proposed_price_history.sql` manualmente no SQL Editor do Sup
 Revalidado: `npm run lint`/`npx tsc --noEmit`/`npm run build` (sem regressão), `npm run db:validate` (0 problemas).
 
 **Classificação final do Price Engine v1**: "Backend Production Ready" — não "Production Ready" de ponta a ponta, porque a leitura pública está bloqueada pelo achado do ADR-019 (mais amplo que só preço) e nenhum caminho de escrita real (Admin/Crawler) existe ainda.
+
+## 2026-06-25 — Sprint 4.0: Compare Engine v1 (Release 0.5)
+
+Entrega o primeiro Compare Engine totalmente funcional do ParaguAI: compara um produto entre todas as lojas disponíveis usando dados reais do Supabase, com Price Engine integrado (histórico de preço por oferta), algoritmo de ranking de ofertas (ADR-014) e endpoint de API estruturado. Primeiro MVP visível da plataforma.
+
+**Arquivos criados**:
+- **`types/compare.ts`** (novo): `RankedOffer`, `CompareSummary`, `CompareResult` — types do Compare Engine.
+- **`services/compare.service.ts`** (novo): `getProductComparisonBySlug(slug)` e `getProductComparison(productId)` — motor de comparação. Executa 3 queries no total para qualquer produto (1 produto + 1 ofertas com loja + 1 batch de price_history por `.in("offer_id", ids)`), evitando N+1; aplica o algoritmo de ranking da ADR-014 em memória; retorna `CompareResult` com `product`, `offers` (rankeadas) e `summary` (min/max/savings/storeCount/availableCount).
+- **`app/api/compare/route.ts`** (novo): GET `/api/compare?slug=<slug>` ou `?productId=<uuid>` — endpoint JSON do Compare Engine. Headers de cache (`s-maxage=60, stale-while-revalidate=120`). Retorna 400 para parâmetros ausentes, 404 para produto inexistente, 200 com `CompareResult` para sucesso.
+- **`hooks/useCompare.ts`** (novo): `useCompare(slug)` — hook client-side, mesma convenção de `useProduct`/`useStore`.
+- **`components/compare/CompareSummary.tsx`** (novo): card de resumo com menor/maior preço, economia máxima (absoluta + percentual) e contagem de lojas/estoque.
+- **`components/compare/CompareOfferCard.tsx`** (novo): card por oferta rankeada — rank badge, nome/rating/verificação da loja, badges (estoque/garantia/condição/cashback), métricas de histórico de preço (mínimo/máximo histórico + variação %), preço em USD e BRL, score de ranking, botão "Ver oferta".
+- **`app/compare/[slug]/page.tsx`** (novo): Server Component, `async` — busca `getProductComparisonBySlug` e `getRelatedProducts` no servidor; `generateMetadata` (título/description/canonical/OG/Twitter com dados reais do produto); breadcrumb, header, summary, lista rankeada, produtos relacionados.
+- **`app/compare/[slug]/loading.tsx`** (novo): skeleton animado durante fetch SSR.
+- **`app/compare/[slug]/not-found.tsx`** (novo): 404 com links para catálogo e busca.
+- **`app/compare/[slug]/error.tsx`** (novo): error boundary client com `unstable_retry`.
+- **`database/seed/validate_compare.js`** (novo): script de validação do Compare Engine contra o Supabase real — 6 cenários: produto com várias ofertas, produto com 1 oferta, produto sem oferta, slug inexistente, leitura com chave anônima (diagnóstico ADR-019), validação do ranking. Todos passaram.
+
+**Arquivos alterados**:
+- **`constants/routes.ts`**: `comparePath(slug)` e `compareUrl(slug)` adicionados no mesmo padrão de `productPath`/`storePath`.
+
+**Algoritmo de Ranking (ADR-014, primeira implementação)**:
+Score composto 0–100 calculado em memória para cada oferta:
+- Preço (50%): a oferta mais barata recebe 50; as demais decaem proporcionalmente (`50 * lowestPrice / price`).
+- Disponibilidade (25%): `in_stock=true` → 25; `false` → 0.
+- Confiabilidade da loja (15%): `store.rating` (0–5) normalizado para 0–15; loja sem rating recebe a média do conjunto (não é punida como "pior").
+- Qualidade do cadastro (10%): proporção de campos preenchidos (`warranty`, `condition`, `product_url` da oferta; `phone`, `whatsapp`, `email`, `website`, `opening_hours` da loja).
+
+**Validação executada (chave de serviço, contra dados reais)**:
+1. `iphone-16-pro-256gb-titanio-preto` — 2 ofertas encontradas; Cellshop rankeada #1 (score 94) vs. Nissei #2 (score 92); preço mínimo histórico $949 corretamente capturado pelo Price Engine integrado — ✅
+2. `smart-tv-samsung-55-4k-qled` — exatamente 1 oferta retornada — ✅
+3. `playstation-5-slim` — produto encontrado, 0 ofertas retornadas (sem crash, graceful) — ✅
+4. Slug inexistente — retorna `null` sem crash — ✅
+5. Chave anônima — produto retorna `null` (RLS bloqueia, ADR-019 confirmado, 0007 ainda não aplicado) — ✅ (comportamento esperado diagnosticado)
+6. Scores em ordem decrescente `[94, 92]` — ✅
+
+**Dependência crítica não resolvida (ADR-019)**: a chave anônima (`NEXT_PUBLIC_SUPABASE_ANON_KEY`), única usada por `lib/supabase.ts`, não lê `products`/`offers`/`price_history` — o Compare Engine retorna `null` para qualquer usuário real até que `0007_proposed_public_read_policies.sql` seja aplicado no SQL Editor do Supabase. Isso é o bloqueador #1 de todo o catálogo, não só do comparador — pré-existe a esta sprint (ADR-019, sprint 3.9). O endpoint `/api/compare` e a rota `/compare/[slug]` **estão corretos e completos**; só precisam que o dado seja visível pela chave pública.
+
+Validado com `npm run lint` (0 erros, 5 warnings pré-existentes — nenhum novo), `npx tsc --noEmit` (0 erros), `npm run build` (sucesso — 8 rotas: as 6 anteriores + `/api/compare` + `/compare/[slug]`), `npm run db:validate` (0 problemas).

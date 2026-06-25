@@ -68,3 +68,11 @@ export function productsPath(params: ProductsQueryParams = {}): string {
 export function productsUrl(params: ProductsQueryParams = {}): string {
   return `${SITE_URL}${productsPath(params)}`;
 }
+
+export function comparePath(slug: string): string {
+  return `/compare/${slug}`;
+}
+
+export function compareUrl(slug: string): string {
+  return `${SITE_URL}${comparePath(slug)}`;
+}
