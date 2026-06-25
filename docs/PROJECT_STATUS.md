@@ -2,10 +2,10 @@
 
 Auditoria gerada por leitura completa do código-fonte. Substitui o conteúdo anterior deste arquivo.
 
-Última atualização: 2026-06-24 (Sprint 3.9, adendo — Price Engine v1 validado + achado crítico de RLS)
-Branch auditada: `main` @ `d093589` + Sprint 3.8 (seed real) + Sprint 3.9 (Price Engine v1, validado contra dados reais) + adendo (achado crítico de leitura pública) desta atualização
+Última atualização: 2026-06-25 (ADR-019 encerrado — leitura pública desbloqueada, validação completa com chave anônima)
+Branch auditada: `main` @ `e69696b` (hotfix 0007) — continuação de Sprint 4.1
 
-> 🔴 **CRÍTICO, NÃO CORRIGIDO (achado do adendo da Sprint 3.9, ADR-019)**: a chave anônima (`NEXT_PUBLIC_SUPABASE_ANON_KEY`, a única que `lib/supabase.ts`/toda a aplicação usa) **não lê nenhuma linha** de `brands`/`categories`/`products`/`offers`/`price_history` — `SELECT` retorna `{ error: null, data: [] }` mesmo havendo linhas reais (confirmado com a chave de serviço). Só `stores` tem leitura pública funcionando. Por dedução direta do código (mesmo client em qualquer ambiente): **o catálogo, a página de produto, a busca e as ofertas provavelmente aparecem vazios para qualquer usuário real agora**, apesar dos dados existirem desde a Sprint 3.8. Isso invalida a afirmação anterior de "dados reais navegáveis em produção" — válida só do ponto de vista do banco, nunca verificada com a chave que a aplicação de fato usa (as auditorias anteriores usavam, sem eu perceber, a chave de serviço — ver ADR-019). Correção proposta, não aplicada: `database/migrations/0007_proposed_public_read_policies.sql`. **Maior prioridade do projeto agora.**
+> ✅ **ADR-019 ENCERRADO (2026-06-25)**: migration `0007_proposed_public_read_policies.sql` aplicada manualmente no Supabase SQL Editor pelo CTO. Validação com `database/seed/validate_adr019.js` confirma: **22 OK | 0 FAIL** usando **exclusivamente** `NEXT_PUBLIC_SUPABASE_ANON_KEY`. As 6 tabelas públicas (`brands`, `categories`, `products`, `offers`, `price_history`, `stores`) retornam dados reais. Escrita continua bloqueada para `anon`/`authenticated`. O catálogo inteiro agora é visível para usuários reais.
 >
 > ✅ **Bugs críticos corrigidos (Sprint 3.5)**: os bugs confirmados na Sprint 3.4.1 (`offer.price`/`stock`/`installments`/`url`, `store.banner_url`/`verified` divergindo do schema real) foram corrigidos antes de construir o catálogo de produtos sobre eles — ver `docs/DECISIONS.md` ADR-009. `types/offer.ts`/`types/store.ts` agora usam os nomes reais (`price_usd`/`price_brl`, `in_stock`, `product_url`, `cover_image`, `is_verified`, mais os 13 campos de contato/horário que já existiam no banco).
 >
@@ -13,11 +13,11 @@ Branch auditada: `main` @ `d093589` + Sprint 3.8 (seed real) + Sprint 3.9 (Price
 >
 > ✅ **Price Engine v1 validado (Sprint 3.9, adendo, ADR-018)**: `updateOfferPrice`/`getOfferPriceMetrics` testados fim a fim contra `price_history` real (criada manualmente pelo CTO) — histórico, no-op, métricas (`lowest`/`highest`/variação %) todos corretos após um bug de cálculo ser encontrado e corrigido durante a validação. Classificação: **"Backend Production Ready"** — correto e testado, mas sem nenhum caminho de chamada real ainda, e a leitura pública (`getOfferPriceMetrics` via app) está sujeita ao mesmo bloqueio de RLS do ADR-019.
 
-## Sprint 4.1 — Public Release Readiness (Release 0.6)
+## Sprint 4.1 + ADR-019 Encerramento — Public Release Readiness (Release 0.6)
 
 **Home dinâmica** com dados reais do Supabase (stores, brands, categories, catalog) — `app/page.tsx` convertida de dados hardcoded para `async` server component com `force-dynamic`. **Double-fetch eliminado** em `/product/[slug]` e `/store/[slug]`: pages convertidas de `"use client"` + hook para server components com `React.cache()` compartilhado via `app/...[slug]/_cache.ts` (ADR-021). **Botão "Comparar preços"** adicionado ao produto, linkando para `/compare/[slug]`. `constants/categories.ts` esvaziado (mock substituído por `getCategories()` real). `ProductHighlight.priceUSD`/`storeName` tornados opcionais para compatibilidade com `ProductCatalogItem`.
 
-**ADR-019 (leitura pública) — ainda não resolvido**: requer ação humana no Supabase SQL Editor (aplicar `0007`). Investigação confirmou que não há mecanismo programático disponível (sem DATABASE_URL, sem PAT da Management API). Todo o código está pronto; a Home mostrará apenas `stores` até que `0007` seja aplicado.
+**ADR-019 ENCERRADO**: `0007_proposed_public_read_policies.sql` aplicada. Validação completa com `validate_adr019.js` — 22 asserções, 0 falhas, exclusivamente com a chave anônima. Todos os domínios públicos desbloqueados.
 
 Build: 8 rotas (`/` agora `ƒ Dynamic`). Lint: 0 erros. TypeScript: 0 erros. db:validate: 0 problemas.
 
@@ -78,7 +78,7 @@ Nenhuma nesta auditoria — `ProductGrid.tsx` (única pendência apontada na aud
 
 | Rota | Tipo | Status |
 |---|---|---|
-| `/` | Server Component (`force-dynamic`) | **Sprint 4.1**: dados reais (stores visíveis; brands/categories/products aguardam ADR-019) |
+| `/` | Server Component (`force-dynamic`) | **ADR-019 encerrado**: dados reais em todos os domínios (stores, brands, categories, products) |
 | `/search` | Server Component (com `<Suspense>`) | Completa, integrada ao Supabase |
 | `/products` | Server Component (com `<Suspense>`) | Completa, integrada ao Supabase |
 | `/product/[slug]` | **Server Component** + Server layout | **Sprint 4.1**: double-fetch eliminado; botão "Comparar preços" |
@@ -252,6 +252,6 @@ Entrega o Compare Engine v1: compara um produto entre todas as lojas disponívei
 
 ---
 
-## Status Geral: **65%**
+## Status Geral: **70%**
 
-Critério: dos 8 domínios do roadmap original (Home, Produto, Loja, Busca, Catálogo/Listagem, Comparação, IA, Admin, Crawler), 6 estão completos no código com integração real ao Supabase (Produto, Busca, Loja, Catálogo, Comparação, **Home — agora dinâmica**). **Caveat crítico (ADR-019)**: a Home mostrará apenas `stores` (única tabela com leitura pública) até que `0007_proposed_public_read_policies.sql` seja aplicado; os demais 5 domínios igualmente invisíveis para usuários reais. A arquitetura e o código estão corretos; o bloqueador é de configuração Supabase, não de engenharia.
+Critério: dos domínios do roadmap original (Home, Produto, Loja, Busca, Catálogo/Listagem, Comparação, IA, Admin, Crawler), 6 estão completos no código **e visíveis para usuários reais** com dados reais do Supabase: Produto, Busca, Loja, Catálogo, Comparação, Home. O bloqueador crítico ADR-019 foi resolvido em 2026-06-25 com a aplicação da migration `0007`. Próximas prioridades: `0002`+`0004` (constraints + índices), `sitemap.xml`, `next/image`.

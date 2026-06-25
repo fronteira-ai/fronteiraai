@@ -201,6 +201,32 @@ Revalidado: `npm run lint`/`npx tsc --noEmit`/`npm run build` (sem regressão), 
 
 **Classificação final do Price Engine v1**: "Backend Production Ready" — não "Production Ready" de ponta a ponta, porque a leitura pública está bloqueada pelo achado do ADR-019 (mais amplo que só preço) e nenhum caminho de escrita real (Admin/Crawler) existe ainda.
 
+## 2026-06-25 — ADR-019 ENCERRADO: migration 0007 aplicada + validação completa com chave anônima
+
+**Hotfix da migration `0007_proposed_public_read_policies.sql`**:
+- Versão anterior da migration usava `CREATE OR REPLACE POLICY` — sintaxe inválida em qualquer versão do PostgreSQL (válida para `FUNCTION`/`VIEW`/`RULE`, nunca para `POLICY`). Erro descoberto ao colar no SQL Editor do Supabase. Migration reescrita com o padrão idiomático correto: `DROP POLICY IF EXISTS "Public read access" ON <tabela>` seguido de `CREATE POLICY "Public read access" ON <tabela> FOR SELECT TO anon, authenticated USING (true)`. Aplicado para as 5 tabelas. Idempotente. Seguro para re-executar.
+
+**Migration aplicada no Supabase SQL Editor pelo CTO** — resultado da query de verificação: 5 linhas com `cmd = 'r'` e `roles = {anon,authenticated}`, nenhuma linha com `cmd = 'w'`.
+
+**Validação integral com chave anônima** (`database/seed/validate_adr019.js`, novo):
+Script dedicado com 7 seções e 22 asserções, usando **exclusivamente** `NEXT_PUBLIC_SUPABASE_ANON_KEY` (zero uso da service role key). Resultado: **22 OK | 0 FAIL**.
+
+| Seção | Resultado |
+|---|---|
+| 1. Leitura direta das 6 tabelas (ADR-019 core) | `brands` 3✓ · `categories` 3✓ · `products` 3✓ · `offers` 3✓ · `price_history` 3✓ · `stores` 3✓ |
+| 2. Home (stores + brands + categories + products) | Mega Eletrônicos, Atacado Games, Shopping China · 5 marcas · 5 categorias · 4 produtos |
+| 3. Produto `/product/[slug]` | iPhone 16 Pro / marca Apple / categoria Celulares · 2 ofertas (menor $999 @ Cellshop) · 4 relacionados |
+| 4. Compare Engine `/compare/[slug]` | produto + 2 ofertas + 3 entradas de price_history via batch `.in()` |
+| 5. Loja `/store/[slug]` | Cellshop / Ciudad del Este · 2 ofertas da loja · 3 lojas relacionadas |
+| 6. Busca `/search` | 1 produto para "iPhone" · 1 loja para "cell" |
+| 7. Catálogo `/products` (join completo) | 6 produtos total · join com offers + brands + categories em 1 query |
+
+**ADR-019 encerrado**: a chave anônima lê todos os domínios públicos do catálogo. Não há mais dado visível ao service role que não seja visível ao anon. Escrita continua bloqueada para `anon`/`authenticated` (nenhuma policy de INSERT/UPDATE/DELETE foi criada).
+
+Commits: `e69696b` (hotfix migration) + `aa5a325` (revisão anterior) — ambos em `main`.
+
+---
+
 ## 2026-06-25 — Sprint 4.1: Public Release Readiness (Release 0.6)
 
 Transição do ParaguAI de uma plataforma tecnicamente funcional para um MVP navegável: Home dinâmica com dados reais, double-fetch resolvido nas páginas de produto e loja, botão "Comparar preços" adicionado ao produto. ADR-019 (leitura pública bloqueada) permanece como único bloqueador restante — requer ação manual no Supabase SQL Editor.

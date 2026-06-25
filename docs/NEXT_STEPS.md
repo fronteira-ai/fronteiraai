@@ -118,24 +118,30 @@ Entregou o Compare Engine v1 completo: `services/compare.service.ts`, `app/api/c
 - ✅ `constants/categories.ts` esvaziado (mock substituído por `getCategories()` real)
 - ✅ Build, lint, TypeScript, db:validate — todos limpos
 
-**Não resolvido (bloqueador de configuração, não de código)**:
-- 🔴 **ADR-019**: `0007_proposed_public_read_policies.sql` ainda não aplicado. Investigação confirmou: sem DATABASE_URL e sem Supabase Management API PAT, não é possível aplicar DDL programaticamente. A ação humana de colar o SQL no Supabase SQL Editor permanece o único caminho. A Home mostra apenas lojas até lá; catálogo/produto/compare/busca retornam vazios para usuários reais.
+## ADR-019 ENCERRADO (2026-06-25, hotfix pós Sprint 4.1)
 
-## Sprint 4.2 (proposta) — Destravar leitura pública + estabilização
+- ✅ `0007_proposed_public_read_policies.sql` aplicada no Supabase SQL Editor (pelo CTO)
+- ✅ Hotfix na migration: `CREATE OR REPLACE POLICY` (inválido no PostgreSQL) substituído por `DROP POLICY IF EXISTS` + `CREATE POLICY` (padrão idiomático, idempotente, compatible com qualquer versão)
+- ✅ **22 asserções validadas** com `database/seed/validate_adr019.js` usando **exclusivamente** `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+- ✅ `brands`, `categories`, `products`, `offers`, `price_history`, `stores` — todos retornam dados reais
+- ✅ Escrita bloqueada para `anon`/`authenticated` (nenhuma policy de INSERT/UPDATE/DELETE criada)
+- ✅ Fluxo completo operacional: Home → Produto → Comparar preços → Loja → Busca
 
-**Pré-condição**: aplicar `0007_proposed_public_read_policies.sql` no SQL Editor do Supabase antes de iniciar.
+**ADR-019 não existe mais como bloqueador.** O catálogo inteiro é visível para usuários reais.
+
+## Sprint 4.2 (proposta) — Estabilização e SEO
+
+O único bloqueador crítico foi resolvido. A Sprint 4.2 pode focar em qualidade e preparação para crescimento.
 
 **Escopo proposto**:
-1. 🔴 **[Ação humana] Aplicar `0007`** no SQL Editor do Supabase. SQL disponível em `database/migrations/0007_proposed_public_read_policies.sql`.
-2. **Confirmar ao vivo** com a chave anônima que produtos/ofertas/categorias/marcas são visíveis.
-3. **Aplicar `0002` e `0004`** (constraints UNIQUE(slug) + índices) — seguro, 0 duplicatas confirmadas.
-4. **Testar o fluxo completo** no navegador: Home → Produto → Comparar preços → Loja → Voltar → Nova pesquisa.
-5. Avaliar performance real: se catálogo com dados reais visíveis mostrar N+1 ou lentidão, aplicar `0003`/`0005` (views de preço e ranking).
-6. Adicionar `sitemap.xml`/`robots.txt` (ausentes em `app/`).
-7. Trocar `<img>` por `next/image` nos 4 componentes apontados pelo lint (ProductCard, ProductGallery, StoreCard, StorePage).
+1. **Aplicar `0002` e `0004`** (constraints `UNIQUE(slug)` + índices de FK/preço) — seguro, 0 duplicatas confirmadas na Sprint 3.8. Protege o banco de dados duplicados futuros e melhora performance de queries filtradas.
+2. **Trocar `<img>` por `next/image`** nos 4 componentes apontados pelo lint (ProductCard, ProductGallery, StoreCard, StoreDetails) — resolve os 5 warnings de lint restantes e habilita otimização automática de imagens pelo Vercel.
+3. **Adicionar `sitemap.xml`** em `app/sitemap.ts` (Next.js App Router) com rotas de produto/loja/catálogo — impacto direto no crawl do Google.
+4. **Adicionar `robots.txt`** em `app/robots.ts` — convênção mínima para SEO.
+5. Avaliar `0003`/`0005` (views de preço e ranking) se o catálogo com dados reais mostrar lentidão na ordenação por preço.
 
-**Riscos**: 🔴 Alto apenas no item 1; 🟢 Baixo no restante.
-**Impacto**: o item 1 é a única mudança que torna o produto visível para usuários reais — sem ela, 6 domínios completos são invisíveis.
+**Riscos**: todos 🟢 Baixo — nenhuma mudança de schema destrutiva, nenhum dado existente afetado.
+**Impacto**: qualidade de SEO, performance de imagens, proteção de integridade do banco.
 
 ### Sprint C — Eliminar dívidas técnicas críticas antes de crescer mais
 - **Prioridade**: 🟡 Média (mas crescente — quanto mais o código cresce, mais caro fica)
