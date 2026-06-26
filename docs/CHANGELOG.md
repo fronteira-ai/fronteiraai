@@ -418,3 +418,67 @@ Validado com `npm run lint` (0 erros, 5 warnings pré-existentes — nenhum novo
 **Pendência restante (ação manual no Supabase)**:
 1. Aplicar `database/migrations/0008_data_integrity.sql` no SQL Editor → confirmação esperada: 4 UNIQUE constraints + 6 índices
 2. Upload de imagens reais no bucket `catalog` seguindo a convenção de nomenclatura definida no ADR-022
+
+---
+
+## 2026-06-26 — Release 0.9: Acquisition Engine
+
+**Sprint**: Release 0.9 — Acquisition Engine (Plataforma Universal de Aquisição)
+
+### Engines implementados
+
+- **Acquisition Pipeline** (`acquisition/core/pipeline.ts`) — orquestrador central; encadeia todas as etapas via `IPipelineStage`; suporte a `dryRun` e `verbose`
+- **Connector Registry** (`acquisition/core/registry.ts`) — registro singleton de conectores; `register / get / list / has / unregister`
+- **Validation Engine** (`acquisition/engines/validation.engine.ts`) — 8 regras de validação com erros e warnings distintos; campos obrigatórios, preços, slugs, URLs
+- **Normalization Engine** (`acquisition/engines/normalization.engine.ts`) — slugify (via `utils/slug.ts` implementado), defaults de brand/category, limpeza de URLs
+- **Deduplication Engine** (`acquisition/engines/deduplication.engine.ts`) — batch-fetch de produtos existentes; classifica cada item como `new | update | skip`
+- **Canonical Product Engine** (`acquisition/engines/canonical.engine.ts`) — infraestrutura pronta; implementa exact-slug matching; extensível para fuzzy/AI
+- **Media Pipeline** (`acquisition/engines/media.engine.ts`) — download via `https`/`http`, conversão WebP via `sharp` (dynamic import, graceful degradation), upload ao Supabase Storage
+- **Catalog Writer** (`acquisition/persistence/catalog.writer.ts`) — upsert brand → category → product → offer → price_history; respeita a filosofia offer-first do banco
+- **Observability** (`acquisition/observability/metrics.ts`) — métricas por etapa (duração, accepted/rejected/skipped), relatório formatado em console
+
+### Parsers implementados
+
+- **JSON Parser** (`acquisition/parsers/json.parser.ts`) — aceita array JSON ou objeto único; mapeamento flexível de campos (`priceUSD`/`price_usd`, `storeSlug`/`store_slug` etc.)
+- **CSV Parser** (`acquisition/parsers/csv.parser.ts`) — parser RFC 4180 custom sem dependência externa; suporte a quotes, escape `""`, CRLF/LF, campo `fieldMap` configurável
+
+### Conectores de referência
+
+- **JsonFileConnector** (`acquisition/connectors/json-file.connector.ts`)
+- **CsvFileConnector** (`acquisition/connectors/csv-file.connector.ts`)
+
+### Datasets de teste
+
+- `acquisition/datasets/sample-products.json` — 4 produtos (Apple, Samsung, Sony, DJI) com 2 lojas
+- `acquisition/datasets/sample-products.csv` — 4 produtos (Apple, Xiaomi, Samsung, Armani) via Nissei
+
+### Scripts
+
+- `npm run acquisition:validate` — 33 asserções, 0 falhas
+- `npm run acquisition:import-json` / `:execute` — dry-run + execução real (JSON)
+- `npm run acquisition:import-csv` / `:execute` — dry-run + execução real (CSV)
+
+### Utilitários
+
+- `utils/slug.ts` — `slugify()` implementado (estava vazio); normalização NFD, remoção de acentos, ASCII only
+- `acquisition/lib/client.ts` — cliente Supabase com service role para scripts (mesmo padrão de `database/seed/lib/client.js`, ADR-012)
+
+### Documentação
+
+- `docs/ACQUISITION.md` — visão geral da arquitetura, pipeline, modelo de dados, scripts
+- `docs/CONNECTOR_GUIDE.md` — guia completo para novos conectores com checklist
+- ADR-024 a ADR-027 adicionados em `docs/DECISIONS.md`
+
+### Dependências novas (devDependencies)
+
+- `tsx ^4.19.0` — execução de scripts TypeScript
+- `sharp ^0.33.0` — conversão de imagens WebP/AVIF
+
+### Validações executadas
+
+- `npm run acquisition:validate` — 33/33 ✓
+- `npm run acquisition:import-json` (dry-run) — 4/4 itens processados, 0 erros
+- `npm run acquisition:import-csv` (dry-run) — 4/4 itens processados, 0 erros
+- `npm run lint` — 0 erros
+- `npm run typecheck` — 0 erros
+- `npm run build` — sucesso, 10 rotas, nenhuma regressão

@@ -449,3 +449,70 @@ Utilitário `utils/storage.ts` exporta `catalogStorage.*` (builders de URL tipad
 - Manter 0002 e 0004 separadas — descartado para reduzir o número de passos manuais no SQL Editor.
 
 **Consequência**: após a aplicação, o banco recusa inserções de slug duplicado mesmo fora do seed engine; queries de catálogo/oferta usam índices em vez de full-table scan; o validador `npm run db:validate:43` inclui instruções SQL de verificação pós-execução.
+
+---
+
+## ADR-024 — Acquisition Engine: localização em `acquisition/`, desacoplado da app Next.js
+
+**Data**: 2026-06-26 (Release 0.9 — Acquisition Engine)
+**Status**: Aceita e aplicada
+
+**Contexto**: o Release 0.9 exige uma infraestrutura de aquisição de dados (pipeline, conectores, validação, normalização, persistência). A decisão central é onde e como essa camada vive no repositório.
+
+**Decisão**: a pasta `acquisition/` vive na raiz do projeto, paralela a `app/`, `services/`, `types/` etc., mas é **desacoplada da aplicação Next.js**: não é um route handler, não é importada por nenhuma página, não usa `"use client"` / `"use server"`. É um módulo Node.js standalone, executável via `tsx` ou integrável futuramente como worker separado. Internamente organizada em `types/`, `core/`, `parsers/`, `engines/`, `persistence/`, `observability/`, `lib/`, `connectors/`, `datasets/`, `scripts/`.
+
+**Alternativas descartadas**:
+- Dentro de `app/api/` como Route Handler — descartado: execução de pipeline longa não cabe no modelo stateless de serverless functions; além disso, escrita exige service role que não deve ficar em rotas públicas.
+- Pasta `tools/` ou `scripts/` — descartado para não misturar com os scripts de seed existentes em `database/seed/`; o Acquisition Engine tem complexidade própria que justifica pasta dedicada.
+- Monorepo separado — descartado por ser overengineering para o estágio atual do projeto.
+
+**Consequência**: o `tsconfig.json` já inclui `**/*.ts`, então todos os tipos do `acquisition/` passam pelo `tsc --noEmit`. O `@/` alias funciona de `acquisition/` para os tipos compartilhados com a app.
+
+---
+
+## ADR-025 — `tsx` e `sharp` como devDependencies para o Acquisition Engine
+
+**Data**: 2026-06-26 (Release 0.9)
+**Status**: Aceita e aplicada
+
+**Contexto**: os scripts do Acquisition Engine são TypeScript (`.ts`). Antes, todos os scripts de tooling eram `.js` (database/seed). O Media Pipeline requer conversão de imagens para WebP.
+
+**Decisão**: adicionar `tsx ^4.19.0` como devDependency para executar scripts TypeScript sem build step (substitui o padrão `node file.js` por `tsx file.ts`). Adicionar `sharp ^0.33.0` como devDependency para conversão de imagens WebP/AVIF e resize no Media Pipeline.
+
+**Por que devDependencies**: nenhuma das duas é importada pela aplicação Next.js em runtime. `sharp` é usado apenas nos scripts de importação (`acquisition/scripts/`), e a Media Pipeline faz dynamic import com graceful degradation (converte para WebP se `sharp` estiver disponível, envia original caso contrário).
+
+**Alternativas descartadas**:
+- Manter scripts como `.js` com JSDoc types — descartado: perderia type safety e os tipos do Acquisition Engine são complexos o suficiente para justificar TypeScript puro.
+- `ts-node` — descartado em favor de `tsx`, que tem cold-start mais rápido, suporte nativo a ESM e não requer configuração adicional de `moduleResolution`.
+- `jimp` ou `canvas` para processamento de imagem — descartados: `sharp` tem melhor performance (baseado em libvips), menor uso de memória, e já é usado internamente pelo Next.js para `next/image`.
+
+**Consequência**: `npm run acquisition:*` requerem `tsx` instalado (garantido por `npm install`). O Media Pipeline degrada graciosamente se `sharp` não estiver disponível — nenhuma etapa do pipeline falha por ausência do módulo.
+
+---
+
+## ADR-026 — Modelo de aquisição: RawOffer como unidade central (offer-first)
+
+**Data**: 2026-06-26 (Release 0.9)
+**Status**: Aceita e aplicada
+
+**Contexto**: o Acquisition Engine precisa de um modelo interno uniforme para representar dados de qualquer origem. A questão é qual entidade é a unidade central: o produto, a oferta, ou as duas separadas.
+
+**Decisão**: a unidade central de aquisição é o `RawOffer` — uma oferta com o produto embutido. Isso reflete a realidade de qualquer fonte de dados real: uma loja exporta seus produtos com preço — não exporta produtos sem preço e preços sem produto em tabelas separadas. O produto (`RawProduct`) vive dentro do `RawOffer`, não no nível raiz. O pipeline separa internamente produto e oferta na etapa de normalização.
+
+**Consequência**: qualquer conector produz `RawOffer[]`. O `CatalogWriter` faz o mapeamento para as tabelas normalizadas (`brands → categories → products → offers`). A filosofia do banco ("preço pertence à oferta, não ao produto") é preservada — o `RawOffer.priceUSD` nunca vai para `products`.
+
+---
+
+## ADR-027 — Observabilidade: in-memory + console no Release 0.9; sem tabela `import_jobs` ainda
+
+**Data**: 2026-06-26 (Release 0.9)
+**Status**: Aceita e aplicada
+
+**Contexto**: o Release 0.9 especifica observabilidade (tempo de processamento, falhas, métricas por etapa). A questão é se as métricas devem ser persistidas em banco (tabela `import_jobs`) ou ficam em memória.
+
+**Decisão**: no Release 0.9, as métricas ficam em memória durante a execução do pipeline e são impressas no console ao final (`printReport()`). Não há migration para tabela `import_jobs` neste Release. A estrutura `PipelineMetrics` é tipada e completa — persistência em banco é adicionada ao `CatalogWriter` em Release futura sem alterar a interface.
+
+**Alternativas descartadas**:
+- Criar tabela `import_jobs` agora — descartado para não adicionar migration sem validação de uso real. O formato de `PipelineMetrics` pode ainda evoluir antes de ser persistido.
+
+**Consequência**: o `PipelineResult` retornado por `pipeline.run()` contém o objeto `metrics` completo — qualquer código que chame o pipeline pode persistir as métricas onde quiser sem aguardar o Release 1.0.

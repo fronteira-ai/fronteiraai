@@ -2,8 +2,12 @@
 
 Auditoria gerada por leitura completa do código-fonte. Substitui o conteúdo anterior deste arquivo.
 
-Última atualização: 2026-06-25 (ADR-019 encerrado — leitura pública desbloqueada, validação completa com chave anônima)
-Branch auditada: `main` @ `e69696b` (hotfix 0007) — continuação de Sprint 4.1
+Última atualização: 2026-06-26 (Release 0.9 — Acquisition Engine aplicado)
+Branch auditada: `main` — Release 0.9 completo
+
+> ✅ **Release 0.9 — Acquisition Engine (2026-06-26)**: pipeline universal de aquisição de dados implementado. Engines: Validation, Normalization, Deduplication, Canonical, Media, CatalogWriter. Parsers: JSON e CSV (RFC 4180). Conectores de referência: JsonFileConnector, CsvFileConnector. 33/33 asserções do validate-pipeline OK. Dry-run de import JSON e CSV: 4/4 itens por run, 0 erros. Lint: 0. TypeScript: 0. Build: sucesso. A partir desta Release, adicionar uma nova loja exige apenas implementar um novo conector.
+>
+> ✅ **Migration 0008 aplicada (2026-06-26)**: 4 UNIQUE constraints em slug (stores, products, brands, categories) + 6 índices de performance confirmados no banco.
 
 > ✅ **ADR-019 ENCERRADO (2026-06-25)**: migration `0007_proposed_public_read_policies.sql` aplicada manualmente no Supabase SQL Editor pelo CTO. Validação com `database/seed/validate_adr019.js` confirma: **22 OK | 0 FAIL** usando **exclusivamente** `NEXT_PUBLIC_SUPABASE_ANON_KEY`. As 6 tabelas públicas (`brands`, `categories`, `products`, `offers`, `price_history`, `stores`) retornam dados reais. Escrita continua bloqueada para `anon`/`authenticated`. O catálogo inteiro agora é visível para usuários reais.
 >

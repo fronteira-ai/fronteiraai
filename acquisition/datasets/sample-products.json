@@ -1,0 +1,93 @@
+[
+  {
+    "product": {
+      "name": "Apple iPhone 16 Pro 256GB Natural Titanium",
+      "description": "Smartphone Apple iPhone 16 Pro com chip A18 Pro, câmera 48MP, tela Super Retina XDR 6.3 polegadas.",
+      "brand": "Apple",
+      "category": "Celulares",
+      "imageUrl": "https://store.storeimages.cdn-apple.com/4668/as-images.apple.com/is/iphone-16-pro-model-unselect-gallery-2-202409.jpg",
+      "specifications": {
+        "storage": "256GB",
+        "color": "Natural Titanium",
+        "display": "6.3 polegadas",
+        "chip": "A18 Pro"
+      }
+    },
+    "storeSlug": "cellshop",
+    "priceUSD": 899.99,
+    "priceBRL": 4999.90,
+    "inStock": true,
+    "stockQuantity": 12,
+    "condition": "new",
+    "warranty": "1 ano Apple",
+    "productUrl": "https://cellshop.com.py/iphone-16-pro-256gb"
+  },
+  {
+    "product": {
+      "name": "Samsung Galaxy S24 Ultra 256GB Titanium Black",
+      "description": "Smartphone Samsung Galaxy S24 Ultra com S Pen integrada, câmera 200MP, tela Dynamic AMOLED 6.8 polegadas.",
+      "brand": "Samsung",
+      "category": "Celulares",
+      "imageUrl": "https://images.samsung.com/is/image/samsung/p6pim/br/2401/gallery/br-galaxy-s24-ultra-s928-sm-s928bzkpzto-thumb-539573051.jpg",
+      "specifications": {
+        "storage": "256GB",
+        "color": "Titanium Black",
+        "display": "6.8 polegadas",
+        "chip": "Snapdragon 8 Gen 3"
+      }
+    },
+    "storeSlug": "cellshop",
+    "priceUSD": 749.99,
+    "priceBRL": 4199.00,
+    "inStock": true,
+    "stockQuantity": 8,
+    "condition": "new",
+    "warranty": "1 ano Samsung",
+    "productUrl": "https://cellshop.com.py/galaxy-s24-ultra"
+  },
+  {
+    "product": {
+      "name": "Sony WH-1000XM5 Headphone Bluetooth",
+      "description": "Headphone over-ear Sony WH-1000XM5 com cancelamento de ruído líder da indústria, 30 horas de bateria.",
+      "brand": "Sony",
+      "category": "Audio",
+      "imageUrl": "https://www.sony.com/image/5d02da5df552836db894cead8a68f5f3?fmt=pjpeg&wid=330&bgcolor=FFFFFF",
+      "specifications": {
+        "type": "Over-ear",
+        "battery": "30 horas",
+        "connectivity": "Bluetooth 5.2"
+      }
+    },
+    "storeSlug": "mega-eletronicos",
+    "priceUSD": 249.99,
+    "priceBRL": 1399.00,
+    "inStock": true,
+    "stockQuantity": 5,
+    "condition": "new",
+    "warranty": "1 ano Sony",
+    "productUrl": "https://mega-eletronicos.com.py/sony-wh1000xm5"
+  },
+  {
+    "product": {
+      "name": "DJI Mini 4 Pro Drone",
+      "description": "Drone DJI Mini 4 Pro com câmera 4K/60fps, omnidirecional, peso abaixo de 249g.",
+      "brand": "DJI",
+      "category": "Drones",
+      "imageUrl": "https://store.dji.com/media/image/cache/mini4pro/large/mini-4-pro-2-800x800.jpg",
+      "specifications": {
+        "camera": "4K/60fps",
+        "weight": "249g",
+        "flight_time": "34 minutos",
+        "obstacle_avoidance": "Omnidirecional"
+      }
+    },
+    "storeSlug": "mega-eletronicos",
+    "priceUSD": 599.99,
+    "priceBRL": 3349.00,
+    "inStock": false,
+    "stockQuantity": 0,
+    "condition": "new",
+    "warranty": "1 ano DJI",
+    "productUrl": "https://mega-eletronicos.com.py/dji-mini-4-pro"
+  }
+]

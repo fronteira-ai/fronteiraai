@@ -1,0 +1,5 @@
+name,description,brand,category,image_url,price_usd,price_brl,old_price_usd,in_stock,stock_quantity,condition,warranty,product_url,store_slug
+"Apple AirPods Pro 2ª Geração","Fone de ouvido AirPods Pro 2ª geração com cancelamento de ruído adaptativo e áudio espacial personalizado.","Apple","Audio","",229.99,1299.00,,true,20,new,1 ano Apple,https://nisseipy.com/airpods-pro-2,nissei
+"Xiaomi Redmi Note 13 Pro 256GB","Smartphone Xiaomi Redmi Note 13 Pro com câmera 200MP, display AMOLED 120Hz, bateria 5000mAh.","Xiaomi","Celulares","",289.99,1649.00,,true,15,new,1 ano Xiaomi,https://nisseipy.com/redmi-note-13-pro,nissei
+"Samsung 55 polegadas QLED 4K Q70D","Smart TV Samsung 55 polegadas QLED 4K Q70D com processador NQ4 AI Gen2 e Tizen OS.","Samsung","TVs","",699.99,3999.00,749.99,true,3,new,1 ano Samsung,https://nisseipy.com/samsung-55-q70d,nissei
+"Perfume Armani Code Homme 75ml","Eau de Toilette Armani Code Homme 75ml, fragrância lenhosa e especiada.","Armani","Perfumes","",89.99,499.00,,true,30,new,,https://nisseipy.com/armani-code-75ml,nissei
