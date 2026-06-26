@@ -516,3 +516,47 @@ Utilitário `utils/storage.ts` exporta `catalogStorage.*` (builders de URL tipad
 - Criar tabela `import_jobs` agora — descartado para não adicionar migration sem validação de uso real. O formato de `PipelineMetrics` pode ainda evoluir antes de ser persistido.
 
 **Consequência**: o `PipelineResult` retornado por `pipeline.run()` contém o objeto `metrics` completo — qualquer código que chame o pipeline pode persistir as métricas onde quiser sem aguardar o Release 1.0.
+
+## ADR-028 — Admin Platform: `@supabase/ssr` para autenticação cookie-based no Next.js 16
+
+**Data**: 2026-06-26 (Release 1.0)
+**Status**: Aceita
+
+**Contexto**: O painel admin precisa de sessão persistente compatível com App Router. O cliente legado `@supabase/auth-helpers-nextjs` não suporta Next.js 15+.
+
+**Decisão**: usar `@supabase/ssr ^0.12.0` com `createServerClient` (cookies assíncronos via `await cookies()`) no servidor e `createBrowserClient` no cliente. Dois clientes por rota — o servidor usa anon key (valida sessão), o service role bypassa RLS para writes admin.
+
+**Alternativas descartadas**:
+- `@supabase/auth-helpers-nextjs` — descontinuado para Next.js 15+.
+- JWT manual via middleware — mais complexo, sem benefício.
+
+**Consequência**: `lib/supabase/server.ts`, `lib/supabase/client.ts`, `lib/supabase/service.ts` são as três entradas únicas para Supabase em contextos diferentes. `lib/admin-auth.ts` compõe server + service para autenticar e autorizar em API routes.
+
+## ADR-029 — import_logs: schema simplificado (`total_raw`, `total_persisted`, `total_errors`, `metrics` JSONB)
+
+**Data**: 2026-06-26 (Release 1.0)
+**Status**: Aceita
+
+**Contexto**: Migration 0009 inicialmente modelou `import_logs` com colunas granulares `received/validated/persisted/skipped/failed`. As API routes e o tipo `ImportLog` precisam de uma estrutura compatível com `PipelineResult`.
+
+**Decisão**: simplificar `import_logs` para: `total_raw` (int), `total_persisted` (int), `total_errors` (int), `success` (bool), `metrics` (JSONB — guarda o `PipelineMetrics` completo), `errors` (JSONB nullable). Granularidade extra fica dentro do JSONB `metrics.totals`.
+
+**Alternativas descartadas**:
+- Manter colunas granulares — redundante com `metrics.totals`, exige mapeamento extra.
+
+**Consequência**: se futuras queries precisarem filtrar por `totals.validated`, usam `metrics->>'totals'->>'validated'` via JSONB operator. Aceito para logs de importação onde queries analíticas não são prioritárias no Release 1.0.
+
+## ADR-030 — Admin CRUD: service role client para todos os writes, anon client apenas para validar sessão
+
+**Data**: 2026-06-26 (Release 1.0)
+**Status**: Aceita
+
+**Contexto**: As API routes do admin precisam escrever em tabelas com RLS ativo (products, offers, stores, etc.) sem criar políticas RLS específicas para admins.
+
+**Decisão**: `requireAdmin()` retorna um `serviceClient` (service role) após validar que o usuário autenticado tem `role IN ('admin','operator')` na tabela `profiles`. Toda escrita admin usa `serviceClient`; leitura de sessão usa o client com anon key.
+
+**Alternativas descartadas**:
+- Políticas RLS para role admin — exige `auth.uid()` + join com `profiles` em cada política; mais frágil.
+- Passar JWT do usuário para writes — o service role é mais simples e seguro para operações de backoffice.
+
+**Consequência**: o service role key (`SUPABASE_SERVICE_ROLE_KEY`) deve existir apenas em `.env.local` (servidor) e nunca ser exposto ao cliente.

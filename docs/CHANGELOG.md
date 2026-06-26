@@ -482,3 +482,73 @@ Validado com `npm run lint` (0 erros, 5 warnings pré-existentes — nenhum novo
 - `npm run lint` — 0 erros
 - `npm run typecheck` — 0 erros
 - `npm run build` — sucesso, 10 rotas, nenhuma regressão
+
+## 2026-06-26 — Release 1.0 — Admin Platform (Operations Center)
+
+**Objetivo**: plataforma de administração completa com autenticação, CRUD de catálogo, pipeline de importação com UI, centro de qualidade, log de importações e configurações.
+
+**Autenticação & Segurança**:
+- `@supabase/ssr ^0.12.0` — auth cookie-based para Next.js 16 App Router
+- `lib/supabase/server.ts` — `createServerClient` com `await cookies()`
+- `lib/supabase/client.ts` — `createBrowserClient` para client components
+- `lib/supabase/service.ts` — singleton service role para writes admin (bypassa RLS)
+- `lib/admin-auth.ts` — `requireAdmin()` valida sessão + role; `isAuthError()` type guard
+- `middleware.ts` — protege `/admin/*`, redireciona para `/admin/login` se não autenticado
+- `database/migrations/0009_admin_platform.sql` — `profiles` + trigger `on_auth_user_created` + `import_logs`
+
+**Layout & UI Components**:
+- `contexts/admin/ToastContext.tsx` — Toast notification system (success/error/warning/info, auto-dismiss 4s)
+- `components/admin/ui/ToastContainer.tsx` — renderização dos toasts
+- `components/admin/ui/ConfirmDialog.tsx` — modal de confirmação para ações destrutivas
+- `components/admin/ui/AdminDataTable.tsx` — tabela genérica com paginação e skeleton
+- `components/admin/ui/AdminFormField.tsx` — `AdminInput`, `AdminTextarea`, `AdminSelect` + label + error
+- `components/admin/ui/AdminButton.tsx` — botão com variantes (primary/secondary/danger/ghost) + loading
+- `components/admin/layout/AdminSidebar.tsx` — sidebar com navegação hierárquica + logout
+- `app/admin/layout.tsx` — layout raiz do admin (sidebar + toast provider)
+- `app/admin/login/page.tsx` — formulário de login com Supabase Auth
+
+**Dashboard**:
+- `app/admin/page.tsx` — stats em tempo real: produtos, ofertas, lojas, marcas, categorias, price_history, última importação
+- `app/api/admin/dashboard/stats/route.ts` — API para stats
+
+**CRUD Produtos** (`app/admin/catalog/products/`):
+- List com busca e paginação; New (`/new`); Edit (`/[id]`)
+- `components/admin/catalog/ProductForm.tsx` — form com marca, categoria, slug auto-gerado
+- `app/api/admin/products/route.ts` (GET paginado + search, POST)
+- `app/api/admin/products/[id]/route.ts` (GET, PUT, DELETE)
+
+**CRUD Categorias** (mesmo padrão):
+- `app/api/admin/categories/route.ts` + `[id]/route.ts`
+- `components/admin/catalog/CategoryForm.tsx`
+
+**CRUD Marcas**:
+- `app/api/admin/brands/route.ts` + `[id]/route.ts`
+- `components/admin/catalog/BrandForm.tsx`
+
+**CRUD Lojas**:
+- `app/api/admin/stores/route.ts` + `[id]/route.ts`
+- `components/admin/catalog/StoreForm.tsx` — form completo com contato, verificação, status
+
+**CRUD Ofertas**:
+- `app/api/admin/offers/route.ts` + `[id]/route.ts`
+- `components/admin/catalog/OfferForm.tsx` — preço USD/BRL, condição, garantia, cashback
+
+**Centro de Importações**:
+- `app/admin/imports/page.tsx` — seleção de connector, dry-run/execute, resultado visual
+- `app/api/admin/import/run/route.ts` — executa pipeline do Acquisition Engine, persiste log
+
+**Centro de Qualidade**:
+- `app/admin/quality/page.tsx` — report com 6 categorias de issues (error/warning/info)
+- `app/api/admin/quality/report/route.ts` — 6 queries paralelas no DB
+
+**Log de Importações**:
+- `app/admin/logs/page.tsx` — tabela paginada de execuções
+- `app/api/admin/logs/route.ts` — GET paginado
+
+**Media Manager**:
+- `app/api/admin/media/upload/route.ts` — upload para Supabase Storage bucket `catalog`
+
+**Configurações**:
+- `app/admin/settings/page.tsx` — status de DB, storage e segurança
+
+**Validações**: lint 0 erros · typecheck 0 erros · build OK
