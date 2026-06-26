@@ -24,13 +24,17 @@
     "acquisition:import-json": "tsx acquisition/scripts/import-json.ts",
     "acquisition:import-json:execute": "tsx acquisition/scripts/import-json.ts --execute",
     "acquisition:import-csv": "tsx acquisition/scripts/import-csv.ts",
-    "acquisition:import-csv:execute": "tsx acquisition/scripts/import-csv.ts --execute"
+    "acquisition:import-csv:execute": "tsx acquisition/scripts/import-csv.ts --execute",
+    "sync:shoppingchina": "tsx acquisition/scripts/sync-shoppingchina.ts",
+    "sync:shoppingchina:execute": "tsx acquisition/scripts/sync-shoppingchina.ts --execute",
+    "sync:shoppingchina:execute:skip-media": "tsx acquisition/scripts/sync-shoppingchina.ts --execute --skip-media"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.0",
     "@supabase/supabase-js": "^2.108.2",
     "lucide-react": "^1.21.0",
     "next": "16.2.9",
+    "node-html-parser": "^8.0.3",
     "react": "19.2.4",
     "react-dom": "19.2.4"
   },

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin, isAuthError } from "@/lib/admin-auth";
 import { AcquisitionPipeline } from "@/acquisition/core/pipeline";
 import { connectorRegistry } from "@/acquisition/core/registry";
+import "@/acquisition/connectors/bootstrap";
 
 export async function POST(request: NextRequest) {
   const auth = await requireAdmin();

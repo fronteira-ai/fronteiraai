@@ -26,3 +26,6 @@ export { MediaPipeline } from "./engines/media.engine";
 export { CatalogWriter } from "./persistence/catalog.writer";
 export { JsonFileConnector } from "./connectors/json-file.connector";
 export { CsvFileConnector } from "./connectors/csv-file.connector";
+export { ShoppingChinaConnector } from "./connectors/shoppingchina";
+export type { IFetchStrategy, FetchOptions, FetchResult } from "./fetch";
+export { HttpFetchStrategy } from "./fetch";

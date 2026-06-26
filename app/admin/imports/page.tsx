@@ -1,23 +1,57 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { AdminButton } from "@/components/admin/ui/AdminButton";
 import { AdminFormField, AdminSelect } from "@/components/admin/ui/AdminFormField";
 import { useToast } from "@/contexts/admin/ToastContext";
-import { Play, AlertCircle, CheckCircle2 } from "lucide-react";
+import { Play, AlertCircle, CheckCircle2, Globe, FileJson, FileText } from "lucide-react";
 import type { PipelineResult } from "@/acquisition/types/pipeline";
+
+interface ConnectorInfo {
+  id: string;
+  name: string;
+  version: string;
+  type: string;
+  storeSlug: string;
+  description: string | null;
+}
+
+const TYPE_ICON: Record<string, React.ReactNode> = {
+  "crawler": <Globe className="w-3.5 h-3.5" />,
+  "api-rest": <Globe className="w-3.5 h-3.5" />,
+  "json-file": <FileJson className="w-3.5 h-3.5" />,
+  "csv-file": <FileText className="w-3.5 h-3.5" />,
+};
+
+const PRODUCTION_TYPES = new Set(["crawler", "api-rest", "erp"]);
 
 export default function ImportsPage() {
   const { toast } = useToast();
-  const [connectorId, setConnectorId] = useState("json-file");
+  const [connectors, setConnectors] = useState<ConnectorInfo[]>([]);
+  const [connectorId, setConnectorId] = useState("shoppingchina");
   const [dryRun, setDryRun] = useState(true);
   const [skipMedia, setSkipMedia] = useState(true);
   const [running, setRunning] = useState(false);
   const [result, setResult] = useState<PipelineResult | null>(null);
 
-  const connectorOptions = [
-    { value: "json-file", label: "JSON File (sample-products.json)" },
-    { value: "csv-file", label: "CSV File (sample-products.csv)" },
-  ];
+  useEffect(() => {
+    fetch("/api/admin/import/connectors")
+      .then((r) => r.json() as Promise<{ data: ConnectorInfo[] }>)
+      .then((json) => {
+        setConnectors(json.data ?? []);
+        // Default to first production connector if available
+        const prod = json.data?.find((c) => PRODUCTION_TYPES.has(c.type));
+        if (prod) setConnectorId(prod.id);
+      })
+      .catch(() => {});
+  }, []);
+
+  const connectorOptions = connectors.map((c) => ({
+    value: c.id,
+    label: c.name,
+  }));
+
+  const selectedConnector = connectors.find((c) => c.id === connectorId);
+  const isProduction = selectedConnector ? PRODUCTION_TYPES.has(selectedConnector.type) : false;
 
   async function handleRun() {
     setRunning(true);
@@ -50,6 +84,18 @@ export default function ImportsPage() {
           <AdminSelect value={connectorId} onChange={(e) => setConnectorId(e.target.value)} options={connectorOptions} />
         </AdminFormField>
 
+        {selectedConnector && (
+          <div className="flex items-center gap-2 text-xs">
+            <span className={`flex items-center gap-1 px-2 py-0.5 rounded-full font-medium ${isProduction ? "bg-green-500/10 text-green-400 border border-green-500/20" : "bg-slate-700 text-slate-400 border border-slate-600"}`}>
+              {TYPE_ICON[selectedConnector.type] ?? null}
+              {isProduction ? "Produção" : "Referência"}
+            </span>
+            <span className="text-slate-500">•</span>
+            <span className="text-slate-400">{selectedConnector.description ?? selectedConnector.type}</span>
+            <span className="text-slate-600 ml-auto">v{selectedConnector.version}</span>
+          </div>
+        )}
+
         <div className="flex gap-6">
           <label className="flex items-center gap-2 text-sm text-slate-300 cursor-pointer">
             <input type="checkbox" checked={dryRun} onChange={(e) => setDryRun(e.target.checked)} className="w-4 h-4 accent-indigo-600" />
@@ -68,13 +114,20 @@ export default function ImportsPage() {
           </div>
         )}
 
+        {isProduction && !dryRun && (
+          <div className="flex items-start gap-2 text-sm text-blue-400 bg-blue-500/10 border border-blue-500/20 rounded-lg px-3 py-2">
+            <Globe className="w-4 h-4 mt-0.5 shrink-0" />
+            Conector ao vivo — o site será acessado em tempo real. Pode demorar alguns minutos.
+          </div>
+        )}
+
         <AdminButton
           icon={<Play className="w-4 h-4" />}
           onClick={handleRun}
           loading={running}
           variant={dryRun ? "secondary" : "primary"}
         >
-          {dryRun ? "Simular Pipeline" : "Executar Pipeline"}
+          {running ? "Executando..." : dryRun ? "Simular Pipeline" : "Executar Pipeline"}
         </AdminButton>
       </div>
 
