@@ -49,6 +49,11 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(dashboardUrl);
   }
 
+  // ── Auth callback (Supabase email confirmation) ───────────────────────────
+  if (pathname.startsWith("/auth/callback")) {
+    return supabaseResponse;
+  }
+
   // ── Merchant routes ───────────────────────────────────────────────────────
   const isMerchantPath = pathname.startsWith("/merchant");
   const isMerchantPublic =
@@ -73,5 +78,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/admin/:path*", "/merchant/:path*"],
+  matcher: ["/admin/:path*", "/merchant/:path*", "/auth/callback"],
 };
