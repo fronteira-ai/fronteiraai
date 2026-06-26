@@ -288,6 +288,26 @@ Lapidação completa da experiência existente antes do primeiro lançamento pú
 - **Scripts**: `db:images`, `db:images:dry-run`.
 - **Validações**: lint 0, tsc 0, build 13 rotas, db:validate 11 OK, db:validate:43 23/23.
 
-## Status Geral: **90%**
+## Status Geral: **95%**
 
-Release 0.8 entregue: site com imagens, favicon, manifesto, analytics, headers de segurança, SEO avançado. Pendência para 100%: (1) aplicar `0008_data_integrity.sql` no SQL Editor, (2) configurar `NEXT_PUBLIC_GA_MEASUREMENT_ID` e `NEXT_PUBLIC_CLARITY_PROJECT_ID` em produção, (3) registrar em Google Search Console e Bing Webmaster.
+Release 0.8 entregue: site com imagens, favicon, manifesto, analytics, headers de segurança, SEO avançado.
+
+---
+
+## Release 1.1 — First Live Connector — 2026-06-26
+
+Primeira loja real integrada: Shopping China (`shoppingchina.com.py`). FetchEngine com `HttpFetchStrategy`, parser de listagem e detalhe HTML, conector com rate limiting, persistência via `CatalogWriter`. 30 produtos reais em 3 categorias. Dry-run validado → execute → idempotência confirmada. Migrations aplicadas: 0010 (store + connector_configs) + 0011 (UNIQUE constraint em offers).
+
+## Release 1.2 — Merchant Operating System — 2026-06-26
+
+Portal self-service completo para lojistas (SaaS). 6 novas tabelas (merchant_plans, merchants, merchant_stores, merchant_audit_logs, merchant_analytics_events, merchant_recommendations). 10 API routes. 11 páginas `/merchant/*`. Onboarding wizard 5 passos. Dashboard com Merchant Score (0-100) e recomendações automáticas. Auditoria completa de ações. Plans engine com 4 planos seed.
+
+**Pendências de apply**:
+- Migration `0012_merchant_platform.sql` — aplicar no Supabase SQL Editor
+
+**Quality Gate Release 1.2**:
+- `npm run lint` → 0 errors
+- `npx tsc --noEmit` → 0 errors
+- `npm run build` → OK (11 rotas /merchant + todas anteriores)
+
+**ADRs**: ADR-024 a ADR-028 (ver DECISIONS.md)

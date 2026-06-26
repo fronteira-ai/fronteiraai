@@ -552,3 +552,105 @@ Validado com `npm run lint` (0 erros, 5 warnings pré-existentes — nenhum novo
 - `app/admin/settings/page.tsx` — status de DB, storage e segurança
 
 **Validações**: lint 0 erros · typecheck 0 erros · build OK
+
+## 2026-06-26 — Release 1.1 — First Live Connector (Shopping China)
+
+**Stack de aquisição produtiva — end-to-end.**
+
+### Acquisition Layer
+- `acquisition/fetch/types.ts` — interface `IFetchStrategy`, `FetchResult`, `FetchOptions`
+- `acquisition/fetch/http.strategy.ts` — `HttpFetchStrategy` com browser UA e `AbortSignal.timeout`
+- `acquisition/connectors/shoppingchina/` — conector completo:
+  - `listing-parser.ts` — extrai URLs `/producto/*` de páginas de listagem
+  - `detail-parser.ts` — extrai nome, preço USD (padrão `U$ N,NN`), preço Gs, marca, categoria, imagens CDN
+  - `connector.ts` — orquestra listing → detail com rate limiting (500ms entre requests)
+  - `index.ts` — auto-registra no `connectorRegistry` via side-effect import
+  - `config.ts` — 3 categorias (Eletrônicos, Informática, Celulares), 10 produtos/categoria
+- `acquisition/connectors/bootstrap.ts` — registra todos os conectores antes de qualquer API route
+
+### Database
+- `database/migrations/0010_shoppingchina_connector.sql` — INSERT store `shopping-china` + tabela `connector_configs`
+- `database/migrations/0011_offers_unique_constraint.sql` — adiciona UNIQUE `(product_id, store_id)` na `offers` (deduplicação prévia incluída)
+
+### Bug fixes
+- `acquisition/persistence/catalog.writer.ts` — `source: "crawler"` (era `"connector"`, tipo inválido)
+- `acquisition/connectors/shoppingchina/connector.ts` — `type: "crawler"` (era `"api-rest"`)
+
+### Resultado validado
+- Dry-run: 30 validados, 0 erros
+- Execute: 30 persistidos (10 por categoria)
+- Idempotência: 30 skip na segunda execução
+
+---
+
+## 2026-06-26 — Release 1.2 — Merchant Operating System
+
+**Portal self-service completo para lojistas (SaaS foundation).**
+
+### Database — migration 0012
+- `profiles.role` expandido para `('admin','operator','merchant')`
+- `merchant_plans` — 4 planos (free/pro/business/enterprise) com seed
+- `merchants` — registro do lojista com score, status, onboarding, RLS self-access
+- `merchant_stores` — junction M:N (merchants ↔ stores) com FK para multi-tenancy
+- `merchant_audit_logs` — todos os eventos de plataforma com payload JSON
+- `merchant_analytics_events` — fundação para analytics futuro
+- `merchant_recommendations` — recomendações automáticas por lojista
+- Índices de performance + trigger `set_updated_at()` + RLS policies
+
+### Types & Auth
+- `types/merchant.ts` — 20+ tipos: `Merchant`, `MerchantPlan`, `MerchantDashboardStats`, `MerchantScoreBreakdown`, `AuditEventType`, etc.
+- `lib/merchant-auth.ts` — `requireMerchant()`, `requireAuth()`, `isMerchantAuthError()` (padrão do admin)
+- `middleware.ts` — rota `/merchant/*` protegida; `/merchant/login` e `/merchant/register` públicas
+
+### Services (M02-M12)
+- `services/merchant.service.ts`:
+  - `getMerchantDashboardStats` — queries paralelas, 10 métricas
+  - `computeMerchantScore` — 8 critérios, 0-100 pontos
+  - `generateRecommendations` — 6 tipos de recomendações automáticas
+  - `logAuditEvent` — persistência de auditoria
+  - `computeTrustScore` — score por produto
+
+### API Routes (10 endpoints)
+- `POST /api/merchant/auth/register` — cadastro idempotente, upgrade de role, cria registro merchant
+- `PATCH /api/merchant/onboarding` — salva passo + vincula loja
+- `GET /api/merchant/dashboard/stats` — stats + score + recomendações
+- `GET /api/merchant/stores` — lojas vinculadas; `POST` — todas disponíveis
+- `GET /api/merchant/products` — catálogo paginado
+- `POST /api/merchant/imports/run` — executa pipeline de aquisição
+- `GET /api/merchant/imports/history` — histórico de importações
+- `GET/PATCH /api/merchant/recommendations` — lista + dismiss/read
+- `GET /api/merchant/audit` — log paginado de auditoria
+- `GET/PATCH /api/merchant/settings` — perfil da empresa
+- `GET /api/merchant/plans` — planos disponíveis
+
+### Components (M01-M02)
+- `components/merchant/layout/MerchantSidebar.tsx` — sidebar emerald, 8 itens de navegação
+- `components/merchant/dashboard/StatsGrid.tsx` — 6 cards de métricas
+- `components/merchant/dashboard/ScoreCard.tsx` — barra de progresso + breakdown de critérios
+- `components/merchant/dashboard/RecommendationsPanel.tsx` — prioridades com dismiss
+- `components/merchant/onboarding/OnboardingWizard.tsx` — wizard 5 passos
+
+### Pages (11 rotas)
+- `/merchant` → redirect dashboard
+- `/merchant/login` e `/merchant/register` — auth emerald-theme
+- `/merchant/onboarding` — wizard completo
+- `/merchant/dashboard` — stats + score + recomendações + ações rápidas
+- `/merchant/products` — tabela paginada com imagens
+- `/merchant/imports/new` — seletor de conector + dry-run toggle + resultado
+- `/merchant/imports` — histórico de importações
+- `/merchant/stores` — lojas vinculadas
+- `/merchant/audit` — log completo de auditoria
+- `/merchant/analytics` — stub (placeholder para Release 1.3)
+- `/merchant/settings` — empresa + contato + plano
+
+### Quality Gate
+- `npm run lint` → 0 errors, 1 warning (variável não-usada não-crítica)
+- `npx tsc --noEmit` → 0 errors
+- `npm run build` → OK, 11 rotas /merchant compiladas
+
+### ADRs
+- ADR-024: Role `merchant` no `profiles` compartilhado
+- ADR-025: Junction table `merchant_stores` para multi-tenancy
+- ADR-026: Portal `/merchant/*` reutiliza design system do admin
+- ADR-027: Merchant Score computado on-demand
+- ADR-028: Plans Engine como tabela seed sem gateway de pagamento

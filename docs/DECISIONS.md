@@ -560,3 +560,78 @@ Utilitário `utils/storage.ts` exporta `catalogStorage.*` (builders de URL tipad
 - Passar JWT do usuário para writes — o service role é mais simples e seguro para operações de backoffice.
 
 **Consequência**: o service role key (`SUPABASE_SERVICE_ROLE_KEY`) deve existir apenas em `.env.local` (servidor) e nunca ser exposto ao cliente.
+
+---
+
+## ADR-024 — Role `merchant` adicionado ao `profiles` compartilhado
+
+**Data**: 2026-06-26 (Release 1.2)
+**Status**: Aceita
+
+**Contexto**: A Release 1.2 introduz um novo tipo de usuário — lojistas (merchants) — que precisam de autenticação própria. A questão é se usam o mesmo sistema de auth do admin/operator ou um sistema separado.
+
+**Decisão**: Reutilizar o mesmo `auth.users` e `profiles` do Supabase, adicionando `'merchant'` ao CHECK constraint de `profiles.role`. O `requireMerchant()` em `lib/merchant-auth.ts` espelha o padrão do `requireAdmin()`, verificando `role = 'merchant'` antes de retornar o registro da tabela `merchants`.
+
+**Alternativas descartadas**:
+- Auth separado para merchants — duplicaria infraestrutura de sessão, cookies e middleware sem benefício claro.
+- Row na tabela `merchants` sem verificação de role — permitiria que admins e operadores acessassem o portal de lojistas sem bloqueio explícito.
+
+**Consequência**: A migration 0012 faz `DROP CONSTRAINT IF EXISTS profiles_role_check` e recria com `('admin','operator','merchant')`. Ao cadastrar, o flow de registro atualiza o `profiles.role` de `'operator'` (padrão do trigger) para `'merchant'` via service key.
+
+---
+
+## ADR-025 — Tabela junction `merchant_stores` (M:N)
+
+**Data**: 2026-06-26 (Release 1.2)
+**Status**: Aceita
+
+**Contexto**: Um lojista pode ter múltiplas lojas. Uma loja pode ser administrada por múltiplos usuários no futuro (multi-user account). Adicionar `merchant_id` direto em `stores` seria uma FK simples, mas quebraria a escalabilidade.
+
+**Decisão**: Tabela `merchant_stores (merchant_id, store_id, is_primary)` com UNIQUE `(merchant_id, store_id)`. Isso prepara para o cenário de múltiplas lojas por merchant e múltiplos merchants por loja (marketplace futuro), sem migração de schema.
+
+**Alternativas descartadas**:
+- `merchant_id` direto em `stores` — quebraria dados existentes (lojas sem merchant) e impede multi-merchant por loja.
+
+---
+
+## ADR-026 — Portal `/merchant/*` com design system compartilhado
+
+**Data**: 2026-06-26 (Release 1.2)
+**Status**: Aceita
+
+**Contexto**: O portal de lojistas precisa de um visual profissional SaaS. O design system do admin (`components/admin/ui/`) já é sólido.
+
+**Decisão**: Reutilizar `ToastContext`, `ToastContainer`, e UI components do admin diretamente no portal merchant. Criar novos componentes merchant apenas onde a semântica é diferente (Sidebar, ScoreCard, RecommendationsPanel). Acento de cor verde-esmeralda (`emerald`) para diferenciar merchant do admin (índigo) visualmente.
+
+**Alternativas descartadas**:
+- Duplicar UI components — viola explicitamente o princípio "não criar código duplicado".
+
+---
+
+## ADR-027 — Merchant Score computado on-demand
+
+**Data**: 2026-06-26 (Release 1.2)
+**Status**: Aceita
+
+**Contexto**: O Merchant Score (0-100) é calculado com base em dados que mudam a cada importação. Como manter o score atualizado?
+
+**Decisão**: Computar o score em `GET /api/merchant/dashboard/stats` a cada carregamento do dashboard, persistir o resultado em `merchants.merchant_score`, e exibir o breakdown no `ScoreCard`. Sem materialized view ou background job nesta release.
+
+**Alternativas descartadas**:
+- Materialized view — overhead de manutenção sem benefício de escala até milhares de merchants.
+- Background job/cron — complexidade desnecessária nesta fase.
+
+---
+
+## ADR-028 — Plans Engine como tabela seed (sem gateway de pagamento)
+
+**Data**: 2026-06-26 (Release 1.2)
+**Status**: Aceita
+
+**Contexto**: A plataforma precisa de planos (Free/Pro/Business/Enterprise) com features diferentes. Mas a cobrança não é implementada nesta release.
+
+**Decisão**: Tabela `merchant_plans` com seed de 4 planos e features mapeadas como colunas boolean/integer. O `plan` em `merchants` é uma FK para esta tabela. A UI exibe o plano atual e as features, mas não há gateway de pagamento. Upgrade via "entre em contato" por ora.
+
+**Alternativas descartadas**:
+- Enum hardcoded no código — impede alteração de planos sem deploy.
+- Integração com Stripe nesta release — prematura; validar modelo de planos com usuários reais primeiro.

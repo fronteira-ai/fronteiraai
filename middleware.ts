@@ -29,19 +29,42 @@ export async function middleware(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const isAdminPath = request.nextUrl.pathname.startsWith("/admin");
-  const isLoginPath = request.nextUrl.pathname.startsWith("/admin/login");
+  const pathname = request.nextUrl.pathname;
 
-  if (isAdminPath && !isLoginPath && !user) {
+  // ── Admin routes ──────────────────────────────────────────────────────────
+  const isAdminPath = pathname.startsWith("/admin");
+  const isAdminLogin = pathname.startsWith("/admin/login");
+
+  if (isAdminPath && !isAdminLogin && !user) {
     const loginUrl = request.nextUrl.clone();
     loginUrl.pathname = "/admin/login";
-    loginUrl.searchParams.set("redirectTo", request.nextUrl.pathname);
+    loginUrl.searchParams.set("redirectTo", pathname);
     return NextResponse.redirect(loginUrl);
   }
 
-  if (isLoginPath && user) {
+  if (isAdminLogin && user) {
     const dashboardUrl = request.nextUrl.clone();
     dashboardUrl.pathname = "/admin";
+    dashboardUrl.search = "";
+    return NextResponse.redirect(dashboardUrl);
+  }
+
+  // ── Merchant routes ───────────────────────────────────────────────────────
+  const isMerchantPath = pathname.startsWith("/merchant");
+  const isMerchantPublic =
+    pathname.startsWith("/merchant/login") ||
+    pathname.startsWith("/merchant/register");
+
+  if (isMerchantPath && !isMerchantPublic && !user) {
+    const loginUrl = request.nextUrl.clone();
+    loginUrl.pathname = "/merchant/login";
+    loginUrl.searchParams.set("redirectTo", pathname);
+    return NextResponse.redirect(loginUrl);
+  }
+
+  if (isMerchantPublic && user) {
+    const dashboardUrl = request.nextUrl.clone();
+    dashboardUrl.pathname = "/merchant/dashboard";
     dashboardUrl.search = "";
     return NextResponse.redirect(dashboardUrl);
   }
@@ -50,5 +73,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/admin/:path*"],
+  matcher: ["/admin/:path*", "/merchant/:path*"],
 };
