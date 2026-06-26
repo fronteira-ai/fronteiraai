@@ -146,7 +146,7 @@ export class CatalogWriter implements IPipelineStage {
         offer_id: existingOfferId,
         price_usd: o.priceUSD,
         price_brl: o.priceBRL,
-        source: "connector",
+        source: "crawler",
       });
 
       return { productSlug: p.slug, storeSlug: o.storeSlug, action: "updated", productId, offerId: existingOfferId };
