@@ -102,10 +102,11 @@ CREATE INDEX IF NOT EXISTS offers_price_usd_idx   ON offers (price_usd);
 CREATE INDEX IF NOT EXISTS products_brand_id_idx  ON products (brand_id);
 CREATE INDEX IF NOT EXISTS products_category_id_idx ON products (category_id);
 
--- Índice composto para price_history (batch .in() + order recorded_at)
--- já existia via 0006; incluído aqui por completude caso 0006 não tenha
--- sido aplicada com o índice.
-CREATE INDEX IF NOT EXISTS price_history_offer_id_recorded_at_idx
+-- Índice composto para price_history (batch .in() + order recorded_at).
+-- Nome alinhado ao criado pela 0006 (price_history_offer_recorded_idx)
+-- para que IF NOT EXISTS seja no-op quando 0006 já foi aplicada, evitando
+-- índice duplicado em (offer_id, recorded_at DESC).
+CREATE INDEX IF NOT EXISTS price_history_offer_recorded_idx
   ON price_history (offer_id, recorded_at DESC);
 
 -- ──────────────────────────────────────────────────────────
@@ -135,6 +136,6 @@ WHERE indexname IN (
   'offers_price_usd_idx',
   'products_brand_id_idx',
   'products_category_id_idx',
-  'price_history_offer_id_recorded_at_idx'
+  'price_history_offer_recorded_idx'
 )
 ORDER BY tablename, indexname;
