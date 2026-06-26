@@ -26,6 +26,9 @@ export default function MerchantLoginPage() {
       return;
     }
 
+    // Idempotent — ensures merchant record exists even if register email was unconfirmed
+    await fetch("/api/merchant/auth/register", { method: "POST" });
+
     router.push("/merchant/dashboard");
     router.refresh();
   }

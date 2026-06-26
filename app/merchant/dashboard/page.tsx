@@ -4,35 +4,87 @@ import { MerchantSidebar } from "@/components/merchant/layout/MerchantSidebar";
 import { StatsGrid } from "@/components/merchant/dashboard/StatsGrid";
 import { ScoreCard } from "@/components/merchant/dashboard/ScoreCard";
 import { RecommendationsPanel } from "@/components/merchant/dashboard/RecommendationsPanel";
-import type { MerchantDashboardStats, MerchantScoreBreakdown, MerchantRecommendation } from "@/types/merchant";
-import { RefreshCw, TrendingUp } from "lucide-react";
+import { NextStepCard } from "@/components/merchant/dashboard/NextStepCard";
+import { GoalsPanel } from "@/components/merchant/dashboard/GoalsPanel";
+import type {
+  MerchantDashboardStats,
+  MerchantScoreBreakdown,
+  MerchantRecommendation,
+  MerchantLevel,
+  NextStep,
+  MerchantGoal,
+} from "@/types/merchant";
+import { RefreshCw } from "lucide-react";
 
 interface DashboardData {
   stats: MerchantDashboardStats;
   scoreBreakdown: MerchantScoreBreakdown;
+  level: MerchantLevel;
+  nextStep: NextStep;
+  goals: MerchantGoal[];
   recommendations: MerchantRecommendation[];
-  merchant: { company_name: string; plan: string; status: string; onboarding_done: boolean; verified_level: string };
+  merchant: {
+    company_name: string;
+    plan: string;
+    status: string;
+    onboarding_done: boolean;
+    verified_level: string;
+  };
+}
+
+function greeting(): string {
+  const h = new Date().getHours();
+  if (h < 12) return "Bom dia";
+  if (h < 18) return "Boa tarde";
+  return "Boa noite";
 }
 
 function relativeTime(iso: string): string {
   const minutes = Math.round((Date.now() - new Date(iso).getTime()) / 60000);
   if (minutes < 2) return "agora";
-  if (minutes < 60) return `há ${minutes} minutos`;
+  if (minutes < 60) return `há ${minutes} min`;
   const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `há ${hours} hora${hours > 1 ? "s" : ""}`;
+  if (hours < 24) return `há ${hours}h`;
   return `há ${Math.floor(hours / 24)} dia${Math.floor(hours / 24) > 1 ? "s" : ""}`;
+}
+
+function DashboardSkeleton() {
+  return (
+    <div className="space-y-5 animate-pulse">
+      <div className="h-28 bg-slate-800 rounded-xl" />
+      <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
+        {[...Array(6)].map((_, i) => <div key={i} className="h-24 bg-slate-800 rounded-xl" />)}
+      </div>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+        <div className="h-64 bg-slate-800 rounded-xl" />
+        <div className="h-64 bg-slate-800 rounded-xl" />
+      </div>
+    </div>
+  );
 }
 
 export default function MerchantDashboardPage() {
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
 
   useEffect(() => {
     fetch("/api/merchant/dashboard/stats")
+      .then(async (r) => {
+        if (r.status === 401 || r.status === 403 || r.status === 404) {
+          await fetch("/api/merchant/auth/register", { method: "POST" });
+          return fetch("/api/merchant/dashboard/stats");
+        }
+        return r;
+      })
       .then((r) => r.json() as Promise<{ data: DashboardData }>)
-      .then((json) => { setData(json.data); setLoading(false); })
-      .catch(() => setLoading(false));
+      .then((json) => {
+        if (json.data) { setData(json.data); }
+        else { setError(true); }
+        setLoading(false);
+      })
+      .catch(() => { setError(true); setLoading(false); });
   }, [refreshKey]);
 
   async function dismissRec(id: string) {
@@ -47,70 +99,72 @@ export default function MerchantDashboardPage() {
     } : prev);
   }
 
+  const name = data?.merchant.company_name;
+  const lastSync = data?.stats.lastImportAt;
+
   return (
     <div className="flex min-h-screen bg-slate-950 text-white">
-      <MerchantSidebar companyName={data?.merchant.company_name} plan={data?.merchant.plan} />
-      <main className="flex-1 overflow-y-auto p-8">
-        <div className="max-w-6xl mx-auto">
-          <div className="flex items-center justify-between mb-6">
+      <MerchantSidebar companyName={name} plan={data?.merchant.plan} />
+      <main className="flex-1 overflow-y-auto">
+        <div className="max-w-5xl mx-auto px-6 py-8">
+
+          {/* Header */}
+          <div className="flex items-start justify-between mb-6">
             <div>
               <h1 className="text-xl font-bold text-white">
-                {data?.merchant.company_name ? `Olá, ${data.merchant.company_name}` : "Dashboard"}
+                {greeting()}{name ? `, ${name}` : ""}
               </h1>
-              <p className="text-slate-400 text-sm mt-0.5">
-                Última sincronização:{" "}
-                {data?.stats.lastImportAt ? relativeTime(data.stats.lastImportAt) : "Nunca"}
+              <p className="text-slate-500 text-sm mt-1">
+                {lastSync
+                  ? <>Última sincronização <span className="text-slate-400">{relativeTime(lastSync)}</span></>
+                  : "Sua loja ainda não tem produtos. Vamos mudar isso?"}
               </p>
             </div>
-            <div className="flex items-center gap-3">
-              {data?.merchant.onboarding_done === false && (
-                <a href="/merchant/onboarding" className="flex items-center gap-2 px-4 py-2 bg-emerald-600/20 text-emerald-400 text-sm rounded-lg border border-emerald-600/30 hover:bg-emerald-600/30 transition-colors">
-                  <TrendingUp className="w-4 h-4" />
-                  Concluir configuração
-                </a>
-              )}
-              <button
-                onClick={() => { setLoading(true); setRefreshKey((k) => k + 1); }}
-                disabled={loading}
-                className="flex items-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 text-sm rounded-lg transition-colors disabled:opacity-50"
-              >
-                <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
-                Atualizar
-              </button>
-            </div>
+            <button
+              onClick={() => { setLoading(true); setError(false); setRefreshKey((k) => k + 1); }}
+              disabled={loading}
+              className="flex items-center gap-2 px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-400 text-xs rounded-lg transition-colors disabled:opacity-40"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} />
+              Atualizar
+            </button>
           </div>
 
           {loading ? (
-            <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 animate-pulse">
-              {[...Array(6)].map((_, i) => <div key={i} className="h-24 bg-slate-800 rounded-xl" />)}
+            <DashboardSkeleton />
+          ) : error ? (
+            <div className="bg-slate-900 border border-slate-800 rounded-xl p-8 text-center">
+              <p className="text-slate-400 text-sm mb-3">Não foi possível carregar os dados.</p>
+              <button
+                onClick={() => { setLoading(true); setError(false); setRefreshKey((k) => k + 1); }}
+                className="text-xs text-emerald-400 hover:text-emerald-300 transition-colors"
+              >
+                Tentar novamente →
+              </button>
             </div>
           ) : data ? (
-            <div className="space-y-6">
+            <div className="space-y-5">
+
+              {/* Próximo passo — always at top */}
+              <NextStepCard nextStep={data.nextStep} />
+
+              {/* Stats */}
               <StatsGrid stats={data.stats} />
 
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <ScoreCard score={data.scoreBreakdown} />
-                <RecommendationsPanel recommendations={data.recommendations} onDismiss={dismissRec} />
+              {/* Score + Goals */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+                <ScoreCard score={data.scoreBreakdown} level={data.level} />
+                <GoalsPanel goals={data.goals} />
               </div>
 
-              <div className="bg-slate-900 border border-slate-800 rounded-xl p-5">
-                <h2 className="text-sm font-semibold text-white mb-3">Ações rápidas</h2>
-                <div className="flex flex-wrap gap-3">
-                  <a href="/merchant/imports/new" className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-sm rounded-lg transition-colors">
-                    Nova importação
-                  </a>
-                  <a href="/merchant/products" className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 text-sm rounded-lg transition-colors">
-                    Ver produtos
-                  </a>
-                  <a href="/merchant/settings" className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 text-sm rounded-lg transition-colors">
-                    Configurações
-                  </a>
-                </div>
-              </div>
+              {/* Growth Insights */}
+              <RecommendationsPanel
+                recommendations={data.recommendations}
+                onDismiss={dismissRec}
+              />
+
             </div>
-          ) : (
-            <p className="text-slate-500 text-sm">Erro ao carregar dados. Tente novamente.</p>
-          )}
+          ) : null}
         </div>
       </main>
     </div>

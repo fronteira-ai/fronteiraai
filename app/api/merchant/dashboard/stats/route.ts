@@ -4,6 +4,9 @@ import {
   getMerchantDashboardStats,
   computeMerchantScore,
   generateRecommendations,
+  getMerchantLevel,
+  computeNextStep,
+  computeGoals,
 } from "@/services/merchant.service";
 
 export async function GET() {
@@ -32,10 +35,18 @@ export async function GET() {
     .order("priority")
     .limit(8);
 
+  const mergedStats = { ...stats, merchantScore: score.total };
+  const level = getMerchantLevel(score.total);
+  const nextStep = computeNextStep(merchant, mergedStats);
+  const goals = computeGoals(merchant, mergedStats);
+
   return NextResponse.json({
     data: {
-      stats: { ...stats, merchantScore: score.total },
+      stats: mergedStats,
       scoreBreakdown: score,
+      level,
+      nextStep,
+      goals,
       recommendations: recs ?? [],
       merchant: {
         id: merchant.id,

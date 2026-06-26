@@ -102,5 +102,41 @@ export interface MerchantDashboardStats {
 // Score breakdown (M05)
 export interface MerchantScoreBreakdown {
   total: number;
-  items: { label: string; points: number; earned: boolean }[];
+  items: { label: string; points: number; earned: boolean; hint?: string }[];
+}
+
+// Score level (M05 — Gamification)
+export interface MerchantLevel {
+  id: "iniciante" | "bronze" | "prata" | "ouro" | "diamante" | "elite";
+  name: string;
+  min: number;
+  max: number;
+  color: string;
+  bgColor: string;
+  next: string | null;
+  pointsToNext: number;
+}
+
+// Single priority next action
+export interface NextStep {
+  id: string;
+  title: string;
+  description: string;
+  benefit: string;
+  cta: string;
+  href: string;
+  urgency: "critical" | "high" | "medium";
+  estimatedMinutes: number;
+}
+
+// Growth goal with progress
+export interface MerchantGoal {
+  id: string;
+  label: string;
+  description: string;
+  achieved: boolean;
+  current: number;
+  target: number;
+  progress: number;
+  icon: string;
 }

@@ -4,6 +4,9 @@ import type {
   MerchantDashboardStats,
   MerchantScoreBreakdown,
   MerchantRecommendation,
+  MerchantLevel,
+  NextStep,
+  MerchantGoal,
   AuditEventType,
 } from "@/types/merchant";
 
@@ -222,6 +225,192 @@ export async function logAuditEvent(
     event_type: eventType,
     payload,
   });
+}
+
+// ── Merchant Level (M05 — Gamification) ──────────────────────────────────────
+
+const LEVELS: MerchantLevel[] = [
+  { id: "iniciante", name: "Iniciante",  min: 0,  max: 20,  color: "text-slate-400",  bgColor: "bg-slate-400",  next: "Bronze",   pointsToNext: 0 },
+  { id: "bronze",    name: "Bronze",     min: 21, max: 40,  color: "text-orange-400", bgColor: "bg-orange-400", next: "Prata",    pointsToNext: 0 },
+  { id: "prata",     name: "Prata",      min: 41, max: 60,  color: "text-slate-300",  bgColor: "bg-slate-300",  next: "Ouro",     pointsToNext: 0 },
+  { id: "ouro",      name: "Ouro",       min: 61, max: 80,  color: "text-yellow-400", bgColor: "bg-yellow-400", next: "Diamante", pointsToNext: 0 },
+  { id: "diamante",  name: "Diamante",   min: 81, max: 95,  color: "text-cyan-400",   bgColor: "bg-cyan-400",   next: "Elite",    pointsToNext: 0 },
+  { id: "elite",     name: "Elite",      min: 96, max: 100, color: "text-emerald-400",bgColor: "bg-emerald-400",next: null,       pointsToNext: 0 },
+];
+
+export function getMerchantLevel(score: number): MerchantLevel {
+  const level = LEVELS.find((l) => score >= l.min && score <= l.max) ?? LEVELS[0];
+  const nextLevel = LEVELS.find((l) => l.min > level.max);
+  return { ...level, pointsToNext: nextLevel ? nextLevel.min - score : 0 };
+}
+
+// ── Next Step (single priority action) ───────────────────────────────────────
+
+export function computeNextStep(merchant: Merchant, stats: MerchantDashboardStats): NextStep {
+  if (stats.totalProducts === 0) {
+    return {
+      id: "first_import",
+      title: "Faça sua primeira importação",
+      description: "Sua loja ainda não aparece para os compradores. Importe seus produtos e comece a vender agora.",
+      benefit: "Sua loja passa a aparecer nas buscas do ParaguAI",
+      cta: "Importar agora",
+      href: "/merchant/imports/new",
+      urgency: "critical",
+      estimatedMinutes: 5,
+    };
+  }
+  if (!merchant.contact_whatsapp && !merchant.contact_phone) {
+    return {
+      id: "add_whatsapp",
+      title: "Adicione seu WhatsApp",
+      description: "Lojas com WhatsApp recebem até 2× mais contatos de compradores interessados.",
+      benefit: "Mais contatos diretos de compradores",
+      cta: "Adicionar agora",
+      href: "/merchant/settings",
+      urgency: "high",
+      estimatedMinutes: 2,
+    };
+  }
+  if (stats.productsNoImage > 0 && stats.productsNoImage / stats.totalProducts > 0.2) {
+    return {
+      id: "add_images",
+      title: `${stats.productsNoImage} produtos precisam de imagem`,
+      description: "Produtos com foto vendem 3× mais. Ative a importação de mídia na próxima sincronização.",
+      benefit: "Até 3× mais cliques nos seus produtos",
+      cta: "Nova importação com mídia",
+      href: "/merchant/imports/new",
+      urgency: "high",
+      estimatedMinutes: 5,
+    };
+  }
+  if (stats.productsNoPrice > 0) {
+    return {
+      id: "fix_prices",
+      title: `${stats.productsNoPrice} produtos sem preço`,
+      description: "Produtos sem preço não aparecem nas comparações do ParaguAI. Sincronize para corrigir.",
+      benefit: "Mais produtos visíveis nas comparações",
+      cta: "Sincronizar preços",
+      href: "/merchant/imports/new",
+      urgency: "critical",
+      estimatedMinutes: 5,
+    };
+  }
+  if (!merchant.company_website) {
+    return {
+      id: "add_website",
+      title: "Adicione o site da sua loja",
+      description: "O link do seu site aumenta a confiança dos compradores e melhora seu Merchant Score.",
+      benefit: "+10 pontos no Merchant Score",
+      cta: "Configurar agora",
+      href: "/merchant/settings",
+      urgency: "medium",
+      estimatedMinutes: 1,
+    };
+  }
+  if (merchant.verified_level === "none") {
+    return {
+      id: "get_verified",
+      title: "Solicite o selo Verificado",
+      description: "Lojas verificadas geram mais confiança e aparecem em destaque para os compradores.",
+      benefit: "Destaque nas buscas e mais vendas",
+      cta: "Ver requisitos",
+      href: "/merchant/settings",
+      urgency: "medium",
+      estimatedMinutes: 10,
+    };
+  }
+  return {
+    id: "sync_catalog",
+    title: "Mantenha seu catálogo atualizado",
+    description: "Sincronizações regulares mantêm os preços precisos e aumentam a confiança dos compradores.",
+    benefit: "Preços atualizados = mais conversões",
+    cta: "Sincronizar agora",
+    href: "/merchant/imports/new",
+    urgency: "medium",
+    estimatedMinutes: 5,
+  };
+}
+
+// ── Goals / Metas (Gamification) ──────────────────────────────────────────────
+
+export function computeGoals(merchant: Merchant, stats: MerchantDashboardStats): MerchantGoal[] {
+  const goals: MerchantGoal[] = [
+    {
+      id: "first_import",
+      label: "Primeira importação",
+      description: "Coloque seus primeiros produtos no ar",
+      achieved: stats.lastImportAt !== null,
+      current: stats.lastImportAt ? 1 : 0,
+      target: 1,
+      progress: stats.lastImportAt ? 100 : 0,
+      icon: "🚀",
+    },
+    {
+      id: "products_10",
+      label: "10 produtos publicados",
+      description: "Tenha uma vitrine inicial para os compradores",
+      achieved: stats.totalProducts >= 10,
+      current: Math.min(stats.totalProducts, 10),
+      target: 10,
+      progress: Math.min(100, Math.round((stats.totalProducts / 10) * 100)),
+      icon: "📦",
+    },
+    {
+      id: "products_50",
+      label: "50 produtos publicados",
+      description: "Uma vitrine robusta atrai mais compradores",
+      achieved: stats.totalProducts >= 50,
+      current: Math.min(stats.totalProducts, 50),
+      target: 50,
+      progress: Math.min(100, Math.round((stats.totalProducts / 50) * 100)),
+      icon: "🏪",
+    },
+    {
+      id: "products_100",
+      label: "100 produtos publicados",
+      description: "Catálogo completo = mais chances de venda",
+      achieved: stats.totalProducts >= 100,
+      current: Math.min(stats.totalProducts, 100),
+      target: 100,
+      progress: Math.min(100, Math.round((stats.totalProducts / 100) * 100)),
+      icon: "🎯",
+    },
+    {
+      id: "score_70",
+      label: "Merchant Score 70",
+      description: "Nível Ouro — sua loja está bem posicionada",
+      achieved: stats.merchantScore >= 70,
+      current: Math.min(stats.merchantScore, 70),
+      target: 70,
+      progress: Math.min(100, Math.round((stats.merchantScore / 70) * 100)),
+      icon: "🥇",
+    },
+    {
+      id: "score_90",
+      label: "Merchant Score 90",
+      description: "Nível Diamante — entre as melhores lojas",
+      achieved: stats.merchantScore >= 90,
+      current: Math.min(stats.merchantScore, 90),
+      target: 90,
+      progress: Math.min(100, Math.round((stats.merchantScore / 90) * 100)),
+      icon: "💎",
+    },
+    {
+      id: "get_verified",
+      label: "Loja Verificada",
+      description: "Ganhe o selo de confiança do ParaguAI",
+      achieved: merchant.verified_level !== "none",
+      current: merchant.verified_level !== "none" ? 1 : 0,
+      target: 1,
+      progress: merchant.verified_level !== "none" ? 100 : 0,
+      icon: "✅",
+    },
+  ];
+
+  // Show achieved + next 2 unachieved
+  const achieved = goals.filter((g) => g.achieved);
+  const pending = goals.filter((g) => !g.achieved).slice(0, 3);
+  return [...achieved, ...pending];
 }
 
 // ── Trust Score (M06) — computed server-side ──────────────────────────────────
