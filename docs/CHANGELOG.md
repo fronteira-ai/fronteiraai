@@ -2,6 +2,35 @@
 
 Reconstruído a partir do histórico real de commits (`git log`) e do estado atual do código. Formato: data, commit, o que mudou de fato (verificado no diff/estado resultante, não só na mensagem).
 
+## 2026-06-27 — Foundation 0.8 — RELEASE_STRATEGY.md — FOUNDATION EMPRESARIAL COMPLETA
+
+Criação do oitavo e último documento permanente da Foundation: o ciclo permanente de evolução da plataforma.
+
+- **`docs/RELEASE_STRATEGY.md`** (novo): 15 seções. Fecha a Foundation respondendo "como o ParaguAI evolui?" Filosofia de Releases: evolução mensurável, não conjunto de tarefas; o que fica (ativo/dado/contrato/aprendizado) é mais importante do que o que entra (código). O Ciclo Permanente de 11 estágios com diagrama: Missão → Observação → Formulação → Decision Filter → ADR → Planejamento → Implementação → Validação → Release → Observação → Aprendizado → Missão. Definição de Release (coeso + evolução identificável + 5 propriedades) e anti-exemplos. 10 Tipos de Release com objetivos e Quality Gates específicos: Foundation, Architecture, Platform, Feature, Quality, Infrastructure, Security, Performance, Data, AI. Critérios para criação de Release vs. ajuste vs. agrupamento. Planejamento como ato de pensar o que pode dar errado (sem cerimônias, sem prazo de calendário). Compounding Releases: motor reutilizável, dados acumuláveis, contrato estabilizado, capacidade de IA alimentada, conhecimento documentado — pergunta de compounding obrigatória. Definition of Ready (8 condições) e Definition of Done (10 condições). Quality Gates universais (build, typecheck, lint, consistência arquitetural, consistência com Foundation, sem regressões) + gates por tipo. Versionamento: Foundation F.x / Major x.0 / Minor x.y / Patch x.y.z — CHANGELOG como significado, versão como escala. Comunicação: CHANGELOG (o quê + por quê), PROJECT_STATUS (fotografia do presente), ADRs (por que decidido assim), NEXT_STEPS (direção emergente). Aprendizado Contínuo: 4 dimensões (problema, solução, processo, próxima Release). O Compromisso: 7 compromissos permanentes; nunca apenas adicionar código. Tabela final: 8 documentos com posição no ciclo.
+- **`CLAUDE.md`** (atualizado): RELEASE_STRATEGY.md declarado como oitavo documento obrigatório. Hierarquia expandida de 11 para 12 níveis.
+- **`docs/MASTER_ROADMAP.md`** (atualizado): RELEASE_STRATEGY.md inserido como prioridade 8.
+
+---
+
+**⚡ FOUNDATION EMPRESARIAL DO PARAGUAI — COMPLETA ⚡**
+
+Oito documentos permanentes criados em uma única sessão (2026-06-27):
+
+| # | Documento | Responde | Versão |
+|---|---|---|---|
+| 0.1 | `AI_CONSTITUTION.md` | Quem somos | v1.1 |
+| 0.2 | `NORTH_STAR.md` | Como decidimos | v1.1 |
+| 0.3 | `BUSINESS_MODEL.md` | Como criamos valor | v1.0 |
+| 0.4 | `VISION_2035.md` | Para onde vamos | v1.0 |
+| 0.5 | `ENGINEERING_PRINCIPLES.md` | Como construímos tecnologia | v1.0 |
+| 0.6 | `PRODUCT_PRINCIPLES.md` | Como construímos produtos | v1.0 |
+| 0.7 | `DECISION_FILTER.md` | Como aprovamos decisões | v1.0 |
+| 0.8 | `RELEASE_STRATEGY.md` | Como evoluímos | v1.0 |
+
+O ciclo está fechado: Identidade → Decisão → Valor → Visão → Engenharia → Produto → Filtro → Release → Aprendizado → Identidade.
+
+---
+
 ## 2026-06-27 — Foundation 0.7 — DECISION_FILTER.md
 
 Criação do sétimo documento permanente da Foundation: o processo permanente de aprovação de decisões.

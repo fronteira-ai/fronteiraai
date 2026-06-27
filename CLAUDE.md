@@ -13,6 +13,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 5. `docs/ENGINEERING_PRINCIPLES.md` — how we build technology. Permanent engineering philosophy: evolutionary architecture, simplicity, asset-oriented systems, data contracts, observability, resilience. Consult when making architectural decisions not covered by specific rules.
 6. `docs/PRODUCT_PRINCIPLES.md` — how we build products. Permanent product philosophy: decisions over clicks, radical simplicity, transparency, AI as assistant, trust as product, neutrality, ecosystem thinking. Consult when conceiving new features or designing experiences.
 7. `docs/DECISION_FILTER.md` — how we approve any decision. The operational entry point for the Foundation: a 10-stage pipeline, 12 permanent filters, decision levels, conflict resolution, and a reusable checklist. Run before any Release, ADR, feature, integration, or architectural change.
+8. `docs/RELEASE_STRATEGY.md` — how the ParaguAI evolves. Closes the Foundation cycle: the permanent Release cycle (11 stages), Release types, Definition of Ready, Definition of Done, Quality Gates, compounding Releases, versioning, and the learning loop that feeds the next cycle.
 
 Document hierarchy:
 1. `docs/AI_CONSTITUTION.md` — permanent principles (read first, always)
@@ -22,10 +23,11 @@ Document hierarchy:
 5. `docs/ENGINEERING_PRINCIPLES.md` — engineering philosophy (read fifth, consult for architectural decisions)
 6. `docs/PRODUCT_PRINCIPLES.md` — product philosophy (read sixth, consult for product and UX decisions)
 7. `docs/DECISION_FILTER.md` — decision process (run before any significant initiative)
-8. `docs/DECISIONS.md` — architectural decision records (ADRs)
-9. `CLAUDE.md` (this file) — operational development instructions
-10. `docs/ARCHITECTURE.md` — real current architecture
-11. `docs/PROJECT_STATUS.md` — real current project state
+8. `docs/RELEASE_STRATEGY.md` — evolution process (run before any Release starts and before any Release ships)
+9. `docs/DECISIONS.md` — architectural decision records (ADRs)
+10. `CLAUDE.md` (this file) — operational development instructions
+11. `docs/ARCHITECTURE.md` — real current architecture
+12. `docs/PROJECT_STATUS.md` — real current project state
 
 ## Critical: Next.js version warning
 
