@@ -11,7 +11,7 @@ import { Shield, Star, Package, RefreshCw, TrendingUp } from "lucide-react";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "Lojas do Paraguai — Ranking e Catálogo | ParaguAI",
+  title: "Lojas do Paraguai — Ranking e Catálogo",
   description:
     "Descubra as melhores lojas do Paraguai no ParaguAI. Veja ranking de lojas verificadas, Merchant Score, quantidade de produtos e avaliações.",
   keywords: ["lojas Paraguai", "Ciudad del Este lojas", "marketplace Paraguai", "ranking lojas", "lojas verificadas Paraguai"],

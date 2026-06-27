@@ -26,7 +26,7 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
     return { title: "Loja não encontrada | ParaguAI" };
   }
 
-  const title = `${store.name} — Loja no Paraguai | ParaguAI`;
+  const title = `${store.name} — Loja no Paraguai`;
   const description =
     store.description ||
     `Compare produtos e preços de ${store.name}, localizada em ${store.city ?? "Ciudad del Este"}, Paraguai. ${store.offerCount} ofertas disponíveis.`;
