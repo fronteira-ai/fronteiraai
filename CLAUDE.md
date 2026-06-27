@@ -4,18 +4,20 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## PRIORITY: Read the Foundation documents first
 
-**Before starting any task**, read these two documents in order:
+**Before starting any task**, read the Foundation documents in order:
 
 1. `docs/AI_CONSTITUTION.md` — who we are, permanent principles, engineering rules, acceptance criteria. Highest-priority document. All other documents are subordinate to it.
 2. `docs/NORTH_STAR.md` — how we make decisions. The daily compass: 10 filters, prioritization framework, the Mandatory Question, and the final checklist before any merge or release.
+3. `docs/BUSINESS_MODEL.md` — how we create and capture value. Consult before any product, monetization or growth strategy decision.
 
 Document hierarchy:
 1. `docs/AI_CONSTITUTION.md` — permanent principles (read first, always)
 2. `docs/NORTH_STAR.md` — decision framework (read second, consult daily)
-3. `docs/DECISIONS.md` — architectural decision records (ADRs)
-4. `CLAUDE.md` (this file) — operational development instructions
-5. `docs/ARCHITECTURE.md` — real current architecture
-6. `docs/PROJECT_STATUS.md` — real current project state
+3. `docs/BUSINESS_MODEL.md` — economic value model (read third, consult for strategy)
+4. `docs/DECISIONS.md` — architectural decision records (ADRs)
+5. `CLAUDE.md` (this file) — operational development instructions
+6. `docs/ARCHITECTURE.md` — real current architecture
+7. `docs/PROJECT_STATUS.md` — real current project state
 
 ## Critical: Next.js version warning
 

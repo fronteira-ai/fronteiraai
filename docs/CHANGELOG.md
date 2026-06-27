@@ -2,6 +2,16 @@
 
 Reconstruído a partir do histórico real de commits (`git log`) e do estado atual do código. Formato: data, commit, o que mudou de fato (verificado no diff/estado resultante, não só na mensagem).
 
+## 2026-06-27 — Foundation 0.3 — BUSINESS_MODEL.md
+
+Criação do terceiro documento permanente da Foundation: o modelo econômico do ParaguAI.
+
+- **`docs/BUSINESS_MODEL.md`** (novo): 18 seções. Responde "como criamos valor?" — complementando a Constituição ("quem somos") e o North Star ("como decidimos"). Contém: Nossa Tese (o problema econômico da assimetria de informação na Tríplice Fronteira), A Assimetria de Informação (4 públicos afetados), Proposta de Valor por segmento (5 grupos), Flywheel Econômico completo, 6 tipos de Network Effects, Estratégia de Monetização (7 pilares), Estratégia de Crescimento (orgânico, sem gasto linear de marketing), Moat (5 camadas), Ativos Estratégicos (8 ativos), O Papel da IA / Dados / Turismo / Merchant OS / API, Como nos tornamos Indispensáveis, Visão Econômica (alinhamento de incentivos), Riscos Estratégicos (6 riscos + mitigação), Princípios Permanentes do Modelo de Negócio (7 princípios), e tabela de integração do núcleo estratégico.
+- **`CLAUDE.md`** (atualizado): BUSINESS_MODEL.md declarado como terceiro documento obrigatório. Hierarquia expandida de 6 para 7 níveis.
+- **`docs/MASTER_ROADMAP.md`** (atualizado): BUSINESS_MODEL.md inserido como prioridade 3 na tabela Foundation Documents.
+
+**Núcleo estratégico completo**: AI_CONSTITUTION (quem somos) + NORTH_STAR (como decidimos) + BUSINESS_MODEL (como criamos valor) formam o sistema de governança permanente do ParaguAI.
+
 ## 2026-06-27 — Foundation 0.2.1 — NORTH_STAR.md (Maturity Review)
 
 Revisão de maturidade do NORTH_STAR.md (v1.0 → v1.1). Preserva 100% do conteúdo existente. Adiciona 4 novos capítulos e fortalece 1 seção existente.

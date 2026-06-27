@@ -2,9 +2,11 @@
 
 Auditoria gerada por leitura completa do código-fonte. Substitui o conteúdo anterior deste arquivo.
 
-Última atualização: 2026-06-27 (Foundation 0.2.1 — NORTH_STAR.md Maturity Review)
-Branch auditada: `main` — Release 1.4 + Foundation Documents completos (Constituição v1.1 + North Star v1.1)
+Última atualização: 2026-06-27 (Foundation 0.3 — BUSINESS_MODEL.md)
+Branch auditada: `main` — Release 1.4 + Foundation Documents completos (Constituição v1.1 + North Star v1.1 + Business Model v1.0)
 
+> ✅ **Foundation 0.3 — BUSINESS_MODEL.md (2026-06-27)**: `docs/BUSINESS_MODEL.md` criado — modelo econômico permanente do ParaguAI. 18 seções: Tese, Assimetria de Informação, Proposta de Valor por segmento (5 grupos), Flywheel Econômico, 6 Network Effects, Monetização (7 pilares), Crescimento orgânico, Moat (5 camadas), Ativos Estratégicos (8), papel da IA/Dados/Turismo/Merchant OS/API, Indispensabilidade, Visão Econômica, 6 Riscos Estratégicos, 7 Princípios Permanentes. `CLAUDE.md` e `MASTER_ROADMAP.md` atualizados com BUSINESS_MODEL como terceiro documento obrigatório. Núcleo estratégico completo: AI_CONSTITUTION + NORTH_STAR + BUSINESS_MODEL.
+>
 > ✅ **Foundation 0.2.1 — NORTH_STAR.md Maturity Review (2026-06-27)**: `docs/NORTH_STAR.md` revisado v1.0 → v1.1. 4 novos capítulos: Anti Goals (9 itens), Tipos de Decisão (Tipo 1/Tipo 2), Compounding Decisions, O Compromisso (fechamento permanente). Seção 8 fortalecida com princípio de infraestrutura reutilizável. Total: 14 seções. Documento declarado permanente.
 >
 > ✅ **Foundation 0.2 — NORTH_STAR.md (2026-06-27)**: `docs/NORTH_STAR.md` criado — bússola operacional do ParaguAI. 10 seções: A Métrica Norte, A Pergunta Obrigatória, 10 Filtros Permanentes, Hierarquia de Prioridades, Framework de Priorização (score/100), O que nunca priorizar, Pensamento de longo prazo, Como avaliamos sucesso, Checklist Final. `CLAUDE.md` atualizado com NORTH_STAR como segundo documento obrigatório.
