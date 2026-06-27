@@ -2,6 +2,16 @@
 
 Reconstruído a partir do histórico real de commits (`git log`) e do estado atual do código. Formato: data, commit, o que mudou de fato (verificado no diff/estado resultante, não só na mensagem).
 
+## 2026-06-27 — Foundation 0.4 — VISION_2035.md
+
+Criação do quarto documento permanente da Foundation: o horizonte estratégico do ParaguAI.
+
+- **`docs/VISION_2035.md`** (novo): 15 seções. Responde "para onde vamos?" — completando o núcleo estratégico com a visão de longo prazo. Contém: Introdução (por que visão importa), Nossa Ambição (infraestrutura de inteligência da Tríplice Fronteira), Nossa Transformação (6 estágios evolutivos sem descontinuidade), O Ecossistema ParaguAI (9 pilares conectados), ParaguAI Brain (visão de convergência de inteligência), Experiência do Usuário 2035, Experiência do Lojista 2035, Turismo Inteligente integrado, Plataforma Aberta (API + ecossistema de parceiros), Inteligência Regional (bem público privado com ética de dados), Expansão (por consequência, não por meta), Cultura Permanente (5 princípios), O Legado (transformação para compradores, lojistas, região e ecossistema digital), Indicadores da Visão (6 qualitative success signals), Manifesto Final, e tabela de integração do núcleo estratégico completo.
+- **`CLAUDE.md`** (atualizado): VISION_2035.md declarado como quarto documento obrigatório. Hierarquia expandida de 7 para 8 níveis.
+- **`docs/MASTER_ROADMAP.md`** (atualizado): VISION_2035.md inserido como prioridade 4 na tabela Foundation Documents.
+
+**Núcleo estratégico completo**: AI_CONSTITUTION (quem somos) + NORTH_STAR (como decidimos) + BUSINESS_MODEL (como criamos valor) + VISION_2035 (para onde vamos) formam os quatro pilares permanentes do ParaguAI.
+
 ## 2026-06-27 — Foundation 0.3 — BUSINESS_MODEL.md
 
 Criação do terceiro documento permanente da Foundation: o modelo econômico do ParaguAI.
