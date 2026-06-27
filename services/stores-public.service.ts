@@ -1,7 +1,9 @@
-// Server-only service — uses service role key.
+// Server-only service — uses service role key for merchant data only.
+// Store data uses the anon client (public read, already proven working).
 // Only call from server components, route handlers, or server actions.
 
 import { getSupabaseServiceClient } from "@/lib/supabase/service";
+import { supabase } from "@/lib/supabase";
 import type { Store } from "@/types/store";
 
 export interface StorePublicData extends Store {
@@ -14,7 +16,8 @@ export interface StorePublicData extends Store {
 export async function getStorePublic(slug: string): Promise<StorePublicData | null> {
   const sc = getSupabaseServiceClient();
 
-  const { data: storeData, error } = await sc
+  // Use anon client for stores — public read policy is confirmed working (ADR-019)
+  const { data: storeData, error } = await supabase
     .from("stores")
     .select("*")
     .eq("slug", slug)
@@ -24,15 +27,17 @@ export async function getStorePublic(slug: string): Promise<StorePublicData | nu
   const store = storeData as Store;
 
   const [merchantLink, offerCountResult, offerProductsResult] = await Promise.all([
+    // Merchant data requires service role (merchants table has RLS self-access only)
     sc.from("merchant_stores")
       .select("merchants!inner(merchant_score, verified_level)")
       .eq("store_id", store.id)
       .limit(1)
       .maybeSingle(),
-    sc.from("offers")
+    // Offers are publicly readable via anon key (ADR-019)
+    supabase.from("offers")
       .select("id", { count: "exact", head: true })
       .eq("store_id", store.id),
-    sc.from("offers")
+    supabase.from("offers")
       .select("product_id")
       .eq("store_id", store.id),
   ]);
@@ -56,31 +61,25 @@ export async function getStorePublic(slug: string): Promise<StorePublicData | nu
 export async function getStoresRanking(limit = 30): Promise<StorePublicData[]> {
   const sc = getSupabaseServiceClient();
 
-  let storeRows = await sc
+  // Use anon client for stores — public read is confirmed working (ADR-019)
+  const { data: storeData, error: storeError } = await supabase
     .from("stores")
     .select("*")
-    .eq("active", true)
     .order("rating", { ascending: false })
     .limit(limit);
 
-  // Fallback: some stores may not have active=true set yet
-  if (storeRows.error || !storeRows.data?.length) {
-    storeRows = await sc
-      .from("stores")
-      .select("*")
-      .order("rating", { ascending: false })
-      .limit(limit);
-  }
-
-  if (!storeRows.data?.length) return [];
-  const stores = storeRows.data as Store[];
+  if (storeError) console.error("[stores-public] store query:", storeError.message);
+  if (!storeData?.length) return [];
+  const stores = storeData as Store[];
   const storeIds = stores.map((s) => s.id);
 
   const [merchantLinks, offerData] = await Promise.all([
+    // Service role: merchants table has RLS self-access only
     sc.from("merchant_stores")
       .select("store_id, merchants!inner(merchant_score, verified_level)")
       .in("store_id", storeIds),
-    sc.from("offers")
+    // Anon: offers are publicly readable (ADR-019)
+    supabase.from("offers")
       .select("store_id")
       .in("store_id", storeIds),
   ]);
