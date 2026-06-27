@@ -654,3 +654,63 @@ Validado com `npm run lint` (0 erros, 5 warnings pré-existentes — nenhum novo
 - ADR-026: Portal `/merchant/*` reutiliza design system do admin
 - ADR-027: Merchant Score computado on-demand
 - ADR-028: Plans Engine como tabela seed sem gateway de pagamento
+
+---
+
+## 2026-06-27 — Release 1.3 — Dashboard Consultivo & Growth Engine
+
+Redesign completo do dashboard do Merchant OS. Foco: inteligência, gamificação e onboarding orientado a ação.
+
+**Novos tipos** (`types/merchant.ts`): `MerchantLevel`, `NextStep`, `MerchantGoal`.
+
+**Serviços** (`services/merchant.service.ts`):
+- `getMerchantLevel(score)` — 6 níveis (Iniciante/Bronze/Prata/Ouro/Diamante/Elite)
+- `computeNextStep(merchant, stats)` — ação prioritária única com urgência e CTA
+- `computeGoals(merchant, stats)` — 7 metas de progresso com ícones e barras
+
+**API** (`/api/merchant/dashboard/stats`): resposta estendida com `level`, `nextStep`, `goals`.
+
+**Novos componentes**:
+- `NextStepCard` — card urgente com ação única, cores por urgência (critical/high/medium)
+- `GoalsPanel` — painel de metas com progress bars e ícones emoji
+
+**Redesign**:
+- `ScoreCard` — nível badge, progresso dentro do nível, ladder de 6 pontos
+- `RecommendationsPanel` — linguagem Growth Insights, CTA links, empty state positivo
+- `StatsGrid` — subtítulos contextuais, cobertura de imagens em %, cores de saúde
+- `app/merchant/dashboard/page.tsx` — greeting, skeleton, layout NextStepCard → StatsGrid → ScoreCard+GoalsPanel → Growth Insights
+
+**Quality Gate**: lint 0, tsc 0, build OK.
+
+---
+
+## 2026-06-27 — Hotfix Auth — Fluxo de Confirmação de E-mail (PKCE)
+
+Corrige o fluxo completo de confirmação de e-mail com Supabase Auth + Next.js SSR.
+
+**Causa raiz**: `signUp()` sem `emailRedirectTo` usava o Site URL do Supabase (`localhost:3001/`) sem o path `/auth/callback`. O code PKCE não era trocado por sessão.
+
+**Arquivos**:
+- `app/auth/callback/route.ts` (NOVO) — Route Handler: `exchangeCodeForSession(code)`, coleta cookies, redireciona para `?next=`. Se o exchange falha (verifier PKCE ausente por browser diferente), redireciona para `/merchant/login?confirmed=true` — o e-mail já foi confirmado no Supabase.
+- `app/merchant/register/page.tsx` — `signUp()` passa `emailRedirectTo: window.location.origin + /auth/callback?next=/merchant/dashboard`.
+- `middleware.ts` — `/auth/callback` adicionado como bypass e ao matcher.
+- `app/merchant/login/page.tsx` — detecta `?error=` e `?confirmed=true`, mostra banner verde. Wrapped em `<Suspense>` para `useSearchParams`.
+- `.env.example` — `NEXT_PUBLIC_SITE_URL` documentado com instruções de Additional Redirect URLs.
+
+**Validado**: cadastro → e-mail → callback → login com banner verde → dashboard ✓
+
+---
+
+## 2026-06-27 — Hotfix Dashboard — requireMerchant + Error States
+
+**Causa raiz**: `requireMerchant()` checava `profiles.role === 'merchant'`. Com email confirmation ativo, `POST /api/merchant/auth/register` retornava 401 (sem sessão), role nunca era atualizada, e dashboard ficava em loop de 403.
+
+**Fix principal** (`lib/merchant-auth.ts`): `requireMerchant()` checa existência do registro em `merchants` diretamente via service role. Merchant record = fonte de verdade de acesso.
+
+**Outros arquivos**:
+- `app/api/merchant/auth/register/route.ts` — profile.role update é best-effort (loga, não para o fluxo).
+- `app/api/merchant/dashboard/stats/route.ts` — try/catch completo; score e recs com logging individual.
+- `app/merchant/dashboard/page.tsx` — error states contextuais (not_found/server/network com CTAs); `WelcomeBanner` para primeiro acesso; logs reais no console.
+- `database/migrations/0013_fix_profiles_role_merchant.sql` — corrige constraint `profiles_role_check` + backfill de merchants existentes.
+
+**Fluxo validado**: Cadastro → e-mail → confirmação → login → dashboard carregando ✓

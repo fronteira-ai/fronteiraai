@@ -302,12 +302,16 @@ Primeira loja real integrada: Shopping China (`shoppingchina.com.py`). FetchEngi
 
 Portal self-service completo para lojistas (SaaS). 6 novas tabelas (merchant_plans, merchants, merchant_stores, merchant_audit_logs, merchant_analytics_events, merchant_recommendations). 10 API routes. 11 páginas `/merchant/*`. Onboarding wizard 5 passos. Dashboard com Merchant Score (0-100) e recomendações automáticas. Auditoria completa de ações. Plans engine com 4 planos seed.
 
-**Pendências de apply**:
-- Migration `0012_merchant_platform.sql` — aplicar no Supabase SQL Editor
-
-**Quality Gate Release 1.2**:
-- `npm run lint` → 0 errors
-- `npx tsc --noEmit` → 0 errors
-- `npm run build` → OK (11 rotas /merchant + todas anteriores)
-
 **ADRs**: ADR-024 a ADR-028 (ver DECISIONS.md)
+
+## Release 1.3 + Hotfixes Auth/Dashboard — 2026-06-27
+
+**Release 1.3 — Dashboard Consultivo**: redesign completo. `NextStepCard`, `GoalsPanel`, 6 níveis de lojista (`MerchantLevel`), `computeNextStep`, `computeGoals`. API `/stats` estendida com `level`/`nextStep`/`goals`. `ScoreCard`/`RecommendationsPanel`/`StatsGrid` redesenhados.
+
+**Hotfix Auth (PKCE)**: `app/auth/callback/route.ts` criado — troca code PKCE por sessão e coloca cookies. `emailRedirectTo` usa `window.location.origin` (resolve mismatch de porta). Quando verifier PKCE está ausente (link aberto em browser diferente), redireciona para `?confirmed=true` em vez de erro. Login page mostra banner verde.
+
+**Hotfix Dashboard**: `requireMerchant()` agora checa `merchants` diretamente via service role key — não depende mais de `profiles.role`. Elimina o loop de 403 causado pelo email confirmation flow. Error states contextuais no dashboard (not_found/server/network). Migration `0013` corrige o constraint `profiles_role_check`.
+
+**Fluxo completo validado**: Cadastro → e-mail → confirmação → login → dashboard carregando ✓
+
+**Pendência**: Migration `0013_fix_profiles_role_merchant.sql` — aplicar no Supabase SQL Editor (idempotente, segura).

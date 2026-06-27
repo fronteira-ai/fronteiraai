@@ -18,12 +18,12 @@ export default function MerchantRegisterPage() {
     setLoading(true);
     setError(null);
 
-    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? window.location.origin;
+    // Use current browser origin so the redirect always matches the running port
     const { data, error: authError } = await supabase.auth.signUp({
       email,
       password,
       options: {
-        emailRedirectTo: `${siteUrl}/auth/callback?next=/merchant/dashboard`,
+        emailRedirectTo: `${window.location.origin}/auth/callback?next=/merchant/dashboard`,
       },
     });
 
