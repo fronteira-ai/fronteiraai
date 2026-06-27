@@ -18,7 +18,8 @@ Documentos permanentes que governam todas as decisões de desenvolvimento.
 | `docs/VISION_2035.md` | 4 — Consultar para alinhamento de visão | Para onde vamos: ecossistema maduro, legado, transformação regional |
 | `docs/ENGINEERING_PRINCIPLES.md` | 5 — Consultar para decisões arquiteturais | Como construímos: filosofia técnica permanente, 12 princípios invioláveis |
 | `docs/PRODUCT_PRINCIPLES.md` | 6 — Consultar para decisões de produto e UX | Como construímos produtos: decisões > cliques, simplicidade radical, confiança, neutralidade, ecossistema |
-| `docs/DECISIONS.md` | 7 | Registro de decisões arquiteturais (ADR-001 a ADR-032+) |
+| `docs/DECISION_FILTER.md` | 7 — Executar antes de qualquer iniciativa significativa | Como aprovamos decisões: pipeline de 10 estágios, 12 filtros permanentes, checklist obrigatório |
+| `docs/DECISIONS.md` | 8 | Registro de decisões arquiteturais (ADR-001 a ADR-032+) |
 | `CLAUDE.md` | 8 | Instruções operacionais de desenvolvimento |
 | `docs/ARCHITECTURE.md` | 9 | Estado real da arquitetura |
 | `docs/PROJECT_STATUS.md` | 10 | Estado real do projeto |

@@ -2,6 +2,16 @@
 
 Reconstruído a partir do histórico real de commits (`git log`) e do estado atual do código. Formato: data, commit, o que mudou de fato (verificado no diff/estado resultante, não só na mensagem).
 
+## 2026-06-27 — Foundation 0.7 — DECISION_FILTER.md
+
+Criação do sétimo documento permanente da Foundation: o processo permanente de aprovação de decisões.
+
+- **`docs/DECISION_FILTER.md`** (novo): 12 seções. Transforma os princípios da Foundation em processo operacional. O papel do Filter (4 propriedades: alinhamento, valor, coerência, experiência). A Pergunta Fundamental ("Esta iniciativa reduz a assimetria de informação ou fortalece a infraestrutura que reduz?"). Pipeline de Decisão de 10 estágios sequenciais com diagrama: problema real → valor gerado (ativo/dado/problema) → alinhamento com missão → filtros North Star → impacto no Business Model → coerência com Vision → Engineering Principles → Product Principles → custo e reversibilidade → decisão (✅/⏸/❌). 12 Filtros Permanentes com 4 críticos bloqueadores. Critérios de Priorização: valor para missão, compounding, habilitadora, fundacional, esforço/risco — como método de raciocínio, não fórmula matemática. 3 Tipos de Decisão: Nível 1 (operacional, Filter simplificado), Nível 2 (produto, Pipeline completo), Nível 3 (estratégico, Pipeline + ADR obrigatório). Critérios de "Não" (9 situações com diagnóstico). Critérios de "Sim" (8 situações com raciocínio). Conflitos Entre Critérios: velocidade vs. qualidade (Tipo 1/2), curto vs. longo prazo (custo de bloqueio), receita vs. confiança (confiança sempre), automação vs. controle humano (dados vs. contexto), completude vs. entrega (incrementos funcionais), Foundation vs. circunstância (exceções documentadas nunca silenciosas). Checklist Obrigatório reutilizável. 10 Anti-Patterns: feature por vaidade, arquitetura por moda, escalamento prematuro, automação desnecessária, duplicação de solução, tecnologia acima do problema, consenso por exaustão, urgência fabricada, exceção que vira regra, decisão pela ausência de questionamento. O Compromisso (4 compromissos permanentes).
+- **`CLAUDE.md`** (atualizado): DECISION_FILTER.md declarado como sétimo documento obrigatório. Hierarquia expandida de 10 para 11 níveis.
+- **`docs/MASTER_ROADMAP.md`** (atualizado): DECISION_FILTER.md inserido como prioridade 7.
+
+**Foundation completa (7 documentos)**: AI_CONSTITUTION + NORTH_STAR + BUSINESS_MODEL + VISION_2035 + ENGINEERING_PRINCIPLES + PRODUCT_PRINCIPLES + DECISION_FILTER.
+
 ## 2026-06-27 — Foundation 0.6 — PRODUCT_PRINCIPLES.md
 
 Criação do sexto documento permanente da Foundation: a filosofia permanente de produto do ParaguAI.
