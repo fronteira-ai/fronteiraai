@@ -2,6 +2,16 @@
 
 Reconstruído a partir do histórico real de commits (`git log`) e do estado atual do código. Formato: data, commit, o que mudou de fato (verificado no diff/estado resultante, não só na mensagem).
 
+## 2026-06-27 — Foundation 0.5 — ENGINEERING_PRINCIPLES.md
+
+Criação do quinto documento permanente da Foundation: a filosofia técnica permanente do ParaguAI.
+
+- **`docs/ENGINEERING_PRINCIPLES.md`** (novo): 15 seções + 12 Princípios Permanentes. Responde "como construímos tecnologia?" — complementando a Constituição (que tem regras operacionais) com a filosofia que permite derivar regras para situações novas. Contém: Filosofia de Engenharia (tecnologia como meio), Arquitetura Evolutiva (composição, baixo acoplamento, contratos > implementações), Simplicidade como Estratégia (complexidade conquistada, não presumida), Sistemas Orientados a Ativos (módulos que produzem ativos reutilizáveis), Dados como Contrato (origem, ciclo de vida, propriedade, imutabilidade histórica), APIs e Fronteiras (contratos explícitos, evolução compatível, dependência unidirecional), Escalabilidade (O(1) vs O(n) no design, idempotência como pré-condição), Observabilidade (logs + métricas + rastreabilidade de automações), Automação (dry-run obrigatório, falha ruidosa, idempotência, escopo delimitado), Inteligência Artificial (capacidade transversal, dados como insumo, modelos como contratos), Evolução Contínua (cada Release melhora a arquitetura, débito intencional vs. acidental), Qualidade (design constraint: testabilidade, legibilidade, zero warnings), Segurança (menor privilégio, defesa em profundidade, privacidade como restrição de design), Resiliência (falha previsível, degradação graciosa, recuperabilidade), Princípios Permanentes (12 princípios invioláveis).
+- **`CLAUDE.md`** (atualizado): ENGINEERING_PRINCIPLES.md declarado como quinto documento obrigatório. Hierarquia expandida de 8 para 9 níveis.
+- **`docs/MASTER_ROADMAP.md`** (atualizado): ENGINEERING_PRINCIPLES.md inserido como prioridade 5.
+
+**Foundation completa (5 documentos)**: AI_CONSTITUTION + NORTH_STAR + BUSINESS_MODEL + VISION_2035 + ENGINEERING_PRINCIPLES.
+
 ## 2026-06-27 — Foundation 0.4 — VISION_2035.md
 
 Criação do quarto documento permanente da Foundation: o horizonte estratégico do ParaguAI.

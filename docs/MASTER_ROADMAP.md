@@ -16,10 +16,11 @@ Documentos permanentes que governam todas as decisões de desenvolvimento.
 | `docs/NORTH_STAR.md` | 2 — Consultar diariamente | Bússola operacional: como decidir, 10 filtros, framework de priorização, checklist final |
 | `docs/BUSINESS_MODEL.md` | 3 — Consultar para estratégia | Como criamos e capturamos valor: flywheel, monetização, moat, network effects |
 | `docs/VISION_2035.md` | 4 — Consultar para alinhamento de visão | Para onde vamos: ecossistema maduro, legado, transformação regional |
-| `docs/DECISIONS.md` | 5 | Registro de decisões arquiteturais (ADR-001 a ADR-032+) |
-| `CLAUDE.md` | 6 | Instruções operacionais de desenvolvimento |
-| `docs/ARCHITECTURE.md` | 7 | Estado real da arquitetura |
-| `docs/PROJECT_STATUS.md` | 8 | Estado real do projeto |
+| `docs/ENGINEERING_PRINCIPLES.md` | 5 — Consultar para decisões arquiteturais | Como construímos: filosofia técnica permanente, 12 princípios invioláveis |
+| `docs/DECISIONS.md` | 7 | Registro de decisões arquiteturais (ADR-001 a ADR-032+) |
+| `CLAUDE.md` | 8 | Instruções operacionais de desenvolvimento |
+| `docs/ARCHITECTURE.md` | 9 | Estado real da arquitetura |
+| `docs/PROJECT_STATUS.md` | 10 | Estado real do projeto |
 
 ---
 

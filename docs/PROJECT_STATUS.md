@@ -2,9 +2,11 @@
 
 Auditoria gerada por leitura completa do código-fonte. Substitui o conteúdo anterior deste arquivo.
 
-Última atualização: 2026-06-27 (Foundation 0.4 — VISION_2035.md)
-Branch auditada: `main` — Release 1.4 + Foundation completa (AI_CONSTITUTION v1.1 + NORTH_STAR v1.1 + BUSINESS_MODEL v1.0 + VISION_2035 v1.0)
+Última atualização: 2026-06-27 (Foundation 0.5 — ENGINEERING_PRINCIPLES.md)
+Branch auditada: `main` — Release 1.4 + Foundation completa (5 documentos permanentes)
 
+> ✅ **Foundation 0.5 — ENGINEERING_PRINCIPLES.md (2026-06-27)**: `docs/ENGINEERING_PRINCIPLES.md` criado — filosofia técnica permanente. 15 seções: Filosofia (tecnologia como meio), Arquitetura Evolutiva (composição, contratos > implementações), Simplicidade como Estratégia, Sistemas Orientados a Ativos, Dados como Contrato (origem/propriedade/imutabilidade), APIs e Fronteiras, Escalabilidade (O(1) no design, idempotência), Observabilidade (logs + métricas + rastreabilidade), Automação (dry-run, falha ruidosa), IA como capacidade transversal, Evolução Contínua, Qualidade como design constraint, Segurança (menor privilégio, defesa em profundidade), Resiliência (falha previsível, degradação graciosa), 12 Princípios Permanentes. Foundation de 5 documentos completa.
+>
 > ✅ **Foundation 0.4 — VISION_2035.md (2026-06-27)**: `docs/VISION_2035.md` criado — horizonte estratégico do ParaguAI. 15 seções: Introdução, Ambição (infraestrutura de inteligência da Tríplice Fronteira), Transformação (6 estágios evolutivos), Ecossistema (9 pilares), ParaguAI Brain (visão de convergência), Experiência do Usuário/Lojista 2035, Turismo Inteligente integrado, Plataforma Aberta, Inteligência Regional (ética de dados), Expansão, Cultura Permanente (5 princípios), O Legado, Indicadores qualitativos (6), Manifesto Final. Núcleo estratégico de 4 documentos completo.
 >
 > ✅ **Foundation 0.3 — BUSINESS_MODEL.md (2026-06-27)**: `docs/BUSINESS_MODEL.md` criado — modelo econômico permanente do ParaguAI. 18 seções: Tese, Assimetria de Informação, Proposta de Valor por segmento (5 grupos), Flywheel Econômico, 6 Network Effects, Monetização (7 pilares), Crescimento orgânico, Moat (5 camadas), Ativos Estratégicos (8), papel da IA/Dados/Turismo/Merchant OS/API, Indispensabilidade, Visão Econômica, 6 Riscos Estratégicos, 7 Princípios Permanentes. `CLAUDE.md` e `MASTER_ROADMAP.md` atualizados com BUSINESS_MODEL como terceiro documento obrigatório. Núcleo estratégico completo: AI_CONSTITUTION + NORTH_STAR + BUSINESS_MODEL.
