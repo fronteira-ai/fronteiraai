@@ -2,6 +2,12 @@
 
 Reconstruído a partir do histórico real de commits (`git log`) e do estado atual do código. Formato: data, commit, o que mudou de fato (verificado no diff/estado resultante, não só na mensagem).
 
+## 2026-06-27 — Foundation 0.2.1 — NORTH_STAR.md (Maturity Review)
+
+Revisão de maturidade do NORTH_STAR.md (v1.0 → v1.1). Preserva 100% do conteúdo existente. Adiciona 4 novos capítulos e fortalece 1 seção existente.
+
+- **`docs/NORTH_STAR.md`** (revisado v1.1): 14 seções totais (era 10). Seção 8 (Como Pensamos Longo Prazo) fortalecida com o princípio "infraestrutura antes de solução específica". Nova Seção 11 (Anti Goals): 9 itens com justificativa de por que cada um viola a missão. Nova Seção 12 (Tipos de Decisão): Tipo 1 (irreversíveis, análise profunda + ADR) vs Tipo 2 (reversíveis, decidir rápido); critério prático "qual é o custo real de voltar atrás?". Nova Seção 13 (Compounding Decisions): toda Release deve tornar a próxima mais fácil; pergunta obrigatória de compounding; distinção entre compounding e over-engineering. Nova Seção 14 (O Compromisso): fechamento permanente — 4 compromissos implícitos de todo desenvolvedor e sistema de IA no projeto.
+
 ## 2026-06-27 — Foundation 0.2 — NORTH_STAR.md
 
 Criação do segundo documento permanente da Foundation: a bússola operacional do ParaguAI.

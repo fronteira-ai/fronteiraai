@@ -2,9 +2,11 @@
 
 Auditoria gerada por leitura completa do código-fonte. Substitui o conteúdo anterior deste arquivo.
 
-Última atualização: 2026-06-27 (Foundation 0.2 — NORTH_STAR.md)
-Branch auditada: `main` — Release 1.4 + Foundation Documents completos (Constituição v1.1 + North Star v1.0)
+Última atualização: 2026-06-27 (Foundation 0.2.1 — NORTH_STAR.md Maturity Review)
+Branch auditada: `main` — Release 1.4 + Foundation Documents completos (Constituição v1.1 + North Star v1.1)
 
+> ✅ **Foundation 0.2.1 — NORTH_STAR.md Maturity Review (2026-06-27)**: `docs/NORTH_STAR.md` revisado v1.0 → v1.1. 4 novos capítulos: Anti Goals (9 itens), Tipos de Decisão (Tipo 1/Tipo 2), Compounding Decisions, O Compromisso (fechamento permanente). Seção 8 fortalecida com princípio de infraestrutura reutilizável. Total: 14 seções. Documento declarado permanente.
+>
 > ✅ **Foundation 0.2 — NORTH_STAR.md (2026-06-27)**: `docs/NORTH_STAR.md` criado — bússola operacional do ParaguAI. 10 seções: A Métrica Norte, A Pergunta Obrigatória, 10 Filtros Permanentes, Hierarquia de Prioridades, Framework de Priorização (score/100), O que nunca priorizar, Pensamento de longo prazo, Como avaliamos sucesso, Checklist Final. `CLAUDE.md` atualizado com NORTH_STAR como segundo documento obrigatório.
 >
 > ✅ **Foundation 0.1.1 — Revisão Estratégica da AI_CONSTITUTION.md (2026-06-27)**: `docs/AI_CONSTITUTION.md` revisado de v1.0 para v1.1. 3 novos capítulos: VII. Ativos, X. Efeito de Rede (Flywheel), XIV. Moat. Identidade reformulada: "Inteligência Operacional da Tríplice Fronteira". Organismo Vivo na Filosofia. ParaguAI Brain expandido. 14 Regras Permanentes (era 12). Missão: assimetria de informação. Total: 19 seções vs. 16 na v1.0.

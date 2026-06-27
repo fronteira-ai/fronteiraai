@@ -1,8 +1,9 @@
 # NORTH_STAR.md
 # A Bússola do ParaguAI
 
-**Versão**: 1.0  
+**Versão**: 1.1  
 **Criado**: 2026-06-27  
+**Revisado**: 2026-06-27  
 **Status**: Permanente — consultar antes de toda decisão de desenvolvimento  
 **Prioridade**: Segundo documento obrigatório. Leia `docs/AI_CONSTITUTION.md` primeiro.
 
@@ -189,6 +190,9 @@ O teste de longo prazo: se dentro de 3 anos você não puder usar os dados gerad
 
 A regra prática: toda implementação deve ter uma resposta clara para "que dado novo isso produz, e quem vai consumir esse dado?" Se a resposta for "nenhum" ou "não sei", reconsiderar o design antes de construir.
 
+**Infraestrutura antes de solução específica.**  
+Sempre que uma decisão puder ser tomada de duas formas — uma que resolve o caso atual e outra que resolve o caso atual e também serve como base para os próximos dez — escolher a segunda, se o custo marginal for razoável. Uma solução específica resolve um problema. Infraestrutura reutilizável resolve uma classe de problemas. O Acquisition Engine não foi construído para importar a Shopping China; foi construído para que qualquer nova loja possa ser conectada em horas, não semanas. Esse é o padrão correto.
+
 ---
 
 ## 9. Como avaliamos sucesso
@@ -230,6 +234,130 @@ Executar obrigatoriamente antes de qualquer Merge, Release ou ADR aprovado.
 Se existir dúvida em qualquer item — não implementar até a dúvida ser resolvida.
 
 Dúvida resolvida ≠ dúvida ignorada.
+
+---
+
+---
+
+## 11. Anti Goals
+
+O ParaguAI é definido não apenas pelo que escolhe construir, mas pelo que escolhe **não** construir. Estes anti goals são tão permanentes quanto os filtros da Seção 4 — violá-los destrói o que os goals constroem.
+
+**Não existimos para maximizar pageviews.**  
+Pageview sem decisão melhor é métrica vazia. Um usuário que navegou por 40 minutos sem encontrar o que precisava é uma falha de produto, não um indicador de engajamento. Qualquer mecanismo que aumenta tráfego às custas da qualidade da decisão viola a North Star.
+
+**Não existimos para maximizar tempo de permanência artificialmente.**  
+Não somos uma mídia social. Um comprador que encontrou o produto certo em três cliques é melhor do que um que navegou por vinte minutos sem clareza. Velocidade de decisão é uma feature, não um defeito. Reter o usuário mais tempo do que necessário é desperdiçar o capital de confiança que nos deu acesso ao tempo dele.
+
+**Não existimos para copiar funcionalidades de concorrentes.**  
+Concorrentes fazem escolhas por razões que não conhecemos, para usuários que podem ser diferentes dos nossos, com restrições que podem não existir para nós. Copiar sem entender o problema que uma feature resolve é competir pelo problema errado.
+
+**Não existimos para adicionar recursos sem problema identificado.**  
+Toda funcionalidade tem custo permanente: manutenção, complexidade de UI, testes, documentação, cognitive load do usuário. Uma funcionalidade que não resolve um problema real identificável cobra esses custos indefinidamente sem retorno. "Pode ser útil para alguém" não é critério suficiente.
+
+**Não existimos para aumentar complexidade sem benefício proporcional.**  
+Complexidade tem custo composto. Toda abstração prematura, toda generalização sem caso de uso real, toda arquitetura over-engineered cobra dividendos de lentidão e erro crescentes ao longo do tempo. A solução mais simples que funciona é a correta, até o problema crescer de tamanho.
+
+**Não existimos para privilegiar anunciantes sobre relevância.**  
+O resultado que um comprador vê deve refletir o melhor produto para sua necessidade — não o produto de quem mais paga. Resultados patrocinados que substituem resultados relevantes destroem a confiança. Confiança é o único ativo que, uma vez perdido em escala, não pode ser reconstituído com investimento.
+
+**Não existimos para manipular rankings por interesse comercial.**  
+O Merchant Score e o ranking de ofertas são calculados sobre dados objetivos de qualidade — completude do catálogo, atualização de preços, verificação, histórico de comportamento. Quando o ranking perde neutralidade verificável, perde razão de existir. Um marketplace cujo ranking é comprado não é um marketplace — é um espaço publicitário.
+
+**Não existimos para criar dependência de IA quando transparência é mais valiosa.**  
+IA é um meio, não uma identidade. Quando um usuário pode resolver um problema com uma tabela de preços clara, oferecer uma "recomendação inteligente" opaca é privilegiar a aparência de inteligência sobre utilidade real. Transparência e explicabilidade são mais valiosas do que sofisticação percebida.
+
+**Não existimos para construir o que é tecnicamente interessante mas sem usuário identificado.**  
+A pergunta "isso é possível de construir?" é irrelevante como critério de prioridade. A pergunta correta é sempre: "Qual usuário, em qual situação, toma uma decisão melhor por causa disso?" Se a resposta não tiver nome e contexto, a feature não tem justificativa.
+
+---
+
+## 12. Tipos de Decisão
+
+Nem toda decisão merece o mesmo nível de análise. Tratar decisões simples como complexas cria paralisia. Tratar decisões complexas como simples cria retrabalho exponencial.
+
+### Tipo 1 — Difíceis ou caras de reverter
+
+Exigem análise profunda, documentação em ADR e aprovação explícita antes de avançar. O custo de errar e reverter é alto — em tempo, dados, ou fundação de código.
+
+Exemplos:
+- Schema de banco de dados (toda mudança carrega dados existentes e migrações)
+- Modelo de domínio (preço pertence à oferta, não ao produto — violado, impacto em cascata)
+- Identidade e posicionamento da plataforma
+- Estratégia de monetização e modelo de planos
+- Arquitetura de camadas e contratos entre módulos
+- Escolha de fornecedores e dependências estruturais
+- Políticas de segurança e acesso a dados (RLS, credenciais, exposição de API)
+- Decisões que afetam múltiplos merchants ou usuários de forma irreversível
+
+### Tipo 2 — Facilmente reversíveis
+
+Devem ser decididas rapidamente. O custo de errar é baixo — uma nova iteração corrige em horas ou dias. Análise longa sobre decisões Tipo 2 é desperdício de capacidade estratégica.
+
+Exemplos:
+- Layout, tipografia, espaçamento, paleta de cores
+- Textos de UI — labels, copy, mensagens de estado vazio, CTAs
+- Ordem de itens em menus e navegação
+- Componentes de apresentação sem persistência de dado
+- Pequenos fluxos de UX sem impacto em dados ou segurança
+- Features experimentais delimitadas e reversíveis
+- A/B tests com escopo definido
+
+### A assimetria crítica
+
+Tratar Tipo 2 como Tipo 1 = discussão longa sobre o que podia ser testado em produção em uma hora.  
+Tratar Tipo 1 como Tipo 2 = uma mudança de schema sem análise profunda que cria débito irrecuperável.
+
+O critério prático antes de qualquer decisão: **"Se errarmos, qual é o custo real de voltar atrás?"**  
+Alto → Tipo 1. Analisar, documentar, aprovar.  
+Baixo → Tipo 2. Decidir, executar, iterar.
+
+---
+
+## 13. Compounding Decisions
+
+**Cada Release deve tornar a próxima Release mais fácil de construir.**
+
+Uma Release que entrega apenas valor imediato — sem deixar infraestrutura, sem gerar dados reutilizáveis, sem fortalecer nenhum ativo — é uma Release que não compõe. Resolve um problema mas não amplia a capacidade do sistema de resolver os próximos.
+
+Releases que compõem têm esta propriedade: o custo marginal de construir a próxima feature relacionada é significativamente menor do que o custo da feature atual. Isso só acontece quando a feature atual deixa fundação reutilizável, não apenas código que funciona.
+
+**O padrão correto:**
+
+O Acquisition Engine não foi construído para importar um conector específico. Foi construído para que cada novo conector custe uma fração do anterior. O primeiro conector levou semanas. O segundo levará dias. O décimo levará horas — porque a fundação compõe.
+
+O sistema de slug único com índices não resolve apenas a busca de produto. Resolve toda busca de entidade por identificador em qualquer tabela que adote o padrão.
+
+O Merchant Score não resolve apenas o ranking da página de lojas. Resolve personalização, recomendações, segmentação B2B, e potencialmente decisões de crédito futuras — com a mesma implementação.
+
+**A pergunta de compounding** — obrigatória antes de aprovar qualquer design de implementação:
+
+> **"Que problema de amanhã essa implementação já resolve, sem que eu precise tocá-la de novo?"**
+
+Se a resposta for "nenhum", o design provavelmente está resolvendo o caso atual sem pensar no próximo. Isso não é errado em todo contexto — mas deve ser uma escolha explícita, não um padrão.
+
+**Compounding não significa over-engineering.**  
+Não é construir para todos os casos possíveis. É construir para os próximos dois ou três casos razoavelmente prováveis, com custo marginal próximo de zero. A diferença entre os dois é julgamento — e o julgamento melhora com a prática de fazer a pergunta acima antes de cada implementação.
+
+---
+
+## 14. O Compromisso
+
+Todo desenvolvedor humano e todo sistema de IA que trabalhar neste projeto assume o seguinte compromisso implicitamente, ao usar este documento como guia:
+
+**Toda decisão tomada hoje deve facilitar as decisões de amanhã.**  
+Não apenas resolver o problema atual. Abrir caminho para o próximo problema ser mais simples de resolver.
+
+**Toda Release deve diminuir a complexidade da próxima, não aumentá-la.**  
+Complexidade acumulada sem compounding é débito. Complexidade com compounding é fundação. A diferença está em se o que foi construído pode ser reutilizado ou se precisa ser reescrito.
+
+**Toda arquitetura deve aumentar a capacidade de evolução.**  
+Um sistema que só pode crescer com reescrita completa foi mal projetado. Um sistema que cresce por composição — novos módulos sobre fundação existente, sem quebrar o que funciona — foi projetado para durar.
+
+**Nunca apenas resolver o problema atual.**  
+Sempre perguntar: o que o próximo estágio do ParaguAI vai precisar? Como o que construo hoje serve a esse estágio, sem que ele precise reimplementar do zero?
+
+O ParaguAI é um organismo que aprende. Este documento é parte do sistema imunológico desse organismo — o conjunto de critérios que garante que cada decisão contribui para um sistema que fica progressivamente mais inteligente, mais defensável e mais valioso para quem depende dele.
 
 ---
 
