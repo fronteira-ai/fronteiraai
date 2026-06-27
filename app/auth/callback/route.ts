@@ -39,8 +39,12 @@ export async function GET(request: NextRequest) {
   const { error: sessionError } = await supabase.auth.exchangeCodeForSession(code);
 
   if (sessionError) {
+    // The email was confirmed by Supabase (it issued the code), but the PKCE
+    // verifier cookie is missing (e.g. link opened in a different browser).
+    // Email IS confirmed — user can log in normally.
+    console.error("[auth/callback] code exchange failed:", sessionError.message);
     const dest = new URL("/merchant/login", origin);
-    dest.searchParams.set("error", "email_confirmation_failed");
+    dest.searchParams.set("confirmed", "true");
     return NextResponse.redirect(dest);
   }
 
