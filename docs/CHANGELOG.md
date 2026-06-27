@@ -714,3 +714,27 @@ Corrige o fluxo completo de confirmação de e-mail com Supabase Auth + Next.js 
 - `database/migrations/0013_fix_profiles_role_merchant.sql` — corrige constraint `profiles_role_check` + backfill de merchants existentes.
 
 **Fluxo validado**: Cadastro → e-mail → confirmação → login → dashboard carregando ✓
+
+---
+
+## 2026-06-27 — Release 1.3.1 — ParaguAI Experience Integration
+
+Release exclusivamente de UX, navegação e branding. Nenhuma funcionalidade do Merchant OS alterada.
+
+**`components/home/HeroCTAs.tsx`** (NOVO — client component): botão "Comparar preços" → `/products`; botão "Sou Lojista" / "Minha Loja" auth-aware — detecta sessão e registro em `merchants`, redireciona para `/merchant/login`, `/merchant/dashboard` ou mostra modal de confirmação para compradores autenticados.
+
+**`components/home/ForLojistasSection.tsx`** (NOVO): seção Premium para lojistas na Home — 6 benefícios com ícones emerald, card CTA com "Cadastrar minha loja" + "Conhecer todos os planos". Posicionada entre Stats e CTASection.
+
+**`components/home/Hero.tsx`**: importa e renderiza `<HeroCTAs />` após `<SearchBar />`.
+
+**`components/layout/Navbar.tsx`**: "Para Lojistas" adicionado ao menu (→ `/para-lojistas`). Botão "Entrar" agora passa `href="/merchant/login"`.
+
+**`components/layout/Footer.tsx`**: coluna "Para Lojistas" adicionada (Cadastrar Loja, Planos, Central do Lojista, Ajuda). Grid expandido de `[1.4fr 1fr 1fr 1fr]` para `[1.4fr 1fr 1fr 1fr 1fr]`.
+
+**`app/para-lojistas/page.tsx`** (NOVO — static SSR): landing page institucional com metadata SEO completo. Seções: Hero emerald, Benefícios (6 cards), Como Funciona (4 passos numerados), Planos (4 cards — Free ativo, Pro/Business/Enterprise "em breve"), Importação (4 formatos), FAQ com `<details>` nativos, CTA final.
+
+**`app/page.tsx`**: imports `ForLojistasSection`, adiciona à composição, atualiza metadata para incluir lojistas.
+
+**Branding**: toda referência user-facing usa "Área do Lojista", "Painel do Lojista", "Central do Lojista". Nunca "Merchant Portal".
+
+**Validações**: lint 0, tsc 0, build OK (64 rotas — + `/para-lojistas`). Fluxo Home → Lojista → Dashboard intacto.

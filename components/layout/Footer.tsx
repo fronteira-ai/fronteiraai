@@ -24,6 +24,15 @@ const columns: { title: string; links: FooterLink[] }[] = [
     ],
   },
   {
+    title: "Para Lojistas",
+    links: [
+      { name: "Cadastrar Loja", href: "/merchant/register" },
+      { name: "Planos", href: "/para-lojistas#planos" },
+      { name: "Central do Lojista", href: "/merchant/login" },
+      { name: "Ajuda", soon: true },
+    ],
+  },
+  {
     title: "ParaguAI",
     links: [
       { name: "Sobre nós", soon: true },
@@ -40,7 +49,7 @@ export default function Footer() {
   return (
     <footer className="border-t border-slate-800 bg-[#050816]">
       <Container className="py-16">
-        <div className="grid gap-12 md:grid-cols-[1.4fr_1fr_1fr_1fr]">
+        <div className="grid gap-12 md:grid-cols-[1.4fr_1fr_1fr_1fr_1fr]">
           <div>
             <Logo size="md" />
 

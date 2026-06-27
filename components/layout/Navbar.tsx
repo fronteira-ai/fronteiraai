@@ -11,6 +11,7 @@ const menu = [
   { name: "Produtos", href: "/products" },
   { name: "Buscar", href: "/search" },
   { name: "IA", href: "/#ia" },
+  { name: "Para Lojistas", href: "/para-lojistas" },
 ];
 
 export default function Navbar() {
@@ -60,7 +61,7 @@ export default function Navbar() {
             <Search size={18} />
           </Link>
 
-          <Button variant="primary" className="hidden sm:inline-flex">
+          <Button href="/merchant/login" variant="primary" className="hidden sm:inline-flex">
             Entrar
           </Button>
         </div>

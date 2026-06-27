@@ -1,4 +1,5 @@
 import SearchBar from "./SearchBar";
+import HeroCTAs from "./HeroCTAs";
 import Badge from "@/components/ui/Badge";
 import StatCard from "@/components/ui/StatCard";
 import Reveal from "@/components/ui/Reveal";
@@ -57,10 +58,14 @@ export default function Hero() {
           <SearchBar />
         </Reveal>
 
+        <Reveal direction="up" delay={320} className="w-full">
+          <HeroCTAs />
+        </Reveal>
+
         <Reveal
           direction="up"
-          delay={340}
-          className="mt-24 flex w-full flex-wrap justify-center gap-6"
+          delay={400}
+          className="mt-20 flex w-full flex-wrap justify-center gap-6"
         >
           <StatCard value={350} suffix="+" label="Lojas cadastradas" />
           <StatCard value={500000} suffix="+" label="Produtos monitorados" />

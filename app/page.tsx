@@ -13,6 +13,7 @@ import HowItWorks from "@/components/home/HowItWorks";
 import Brands from "@/components/home/Brands";
 import Stats from "@/components/home/Stats";
 import CTASection from "@/components/home/CTASection";
+import ForLojistasSection from "@/components/home/ForLojistasSection";
 import { getStores } from "@/services/store.service";
 import { getBrands } from "@/services/brand.service";
 import { getCategories } from "@/services/category.service";
@@ -20,15 +21,15 @@ import { getProductsCatalog } from "@/services/product.service";
 import { ProductHighlight } from "@/types/product";
 
 export const metadata: Metadata = {
-  title: "ParaguAI — Compare preços e descubra as melhores lojas do Paraguai",
+  title: "ParaguAI — Compare preços e venda no Paraguai",
   description:
-    "Pesquise produtos, compare preços entre lojas e descubra as melhores ofertas no Paraguai. Celulares, notebooks, drones, TVs e muito mais.",
-  keywords: ["Paraguai", "Ciudad del Este", "comparador de preços", "eletrônicos", "importados"],
+    "Pesquise produtos, compare preços entre lojas e descubra as melhores ofertas no Paraguai. Lojistas: cadastre sua loja e sincronize produtos automaticamente.",
+  keywords: ["Paraguai", "Ciudad del Este", "comparador de preços", "eletrônicos", "importados", "lojista Paraguai", "marketplace Paraguai"],
   alternates: { canonical: SITE_URL },
   openGraph: {
-    title: "ParaguAI — Compare preços no Paraguai",
+    title: "ParaguAI — Compare preços e venda no Paraguai",
     description:
-      "A maior plataforma de comparação de preços do Paraguai. Encontre os melhores negócios em Ciudad del Este.",
+      "A maior plataforma de comparação de preços do Paraguai. Para compradores e lojistas de Ciudad del Este.",
     url: SITE_URL,
     siteName: "ParaguAI",
     type: "website",
@@ -36,9 +37,9 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "ParaguAI — Compare preços no Paraguai",
+    title: "ParaguAI — Compare preços e venda no Paraguai",
     description:
-      "A maior plataforma de comparação de preços do Paraguai. Encontre os melhores negócios em Ciudad del Este.",
+      "A maior plataforma de comparação de preços do Paraguai. Para compradores e lojistas de Ciudad del Este.",
   },
 };
 
@@ -70,6 +71,7 @@ export default async function Home() {
       <HowItWorks />
       <Brands brands={brands} />
       <Stats />
+      <ForLojistasSection />
       <CTASection />
       <Footer />
     </main>

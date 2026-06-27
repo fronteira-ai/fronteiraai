@@ -216,3 +216,20 @@ Entregou o Compare Engine v1 completo: `services/compare.service.ts`, `app/api/c
 | Prontidão para Produção | ★★☆☆☆ | Código pronto para os 3 domínios centrais, mas **sem dados reais** (ADR-007) e com bugs confirmados de tipo↔schema que vão aparecer assim que houver dados (ADR-008) — duas camadas de risco antes de estar pronto para usuários reais. |
 
 **Média geral: ≈ 3,5/5** (avaliação congelada na Sprint 3.4.1, antes da correção). **Atualização Sprint 3.5**: a correção da camada de tipos (ADR-009) e a entrega do catálogo elevam principalmente "Código" e "Prontidão para Produção" — ver `docs/PROJECT_STATUS.md` (**50%**) para o número atualizado; esta tabela não foi reavaliada item a item nesta sprint.
+
+---
+
+## Release 1.3 — ParaguAI Experience Integration (2026-06-27)
+
+**Executado — exclusivamente UX, navegação e branding. Zero alterações no Merchant OS, auth, onboarding ou APIs.**
+
+- ✅ **Hero** — CTAs adicionados: "Comparar preços" (→ /products) + "Sou Lojista" / "Minha Loja" (auth-aware). `HeroCTAs.tsx` client component detecta estado de autenticação (carregando/não autenticado/lojista/comprador). Comprador vê modal de confirmação.
+- ✅ **Seção Para Lojistas** — `ForLojistasSection.tsx` na Home: 6 benefícios, CTA duplo (cadastrar loja + ver planos). Posicionada entre Stats e CTASection.
+- ✅ **Navbar** — "Para Lojistas" adicionado ao menu. Botão "Entrar" agora linka para `/merchant/login`.
+- ✅ **Footer** — Nova coluna "Para Lojistas": Cadastrar Loja, Planos, Central do Lojista, Ajuda. Grid expandido para 5 colunas.
+- ✅ **`/para-lojistas`** — Landing page institucional completa: Hero emerald, Benefícios, Como Funciona, Planos (Free ativo + Pro/Business/Enterprise como "em breve"), Importação, FAQ com `<details>`, CTA final.
+- ✅ **Branding** — Toda referência user-facing usa "ParaguAI", "Área do Lojista", "Painel do Lojista", "Central do Lojista" — nunca "Merchant Portal".
+- ✅ **SEO** — metadata completo em `/para-lojistas`: canonical, OG, Twitter, keywords específicas para lojistas.
+- ✅ **Qualidade**: lint 0 erros, tsc 0 erros, build OK (64 rotas — +`/para-lojistas`), nenhuma regressão.
+
+**Não alterado**: Merchant OS, auth flow, onboarding, login, dashboard, callback, APIs, banco, migrations.

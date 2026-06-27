@@ -315,3 +315,16 @@ Portal self-service completo para lojistas (SaaS). 6 novas tabelas (merchant_pla
 **Fluxo completo validado**: Cadastro → e-mail → confirmação → login → dashboard carregando ✓
 
 **Pendência**: Migration `0013_fix_profiles_role_merchant.sql` — aplicar no Supabase SQL Editor (idempotente, segura).
+
+## Release 1.3.1 — ParaguAI Experience Integration — 2026-06-27
+
+Release exclusivamente de UX, navegação e branding. Zero alterações no Merchant OS, auth, APIs ou banco.
+
+- `HeroCTAs` — CTAs auth-aware no Hero: "Comparar preços" + "Sou Lojista" / "Minha Loja"
+- `ForLojistasSection` — Seção premium para lojistas na Home (6 benefícios + CTA duplo)
+- Navbar — "Para Lojistas" no menu; botão "Entrar" → `/merchant/login`
+- Footer — Coluna "Para Lojistas" (Cadastrar Loja / Planos / Central do Lojista / Ajuda)
+- `/para-lojistas` — Landing page institucional (Hero + Benefícios + Como Funciona + Planos + Importação + FAQ + CTA)
+- Branding: user-facing usa "Área do Lojista" / "Central do Lojista" — nunca "Merchant Portal"
+- SEO: metadata + canonical + OG + Twitter em `/para-lojistas`
+- Qualidade: lint 0, tsc 0, build OK (64 rotas + `/para-lojistas`), zero regressões
