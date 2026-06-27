@@ -1,8 +1,9 @@
 # AI_CONSTITUTION.md
 # Constituição do ParaguAI
 
-**Versão**: 1.0  
+**Versão**: 1.1  
 **Criado**: 2026-06-27  
+**Revisado**: 2026-06-27  
 **Status**: Permanente — não deprecar; apenas estender com revisões versionadas  
 **Prioridade**: Este é o primeiro documento a ser lido antes de qualquer tarefa de desenvolvimento.
 
@@ -14,6 +15,8 @@ Este documento não descreve o que o ParaguAI pretende ser. Descreve o que o Par
 
 Tecnologias mudam. Plataformas mudam. Mercados mudam. Os princípios aqui registrados devem permanecer válidos independentemente dessas mudanças. Quando um princípio parecer obsoleto, o momento certo é revisá-lo formalmente e versionar, não ignorá-lo silenciosamente.
 
+O ParaguAI não terá um dia em que estará "pronto". É um organismo digital que aprende, melhora e expande continuamente. Esta Constituição é o sistema imunológico desse organismo — o conjunto de princípios que garante que o crescimento não destrua o que nos faz valiosos.
+
 Todo desenvolvedor humano ou sistema de IA que trabalhar neste projeto deve ler este documento antes de iniciar qualquer tarefa.
 
 ---
@@ -22,57 +25,69 @@ Todo desenvolvedor humano ou sistema de IA que trabalhar neste projeto deve ler 
 
 ### Quem somos
 
-O ParaguAI é uma plataforma de inteligência de compras focada no mercado do Paraguai e na região de fronteira com o Brasil. Conectamos compradores que buscam o melhor preço com lojas que precisam de visibilidade e distribuição digital.
+O ParaguAI é a **inteligência operacional da Tríplice Fronteira**.
 
-Somos uma **plataforma**, não apenas um site de comparação. A diferença é estrutural: um agregador coleta dados. Uma plataforma cria valor para os dois lados simultaneamente — compradores e lojistas — e gera retornos crescentes de escala a cada novo participante.
+Compras são o ponto de entrada. Mas o que construímos é mais profundo: uma camada de conhecimento estruturado sobre o maior polo de comércio informal da América do Sul — seus preços, lojas, produtos, padrões, sazonalidade e comportamento de compradores. Uma infraestrutura digital que não existia e que, uma vez construída, torna-se extremamente difícil de replicar.
+
+Somos uma **plataforma**, não um site de comparação. A diferença é estrutural: um site de comparação agrega dados estáticos. Uma plataforma cria valor para múltiplos lados simultaneamente, gera retornos crescentes de escala a cada novo participante e acumula conhecimento que se transforma em vantagem competitiva permanente.
 
 ### O que estamos construindo
 
-Uma infraestrutura de confiança para decisões de compra em um mercado com alta fragmentação, baixa transparência de preços e pouca digitalização de lojas.
+Uma infraestrutura de confiança e inteligência para um mercado com alta fragmentação, baixa transparência de preços, pouca digitalização de lojas e ausência histórica de dados estruturados.
 
 Estamos construindo:
 
-- A maior base de dados de produtos e preços do Paraguai
-- Um sistema de confiança e reputação para lojas locais
-- Ferramentas de crescimento para lojistas (Merchant OS)
-- Inteligência para compradores: comparação, histórico de preços, recomendações
-- Uma rede que cresce com cada nova loja e cada novo usuário
+- A maior base de dados de produtos, preços e lojas da Tríplice Fronteira
+- Um sistema de confiança e reputação verificável para lojas locais
+- Ferramentas de crescimento para lojistas: visibilidade, análise, automação (Merchant OS)
+- Inteligência para compradores: comparação, histórico de preços, alertas, recomendações
+- Infraestrutura turística, comercial e de serviços para a região
+- Uma rede que se torna mais valiosa a cada novo participante, de forma não-linear
 
 ### O que NÃO somos
 
-Não somos um e-commerce. Não processamos pagamentos, não guardamos estoque, não fazemos logística. Somos a camada de descoberta e decisão, não a camada de transação.
+Não somos um e-commerce. Não processamos pagamentos, não guardamos estoque, não fazemos logística. Somos a camada de descoberta, decisão e inteligência — não a camada de transação.
 
 Não somos um agregador passivo. Processamos, validamos, normalizamos e enriquecemos cada dado que entra na plataforma.
 
-Não somos um produto para o Paraguai inteiro desde o primeiro dia. Começamos em Ciudad del Este, onde a concentração de lojas e o volume de tráfego de compradores brasileiros criam a densidade necessária para efeito de rede.
+Não somos um produto para o Paraguai inteiro desde o primeiro dia. Começamos em Ciudad del Este, onde a concentração de lojas e o volume de tráfego de compradores brasileiros criam a densidade necessária para o efeito de rede ignitar.
 
 Não somos rápidos às custas de corretos. Velocidade sem fundação gera retrabalho exponencial.
+
+Não somos um conjunto de funcionalidades. Somos um organismo que aprende. Cada dado coletado, cada interação registrada, cada decisão de compra assistida nos torna mais inteligentes do que éramos ontem.
 
 ---
 
 ## II. Missão
 
-**Tornar o processo de compra no Paraguai transparente, inteligente e confiável — para compradores que buscam o melhor preço e para lojistas que buscam crescimento.**
+**O ParaguAI existe para eliminar a assimetria de informação que separa compradores de boas decisões e lojistas de crescimento real.**
+
+A Tríplice Fronteira movimenta bilhões de dólares por ano. Compradores atravessam fronteiras sem saber qual loja tem o melhor preço, qual tem estoque real, qual é confiável. Lojistas têm produtos de qualidade mas sem visibilidade digital estruturada. Esse gap de informação é o problema que resolvemos — com dados, inteligência e automação.
 
 ---
 
 ## III. Visão 2030
 
-Ser a principal plataforma de inteligência de compras da América do Sul, começando pelo Paraguai.
+Ser a principal infraestrutura digital de inteligência comercial da América do Sul, com raiz no Paraguai.
 
 Em 2030:
-- Qualquer comprador que considere uma viagem a Ciudad del Este, uma compra online de loja paraguaia ou uma comparação de preços na fronteira consulta o ParaguAI antes de decidir.
-- Qualquer loja no Paraguai que queira crescimento digital tem o ParaguAI como canal de distribuição e análise.
-- O ParaguAI opera em todos os principais mercados do Paraguai e inicia expansão para Brasil e Argentina.
-- A plataforma tem API pública, permitindo que terceiros construam sobre a infraestrutura de dados do ParaguAI.
+
+- Qualquer comprador que planeje uma viagem a Ciudad del Este, uma compra online de loja paraguaia ou uma comparação de preços na fronteira consulta o ParaguAI antes de decidir.
+- Qualquer loja no Paraguai que queira crescimento digital tem o ParaguAI como canal de distribuição, análise e automação.
+- Turistas e viajantes de negócio usam o ParaguAI para planejar roteiros de compra, entender disponibilidade de produtos e reservar experiências comerciais antes de cruzar a fronteira.
+- O ParaguAI é a referência para dados de mercado, preços e tendências de consumo da Tríplice Fronteira — consultado por jornalistas, pesquisadores, órgãos de turismo e gestores comerciais.
+- A plataforma opera em todos os principais mercados do Paraguai e inicia expansão para Brasil e Argentina.
+- A API pública do ParaguAI permite que terceiros construam produtos e serviços sobre a infraestrutura de dados que acumulamos.
 
 ---
 
 ## IV. North Star
 
-**O número de decisões de compra melhores que o ParaguAI ajudou a tomar.**
+**O número de decisões melhores que o ParaguAI tornou possíveis.**
 
-Uma decisão de compra melhor é aquela em que o comprador encontrou o produto certo, no preço certo, da loja certa — com confiança. Não é simplesmente o menor preço. É a melhor decisão considerando preço, disponibilidade, confiabilidade da loja e timing.
+Uma decisão melhor é aquela em que o comprador encontrou o produto certo, no preço certo, da loja certa — com confiança e contexto histórico suficiente para agir sem arrependimento. Não é simplesmente o menor preço. É a melhor decisão considerando preço, disponibilidade, confiabilidade da loja, histórico de variação e timing.
+
+Uma decisão melhor para o lojista é aquela baseada em dados reais de mercado — não em intuição. Qual produto tem maior procura na sua categoria? Em qual período os preços dos concorrentes caem? Qual é o perfil real de quem visita sua loja?
 
 Toda métrica técnica — uptime, latência, cobertura de catálogo, número de merchants — é um insumo para esse número. Nenhuma métrica técnica é o objetivo em si.
 
@@ -100,6 +115,19 @@ Ações irreversíveis — alterar schema, escrever em produção, publicar exte
 **Estado honesto, sempre.**  
 Um sistema que reporta sucesso sem verificar o resultado é pior do que um sistema que reporta falha. Falsos positivos são mais perigosos do que falsos negativos porque constroem confiança em premissas incorretas.
 
+**Toda funcionalidade nova deve gerar conhecimento.**  
+Nenhuma feature é adicionada apenas para resolver um problema pontual. Toda funcionalidade deve produzir dados que alimentam inteligência futura. Se uma feature não produz sinal útil, questionar se é a feature certa.
+
+### O ParaguAI como organismo vivo
+
+O ParaguAI nunca estará "pronto". Não existe versão final. Não existe estado de equilíbrio.
+
+A plataforma aprende com cada busca. Melhora com cada loja que entra. Fica mais precisa com cada mudança de preço capturada. Torna-se mais útil com cada decisão de compra que assiste.
+
+Esse crescimento contínuo não é um objetivo futuro — é uma propriedade do design presente. Cada componente construído hoje deve ser pensado não apenas para o que resolve agora, mas para o que alimentará amanhã.
+
+O trabalho humano no ParaguAI é progressivamente estratégico, não operacional. À medida que a plataforma amadurece, as tarefas repetitivas migram para automação e as decisões que restam para humanos são as que exigem julgamento que a máquina ainda não tem. Esse é o modelo de maturidade que guia toda decisão de construção.
+
 ### Como tomamos decisões
 
 Toda decisão estrutural é documentada com:
@@ -117,6 +145,10 @@ O registro de decisões não é burocracia — é o mecanismo que permite ao pro
 ## VI. Dados
 
 Todo dado que entra na plataforma é um ativo, não uma string.
+
+**Nosso maior patrimônio não será o software. Será o conhecimento acumulado.**
+
+Qualquer concorrente com recursos suficientes pode reproduzir nossa interface, replicar nosso pipeline e copiar nossa arquitetura. Nenhum concorrente pode comprar ou reproduzir cinco anos de histórico de preços, comportamento de compradores brasileiros na fronteira, padrões de sazonalidade por categoria e reputação verificável de centenas de lojas. Esses dados são o moat real do ParaguAI.
 
 ### Princípios de dados
 
@@ -138,17 +170,55 @@ Cada produto indexado, cada oferta registrada, cada mudança de preço capturada
 **O banco é a fonte de verdade.**  
 Tipos de dado, contratos de API e documentação devem refletir o banco real. Uma divergência entre o que o código afirma e o que o banco armazena é um bug silencioso esperando por dados reais para se manifestar.
 
+**Dados são acumulativos, não substituíveis.**  
+Diferente do código, que pode ser reescrito, dados históricos não podem ser recriados retroativamente. Um ano de histórico de preços não tem equivalente. Isso significa que a decisão de começar a coletar um tipo de dado tem impacto crescente ao longo do tempo — a melhor hora para começar sempre foi no passado, a segunda melhor é agora.
+
 ---
 
-## VII. Automação
+## VII. Ativos
+
+**O ParaguAI não desenvolve funcionalidades. Desenvolve ativos.**
+
+A distinção não é semântica. Uma funcionalidade resolve um problema. Um ativo resolve um problema e, simultaneamente, torna-se insumo para dezenas de outros módulos, hoje e no futuro.
+
+### O que são ativos no ParaguAI
+
+**Merchant Score** — um número (0-100) que sintetiza a qualidade de um lojista. Usado no ranking de lojas, no dashboard do merchant, nas páginas públicas, nas recomendações de compradores e, futuramente, em modelos de crédito e priorização de exibição.
+
+**Catálogo normalizado** — cada produto, marca e categoria com slug único, imagem, especificações e histórico. A fundação de toda comparação, busca semântica e recomendação.
+
+**Histórico de preços** — séries temporais de preço por oferta. Insumo para alertas, detecção de manipulação, predição de tendência e análise de mercado. Quanto mais tempo acumula, mais valioso se torna.
+
+**Sistema de reputação de lojas** — combinação de score, verificação, avaliações e histórico de comportamento. Substitui a assimetria de informação entre comprador e loja por um sistema de confiança verificável.
+
+**Merchant OS** — as ferramentas de gestão de lojistas (dashboard, importação, analytics, recomendações). Um ativo de retenção: um lojista que usa o Merchant OS para gerir seu catálogo não muda de plataforma facilmente.
+
+**Rede de conectores** — cada conector de loja (Shopping China, Nissei, Cellshop, etc.) é um ativo de aquisição de dados. O custo marginal de adicionar uma nova loja cai com cada conector implementado.
+
+**ParaguAI Brain** — a camada de inteligência que conecta todos os ativos acima. Ver Seção IX.
+
+### O critério de um ativo
+
+Antes de iniciar qualquer implementação, responder: **Este módulo, além de resolver seu problema imediato, produz dados que reutilizaremos em outros módulos?**
+
+Se a resposta for não, reconsiderar o design antes de construir. Funcionalidades descartáveis acumulam; ativos compõem.
+
+---
+
+## VIII. Automação
 
 **Tudo que puder ser automatizado deve ser automatizado.** A plataforma não escala com esforço manual.
 
 ### O princípio de automação
 
-Qualquer processo que se repete — importação de catálogos, atualização de preços, geração de recomendações, envio de alertas, validação de dados — é um candidato imediato à automação.
+Qualquer processo que se repete — importação de catálogos, atualização de preços, geração de recomendações, envio de alertas, validação de dados, recálculo de scores — é um candidato imediato à automação.
 
-O critério de automação não é a frequência da tarefa, mas o custo de não automatizá-la em escala. Uma loja com 10.000 produtos que atualiza preços diariamente não pode depender de intervenção humana.
+O critério de automação não é a frequência da tarefa, mas o custo de não automatizá-la em escala. Uma rede com 1.000 lojas e 10 milhões de produtos não pode depender de nenhuma intervenção humana em operações rotineiras.
+
+**O papel humano é estratégico, não operacional.**  
+À medida que a automação avança, o trabalho humano no ParaguAI concentra-se em decisões que exigem julgamento contextual, criatividade ou responsabilidade moral: definição de estratégia, curadoria de casos-limite que a IA não cobre, decisões com impacto irreversível. Toda tarefa operacional que um humano executa repetidamente é uma automação pendente.
+
+Agentes de IA devem progressivamente assumir tarefas de: moderação de dados, resposta a lojistas com padrões conhecidos, detecção de anomalias, publicação de novos produtos, e geração de relatórios periódicos. Não como substituição humana — como ampliação da capacidade humana.
 
 ### Requisitos de qualquer automação
 
@@ -164,22 +234,25 @@ A automação não substitui aprovação para ações de alto impacto. Um sistem
 
 ---
 
-## VIII. Inteligência Artificial
+## IX. Inteligência Artificial
 
 A IA não é uma feature do ParaguAI — é a direção de todas as features.
 
+**Toda interação deve alimentar IA. Todo dado deve melhorar decisões futuras. Nenhuma funcionalidade é neutra — ou gera conhecimento, ou é um custo sem retorno.**
+
 ### Papel atual
 
-Atualmente, a IA do ParaguAI existe como infraestrutura: catálogo normalizado, histórico de preços rastreado, ranking de ofertas calculado, reputação de lojas consolidada em um score. Esses dados são o combustível da inteligência futura, não um produto em si.
+Atualmente, a IA do ParaguAI existe como infraestrutura: catálogo normalizado, histórico de preços rastreado, ranking de ofertas calculado por score composto, reputação de lojas consolidada em Merchant Score. Esses dados são o combustível da inteligência futura, não um produto em si.
 
 ### Papel futuro
 
 A IA do ParaguAI deve, progressivamente, responder a perguntas que nenhum humano consegue responder manualmente:
 
-- "Qual é o melhor momento para comprar este produto?"
-- "Esta loja tem histórico de inflacionar preços antes de datas promocionais?"
+- "Qual é o melhor momento para comprar este produto, baseado em 18 meses de histórico desta categoria?"
+- "Esta loja tem padrão histórico de inflacionar preços 30 dias antes de feriados comerciais?"
 - "Qual loja tem a menor variação de preço ao longo do tempo, mesmo que não tenha o menor preço hoje?"
-- "O que comprar nesta viagem, dado meu orçamento e preferências anteriores?"
+- "O que comprar nesta viagem, dado meu orçamento, minhas compras anteriores e o que está com preço abaixo da média desta semana?"
+- "Qual categoria de produto tem maior demanda de compradores brasileiros neste período do ano?"
 
 ### Como cada módulo alimenta inteligência
 
@@ -187,28 +260,87 @@ A IA do ParaguAI deve, progressivamente, responder a perguntas que nenhum humano
 
 **Histórico de preços** — séries temporais que alimentam detecção de padrão e predição. O preço de hoje sem contexto histórico não tem valor analítico.
 
-**Merchant Score** — reputação calculada a partir de comportamento observável: volume, atualização, completude, verificação. É o primeiro modelo de ranking do ParaguAI.
+**Merchant Score** — reputação calculada a partir de comportamento observável: volume, atualização, completude, verificação. É o primeiro modelo de ranking do ParaguAI e o precursor de modelos de recomendação B2B.
 
-**Interações de compradores** — buscas, cliques, comparações, favoritos, alertas. Cada ação é um sinal de intenção que melhora as recomendações futuras.
+**Interações de compradores** — buscas, cliques, comparações, favoritos, alertas. Cada ação é um sinal de intenção que melhora as recomendações futuras. Cada busca que não encontra resultado é um dado de gap de catálogo.
 
-**Dados de lojistas** — importações, plano, qualidade do catálogo, tempo de resposta. Alimentam segmentação e recomendações B2B.
+**Dados de lojistas** — importações, plano, qualidade do catálogo, frequência de atualização. Alimentam segmentação, recomendações B2B e modelos de churn prevention.
+
+**Padrões turísticos** — períodos de alta de compradores brasileiros, categorias com pico sazonal, perfil de intenção de compra por período do ano. Alimentam tanto o lado do comprador (quando ir, o que comprar) quanto o do lojista (quando e como se preparar).
 
 ### ParaguAI Brain
 
-O ParaguAI Brain é a camada de inteligência central que unifica todos esses sinais. Não é um produto separado — é o resultado de conectar as camadas existentes com modelos de linguagem e aprendizado.
+O ParaguAI Brain é a camada de inteligência central que conecta todos esses ativos. Não é um produto separado — é o resultado arquitetural de conectar catálogo, histórico, reputação, comportamento e modelos de linguagem em um sistema coeso.
+
+O Brain não é apenas um chatbot. É o sistema nervoso central da plataforma: interpreta dados, gera insights, responde perguntas, detecta anomalias, personaliza experiências e progressivamente reduz a necessidade de intervenção humana em operações rotineiras.
 
 O Brain deve:
-- Entender linguagem natural de compradores brasileiros e paraguaios
-- Contextualizar produtos dentro de categorias, marcas e faixas de preço históricas
-- Personalizar recomendações com base no histórico do usuário
-- Detectar anomalias de preço: inflação artificial, fraude, divergência de catálogo
-- Responder perguntas sobre o mercado com dados próprios, não dados de terceiros
+- Entender linguagem natural de compradores brasileiros e paraguaios, com contexto local real
+- Contextualizar produtos dentro de categorias, marcas, faixas de preço históricas e padrões sazonais
+- Personalizar recomendações com base no histórico do usuário, não em preferências declaradas
+- Detectar anomalias de preço: inflação artificial, fraude, divergência de catálogo, outliers estatísticos
+- Responder perguntas sobre o mercado com dados próprios, não dados genéricos de terceiros
+- Conectar demanda de compradores com oferta de lojistas de forma proativa — antes que o comprador saiba que precisa da conexão
+- Sugerir ações de crescimento para lojistas baseadas em dados reais de comportamento de compradores em sua categoria
 
-A qualidade da inteligência é diretamente proporcional à qualidade dos dados que a alimentam. O Brain não substitui o catálogo, o histórico e o ranking — depende completamente deles.
+**A qualidade da inteligência é diretamente proporcional à qualidade dos dados que a alimentam.** O Brain não substitui o catálogo, o histórico e o ranking — depende completamente deles. Investir em dados é investir em inteligência.
+
+O Brain não terá uma data de lançamento. Evoluirá continuamente, com cada novo módulo de dados ampliando sua capacidade. O critério de evolução não é a sofisticação do modelo — é a melhora mensurável nas decisões que assiste.
 
 ---
 
-## IX. Engenharia
+## X. Efeito de Rede
+
+O efeito de rede é o principal ativo estratégico do ParaguAI. Não o código. Não a interface. Não os conectores. A rede que se autoperpetua.
+
+### O Flywheel
+
+```
+Mais lojas cadastradas
+        ↓
+Mais produtos e ofertas
+        ↓
+Mais compradores atraídos
+        ↓
+Mais dados de comportamento
+        ↓
+IA mais precisa e relevante
+        ↓
+Experiência melhor para todos
+        ↓
+Mais valor percebido
+        ↓
+Mais lojas querem estar presentes
+        ↓
+(volta ao início, em escala maior)
+```
+
+Cada volta desse ciclo é mais rápida e poderosa que a anterior. Este é o mecanismo pelo qual o ParaguAI se torna progressivamente mais difícil de competir — não porque a tecnologia fica mais complexa, mas porque a rede fica mais densa.
+
+### Por que o efeito de rede do ParaguAI é defensável
+
+A maioria das plataformas de comparação de preços tem efeito de rede fraco — o usuário vai à plataforma com maior cobertura, independente da história. O ParaguAI constrói camadas adicionais de defensabilidade:
+
+**Dados históricos acumulados** — nenhum entrante tem acesso ao histórico de preços que acumulamos. Um ano de dados vale mais que um. Cinco anos valem exponencialmente mais.
+
+**Confiança de lojistas** — um lojista que integra seu catálogo, recebe análises, monitora sua reputação e usa o Merchant OS tem custo de troca alto. Não é locked-in por contrato — é locked-in por valor real.
+
+**Inteligência contextual** — o Brain é treinado com dados locais específicos da Tríplice Fronteira. Não é replicável com dados genéricos.
+
+**Reputação verificável** — o sistema de verificação de lojas cria uma marca de confiança que novos entrantes precisam de anos para construir.
+
+### Implicações para o produto
+
+O efeito de rede define a ordem de prioridade de desenvolvimento:
+
+1. **Cobertura de catálogo** é mais urgente do que profundidade de feature. Um comprador que não encontra o produto que procura vai embora — e talvez não volte.
+2. **Retenção de lojistas** é mais valiosa do que aquisição. Um lojista que sai leva seu catálogo e impacta negativamente a cobertura.
+3. **Qualidade de dados** é mais importante que velocidade de indexação. Um produto com preço errado quebra a confiança de ambos os lados.
+4. **Densidade local** precede expansão geográfica. Ciudad del Este com 200 lojas indexadas é mais valioso que Ciudad del Este + Assunção com 50 cada.
+
+---
+
+## XI. Engenharia
 
 ### Princípios permanentes de arquitetura
 
@@ -232,12 +364,16 @@ Toda alteração de dado importante tem exatamente um ponto de entrada no sistem
 
 ### Escalabilidade
 
+**Toda implementação deve funcionar hoje e ser pensada para milhões.**  
+Não "escalar prematuramente" não significa ignorar escala — significa não otimizar o que não é gargalo. Mas significa também nunca construir algo que, por design, não possa escalar. A diferença entre uma query O(1) e O(N) é uma decisão de design, não de otimização posterior.
+
 Decisões de design que determinam escalabilidade:
 
 - **Queries ao banco devem ser O(1) em relação ao volume de dados**, não O(N). Agregações, filtros e paginação pertencem ao banco, não à memória da aplicação.
 - **Desacoplamento entre aquisição e apresentação.** O pipeline de importação de dados é independente da aplicação de consumo. Um pode evoluir sem bloquear o outro.
 - **Idempotência em operações em lote.** Qualquer operação que processa múltiplos itens deve ser segura para reexecução parcial.
 - **Automação substituível.** Qualquer conector de dados pode ser substituído sem alterar o pipeline. O contrato de entrada é o que importa, não a implementação.
+- **Dados nunca são apagados, apenas desativados.** Registros históricos têm valor crescente. A exclusão permanente é uma exceção que requer justificativa, não o comportamento padrão.
 
 ### Qualidade
 
@@ -273,7 +409,7 @@ Testar com credenciais privilegiadas quando o sistema usa credenciais públicas 
 
 ---
 
-## X. Produto
+## XII. Produto
 
 ### Princípios de UX
 
@@ -307,23 +443,13 @@ Cores, espaçamentos, tipografia e estilos de interação são tokens, não repe
 
 ---
 
-## XI. Negócio
+## XIII. Negócio
 
 ### Crescimento
 
-O crescimento do ParaguAI é fundamentalmente de efeito de rede. Mais lojas atraem mais compradores. Mais compradores atraem mais lojas. Mais dados de ambos os lados melhoram a inteligência, que aumenta o valor percebido por ambos os lados.
+O crescimento do ParaguAI é fundamentalmente de efeito de rede — tratado em profundidade na Seção X. As decisões de negócio derivam diretamente desse mecanismo.
 
-A consequência direta: as primeiras 100 lojas e os primeiros 10.000 usuários têm impacto desproporcional. A densidade inicial determina se o efeito de rede ignita ou não.
-
-### Efeito de rede
-
-O ParaguAI opera um efeito de rede de dois lados com uma terceira camada de dados:
-
-- **Lado do comprador**: mais compradores → mais dados de comportamento → melhores recomendações → mais valor para cada comprador.
-- **Lado do lojista**: mais lojas → mais produtos → melhor cobertura de catálogo → mais valor para compradores → mais lojas.
-- **Camada de dados**: cada busca, clique e comparação melhora os modelos, que aumentam o valor de ambos os lados.
-
-A plataforma não cresce linearmente. Cresce exponencialmente quando ambos os lados são servidos bem simultaneamente.
+A consequência direta: as primeiras 100 lojas e os primeiros 10.000 usuários têm impacto desproporcional. A densidade inicial determina se o efeito de rede ignita ou não. Qualquer decisão de produto ou comercial que comprometa a qualidade da experiência para acelerar a quantidade de lojas ou usuários é uma decisão que destrói o flywheel.
 
 ### Monetização
 
@@ -336,30 +462,60 @@ Princípios permanentes de monetização:
 - A diferença entre planos é de capacidade e inteligência, não de acesso fundamental. Um merchant no plano básico acessa seus dados; um merchant no plano avançado acessa seus dados mais os do mercado.
 - Cobrança só começa quando o valor entregue é verificável. Planos pagos precedem métricas de resultado — o produto prova valor antes de cobrar por ele.
 
+### Expansão
+
+A expansão geográfica segue densidade, não ambição. Entrar em Assunção antes de Ciudad del Este ter cobertura robusta dilui o flywheel sem criar um novo. Cada mercado novo deve ser tratado como uma ignição de efeito de rede independente — com massa crítica de lojas antes do lançamento público.
+
 ---
 
-## XII. Autonomia
+## XIV. Moat
+
+**Por que o ParaguAI será extremamente difícil de copiar.**
+
+A resposta não é tecnologia. Tecnologia é replicável. O moat real do ParaguAI é composto por cinco camadas que se reforçam mutuamente:
+
+**1. Dados históricos irreplicáveis**  
+O histórico de preços, comportamento de compradores, padrões sazonais e reputação de lojas que acumulamos não pode ser comprado nem recriado retroativamente. Cada dia que passa, nossa vantagem em dados cresce. Um concorrente que entrar em 2028 começará sem os dados de 2026 e 2027.
+
+**2. Efeito de rede de dois lados com camada de dados**  
+Plataformas de efeito de rede de dois lados já são difíceis de competir. O ParaguAI adiciona uma terceira camada — dados — que se torna mais valiosa com cada interação de ambos os lados. O entrante não apenas precisa de lojas E compradores — precisa também dos dados acumulados que tornam a experiência superior.
+
+**3. Inteligência contextual não-genérica**  
+O ParaguAI Brain é treinado com dados específicos da Tríplice Fronteira: preços locais, comportamento de compradores brasileiros, sazonalidade do comércio fronteiriço, catálogos de lojas paraguaias. Modelos de IA genéricos não têm esse contexto. Replicar nossa inteligência requer replicar nossos dados — que são o item 1 desta lista.
+
+**4. Confiança acumulada**  
+Confiança não é transferível e não é rápida de construir. Lojas verificadas, scores de reputação com histórico, compradores que tomaram boas decisões baseadas nos nossos dados — esses são ativos de confiança que um concorrente novo não possui. A confiança do comprador na plataforma e do lojista no Merchant OS são barreiras de troca reais.
+
+**5. Custo de troca do lojista**  
+Um lojista com catálogo integrado, histórico de importações, análises de performance e reputação pública construída no ParaguAI tem custo de troca alto. Não por lock-in contratual — por custo real de recriar valor. Isso é um moat legítimo e ético: construído sobre valor entregue, não sobre aprisionamento.
+
+**O que não é moat**  
+Tecnologia, design, domínio e nome de marca são facilmente replicáveis com recursos. Não contamos com eles como diferenciação competitiva permanente. Contamos com o que não pode ser comprado: dados, rede, confiança, tempo e conhecimento acumulado.
+
+---
+
+## XV. Autonomia
 
 À medida que a plataforma amadurece, mais decisões são tomadas pelo sistema, não por humanos.
 
 ### Graus de autonomia
 
 **Automação total, sem revisão humana**:  
-Recálculo de scores de reputação, atualização de métricas agregadas, envio de alertas de preço a usuários que os solicitaram, geração de relatórios de performance para merchants.
+Recálculo de scores de reputação, atualização de métricas agregadas, envio de alertas de preço a usuários que os solicitaram, geração de relatórios de performance para merchants, detecção de anomalias de preço, recálculo de rankings.
 
 **Automação com revisão**:  
-Publicação de novos produtos oriundos de crawlers (validação automática, publicação após intervalo de revisão configurável), alterações de dados mestre como nome de produto, categoria ou marca vindas de fontes externas.
+Publicação de novos produtos oriundos de crawlers (validação automática, publicação após intervalo de revisão configurável), alterações de dados mestre como nome de produto, categoria ou marca vindas de fontes externas, moderação de avaliações com patterns conhecidos.
 
 **Aprovação obrigatória, sempre**:  
-Alterações de schema de banco de dados, escrita em produção por processos novos não validados, ações que afetam múltiplos merchants ou usuários de forma irrecuperável, integração com sistemas externos de pagamento ou dados financeiros.
+Alterações de schema de banco de dados, escrita em produção por processos novos não validados, ações que afetam múltiplos merchants ou usuários de forma irrecuperável, integração com sistemas externos de pagamento ou dados financeiros, exclusão permanente de dados.
 
 O aumento de autonomia do sistema segue o aumento de confiança nos dados e nos modelos. Autonomia não é delegação cega — é confiança construída sobre histórico verificável.
 
 ---
 
-## XIII. Regras Permanentes
+## XVI. Regras Permanentes
 
-As seguintes regras não têm exceção contextual. Se uma exceção parecer necessária, a regra deve ser revisada formalmente e versionada — não contornada.
+As seguintes regras não têm exceção contextual. Se uma exceção parecer necessária, a regra deve ser revisada formalmente e versionada — não contornada silenciosamente.
 
 1. **Schema de banco de dados não muda sem aprovação explícita.** Nenhum processo automatizado executa alterações estruturais em produção.
 
@@ -385,9 +541,13 @@ As seguintes regras não têm exceção contextual. Se uma exceção parecer nec
 
 12. **Toda decisão arquitetural é documentada no momento em que é tomada.** Decisões não documentadas se repetem com as mesmas análises e os mesmos erros.
 
+13. **Toda funcionalidade nova deve produzir dados reutilizáveis.** Uma feature que resolve um problema sem gerar conhecimento para futuras decisões é uma feature com retorno zero sobre o investimento de longo prazo.
+
+14. **Dados históricos não são apagados sem justificativa explícita e aprovação.** O valor de dados cresce com o tempo. A exclusão permanente é irreversível.
+
 ---
 
-## XIV. Processo de Desenvolvimento
+## XVII. Processo de Desenvolvimento
 
 ### Como cada Release é planejada
 
@@ -396,7 +556,8 @@ Cada Release responde, nesta ordem:
 1. **O que está quebrado ou incompleto?** Nenhuma Release começa sem garantir que a anterior não tem débito técnico crítico aberto.
 2. **O que o usuário não consegue fazer hoje que deveria conseguir?** Releases são definidas pela lacuna de valor, não pela lista de features desejadas.
 3. **O que a infraestrutura ainda não suporta?** Features visíveis dependem de fundação invisível. A fundação é construída antes da feature.
-4. **Qual é o critério de aceitação verificável?** Toda Release tem um conjunto de afirmações verificáveis que, quando todas passam, declaram a Release completa.
+4. **Qual ativo este Release produz ou fortalece?** Toda Release deve avançar pelo menos um dos ativos estratégicos listados na Seção VII.
+5. **Qual é o critério de aceitação verificável?** Toda Release tem um conjunto de afirmações verificáveis que, quando todas passam, declaram a Release completa.
 
 ### O que uma Release NÃO é
 
@@ -423,6 +584,7 @@ Uma tarefa está concluída quando:
 - O código funciona com dados reais
 - Os tipos estão corretos e refletem o schema real
 - A arquitetura foi respeitada (sem bypass de camadas)
+- A funcionalidade produz dados reutilizáveis quando aplicável
 - A documentação foi atualizada
 - Não há regressão introduzida
 - O projeto compila, passa typecheck e passa lint
@@ -431,7 +593,7 @@ Qualquer um desses critérios não atendido significa que a tarefa não está co
 
 ---
 
-## XV. Critério de Aceitação
+## XVIII. Critério de Aceitação
 
 Toda funcionalidade nova deve responder afirmativamente a todas estas perguntas antes de entrar em produção:
 
@@ -440,6 +602,12 @@ Toda funcionalidade nova deve responder afirmativamente a todas estas perguntas 
 - Para qual usuário específico esta funcionalidade existe?
 - O que este usuário consegue fazer agora que não conseguia antes?
 - Existe evidência de que este usuário quer isso?
+
+### Ativo
+
+- Esta funcionalidade fortalece ou cria um ativo estratégico (Seção VII)?
+- Ela produz dados que outros módulos poderão consumir?
+- Se for removida amanhã, o ParaguAI perde capacidade de aprendizado?
 
 ### Completude
 
@@ -481,7 +649,7 @@ Qualquer "não" nesta lista é um bloqueador — não um item de backlog.
 
 ---
 
-## XVI. Hierarquia de documentos
+## XIX. Hierarquia de documentos
 
 Quando este documento conflitar com outro, a hierarquia é:
 
@@ -501,6 +669,7 @@ Documentos de estado (PROJECT_STATUS, ARCHITECTURE, CHANGELOG) refletem o que é
 | Versão | Data | Autor | Descrição |
 |---|---|---|---|
 | 1.0 | 2026-06-27 | Daniel Gonçalves (CTO) | Versão inicial — síntese de ADR-001 a ADR-032, ROADMAP.md, ARCHITECTURE.md, DOMAIN_MODEL.md, DECISIONS.md e todo o histórico de sprints do projeto |
+| 1.1 | 2026-06-27 | Daniel Gonçalves (CTO) | Revisão estratégica: Identidade reformulada (Inteligência Operacional da Tríplice Fronteira), nova seção VII (Ativos), nova seção X (Efeito de Rede / Flywheel), nova seção XIV (Moat), fortalecimento de IA (Brain), Missão, Automação, Escalabilidade, Organismo Vivo. 2 novas Regras Permanentes. Total: 19 seções vs. 16 na v1.0. |
 
 ---
 

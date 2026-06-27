@@ -2,6 +2,14 @@
 
 Reconstruído a partir do histórico real de commits (`git log`) e do estado atual do código. Formato: data, commit, o que mudou de fato (verificado no diff/estado resultante, não só na mensagem).
 
+## 2026-06-27 — Foundation 0.1.1 — Revisão Estratégica da AI_CONSTITUTION.md
+
+Revisão estratégica de alto nível da Constituição do ParaguAI. Não altera funcionalidades — eleva a visão e adiciona capítulos estratégicos ausentes na v1.0.
+
+- **`docs/AI_CONSTITUTION.md`** (revisado — v1.0 → v1.1): 3 novos capítulos, 19 seções totais (vs. 16 na v1.0). Nova Identidade: "Inteligência Operacional da Tríplice Fronteira". Organismo Vivo adicionado à Seção V. Nova Seção VII (Ativos): "O ParaguAI não desenvolve funcionalidades — desenvolve ativos." Efeito de Rede elevado a capítulo dedicado (Seção X) com Flywheel completo. ParaguAI Brain expandido (Seção IX). Moat explicitado como capítulo próprio (Seção XIV). 14 Regras Permanentes (antes 12). Missão reformulada em torno de assimetria de informação. Turismo e infraestrutura regional na Visão 2030. Tom CTO/CPO/CAI.
+
+**Princípio adicionado**: toda funcionalidade nova deve produzir dados reutilizáveis. Uma feature que não gera conhecimento tem retorno zero de longo prazo.
+
 ## 2026-06-27 — Foundation 0.1 — AI_CONSTITUTION.md
 
 Pausa completa no desenvolvimento de funcionalidades para criação da documentação permanente do projeto.

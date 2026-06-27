@@ -2,10 +2,12 @@
 
 Auditoria gerada por leitura completa do código-fonte. Substitui o conteúdo anterior deste arquivo.
 
-Última atualização: 2026-06-27 (Foundation 0.1 — AI_CONSTITUTION.md)
-Branch auditada: `main` — Release 1.4 + Foundation Documents completos
+Última atualização: 2026-06-27 (Foundation 0.1.1 — Revisão Estratégica da AI_CONSTITUTION.md)
+Branch auditada: `main` — Release 1.4 + Foundation Documents v1.1 completos
 
-> ✅ **Foundation 0.1 — AI_CONSTITUTION.md (2026-06-27)**: Constituição permanente do projeto criada em `docs/AI_CONSTITUTION.md`. `CLAUDE.md` atualizado com prioridade de leitura. `MASTER_ROADMAP.md` expandido com seção Foundation Documents e fases estratégicas. 15 seções: Identidade, Missão, Visão 2030, North Star, Filosofia, Dados, Automação, IA, Engenharia, Produto, Negócio, Autonomia, Regras Permanentes (12 regras), Processo de Desenvolvimento, Critério de Aceitação.
+> ✅ **Foundation 0.1.1 — Revisão Estratégica da AI_CONSTITUTION.md (2026-06-27)**: `docs/AI_CONSTITUTION.md` revisado de v1.0 para v1.1. 3 novos capítulos: VII. Ativos, X. Efeito de Rede (Flywheel), XIV. Moat. Identidade reformulada: "Inteligência Operacional da Tríplice Fronteira". Organismo Vivo na Filosofia. ParaguAI Brain expandido. 14 Regras Permanentes (era 12). Missão: assimetria de informação. Total: 19 seções vs. 16 na v1.0.
+>
+> ✅ **Foundation 0.1 — AI_CONSTITUTION.md (2026-06-27)**: Constituição permanente do projeto criada em `docs/AI_CONSTITUTION.md`. `CLAUDE.md` atualizado com prioridade de leitura. `MASTER_ROADMAP.md` expandido com seção Foundation Documents e fases estratégicas. 16 seções: Identidade, Missão, Visão 2030, North Star, Filosofia, Dados, Automação, IA, Engenharia, Produto, Negócio, Autonomia, Regras Permanentes (12 regras), Processo de Desenvolvimento, Critério de Aceitação, Hierarquia de Documentos.
 >
 > ✅ **Release 1.4 — Merchant Growth Platform (2026-06-27)**: 10 módulos. Novos: `/lojas` ranking, `/lojas/[slug]` página pública premium, `MerchantProgressCard`, `GoalsPanel` expandido com 10 missões, `stores-public.service.ts` (service role). SEO: `/lojas` e `/lojas/[slug]` no sitemap. Navbar: "Lojas" adicionado. ADR-029 a ADR-032. Build: 67 rotas, lint 0, tsc 0.
 >
