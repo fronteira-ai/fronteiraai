@@ -7,6 +7,7 @@ import {
   getMerchantLevel,
   computeNextStep,
   computeGoals,
+  computeProfileCompletion,
 } from "@/services/merchant.service";
 
 export async function GET() {
@@ -41,6 +42,7 @@ export async function GET() {
     const level = getMerchantLevel(score.total);
     const nextStep = computeNextStep(merchant, mergedStats);
     const goals = computeGoals(merchant, mergedStats);
+    const profileCompletion = computeProfileCompletion(merchant, mergedStats);
 
     return NextResponse.json({
       data: {
@@ -49,6 +51,7 @@ export async function GET() {
         level,
         nextStep,
         goals,
+        profileCompletion,
         recommendations: recs ?? [],
         merchant: {
           id: merchant.id,

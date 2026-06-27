@@ -1,0 +1,113 @@
+// Server-only service — uses service role key.
+// Only call from server components, route handlers, or server actions.
+
+import { getSupabaseServiceClient } from "@/lib/supabase/service";
+import type { Store } from "@/types/store";
+
+export interface StorePublicData extends Store {
+  merchantScore: number | null;
+  verifiedLevel: string | null;
+  offerCount: number;
+  productCount: number;
+}
+
+export async function getStorePublic(slug: string): Promise<StorePublicData | null> {
+  const sc = getSupabaseServiceClient();
+
+  const { data: storeData, error } = await sc
+    .from("stores")
+    .select("*")
+    .eq("slug", slug)
+    .single();
+
+  if (error || !storeData) return null;
+  const store = storeData as Store;
+
+  const [merchantLink, offerCountResult, offerProductsResult] = await Promise.all([
+    sc.from("merchant_stores")
+      .select("merchants!inner(merchant_score, verified_level)")
+      .eq("store_id", store.id)
+      .limit(1)
+      .maybeSingle(),
+    sc.from("offers")
+      .select("id", { count: "exact", head: true })
+      .eq("store_id", store.id),
+    sc.from("offers")
+      .select("product_id")
+      .eq("store_id", store.id),
+  ]);
+
+  type MerchantFields = { merchant_score: number; verified_level: string };
+  const merchantData = (merchantLink.data?.merchants as unknown as MerchantFields | null) ?? null;
+
+  const uniqueProducts = new Set(
+    ((offerProductsResult.data ?? []) as { product_id: string }[]).map((o) => o.product_id)
+  );
+
+  return {
+    ...store,
+    merchantScore: merchantData?.merchant_score ?? null,
+    verifiedLevel: merchantData?.verified_level ?? null,
+    offerCount: offerCountResult.count ?? 0,
+    productCount: uniqueProducts.size,
+  };
+}
+
+export async function getStoresRanking(limit = 30): Promise<StorePublicData[]> {
+  const sc = getSupabaseServiceClient();
+
+  let storeRows = await sc
+    .from("stores")
+    .select("*")
+    .eq("active", true)
+    .order("rating", { ascending: false })
+    .limit(limit);
+
+  // Fallback: some stores may not have active=true set yet
+  if (storeRows.error || !storeRows.data?.length) {
+    storeRows = await sc
+      .from("stores")
+      .select("*")
+      .order("rating", { ascending: false })
+      .limit(limit);
+  }
+
+  if (!storeRows.data?.length) return [];
+  const stores = storeRows.data as Store[];
+  const storeIds = stores.map((s) => s.id);
+
+  const [merchantLinks, offerData] = await Promise.all([
+    sc.from("merchant_stores")
+      .select("store_id, merchants!inner(merchant_score, verified_level)")
+      .in("store_id", storeIds),
+    sc.from("offers")
+      .select("store_id")
+      .in("store_id", storeIds),
+  ]);
+
+  type LinkRow = { store_id: string; merchants: { merchant_score: number; verified_level: string } };
+  const merchantMap = new Map<string, { merchant_score: number; verified_level: string }>();
+  ((merchantLinks.data ?? []) as unknown as LinkRow[]).forEach((link) =>
+    merchantMap.set(link.store_id, link.merchants)
+  );
+
+  const countMap = new Map<string, number>();
+  ((offerData.data ?? []) as { store_id: string }[]).forEach((o) =>
+    countMap.set(o.store_id, (countMap.get(o.store_id) ?? 0) + 1)
+  );
+
+  const result = stores.map((store) => ({
+    ...store,
+    merchantScore: merchantMap.get(store.id)?.merchant_score ?? null,
+    verifiedLevel: merchantMap.get(store.id)?.verified_level ?? null,
+    offerCount: countMap.get(store.id) ?? 0,
+    productCount: 0,
+  }));
+
+  // Sort by merchant score desc, then by offer count desc, then by rating desc
+  return result.sort((a, b) => {
+    if ((b.merchantScore ?? 0) !== (a.merchantScore ?? 0)) return (b.merchantScore ?? 0) - (a.merchantScore ?? 0);
+    if (b.offerCount !== a.offerCount) return b.offerCount - a.offerCount;
+    return (b.rating ?? 0) - (a.rating ?? 0);
+  });
+}

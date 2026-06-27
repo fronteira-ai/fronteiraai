@@ -635,3 +635,65 @@ Utilitário `utils/storage.ts` exporta `catalogStorage.*` (builders de URL tipad
 **Alternativas descartadas**:
 - Enum hardcoded no código — impede alteração de planos sem deploy.
 - Integração com Stripe nesta release — prematura; validar modelo de planos com usuários reais primeiro.
+
+---
+
+## ADR-029 — Páginas públicas `/lojas` usam service role para enriquecer dados de merchant
+
+**Data**: 2026-06-27 (Release 1.4)
+**Status**: Aceita
+
+**Contexto**: A tabela `merchants` tem RLS que permite leitura apenas ao próprio usuário (`auth.uid() = user_id`). As páginas públicas `/lojas` e `/lojas/[slug]` precisam exibir `merchant_score` e `verified_level` para compradores anônimos.
+
+**Decisão**: Criar `services/stores-public.service.ts` com as funções `getStorePublic(slug)` e `getStoresRanking(limit)` — ambas usam `getSupabaseServiceClient()` (service role) via import server-only. As funções só são chamadas a partir de Server Components (`app/lojas/page.tsx`, `app/lojas/[slug]/page.tsx`), nunca de client components ou do browser. Os dados públicos expostos são limitados a: `merchant_score`, `verified_level` — sem dados privados (user_id, e-mail, telefone interno, etc.).
+
+**Alternativas descartadas**:
+- Criar policy pública de leitura em `merchants` — exporia dados de contato e user_id ao anon.
+- Denormalizar score/verified em `stores` — duplicação de dados; inconsistência quando score muda.
+
+**Consequência**: `stores-public.service.ts` nunca deve ser importado por client components. Qualquer dado de merchant em páginas públicas deve passar por este serviço.
+
+---
+
+## ADR-030 — Merchant Progress Engine: completude computada on-demand, sem coluna nova
+
+**Data**: 2026-06-27 (Release 1.4)
+**Status**: Aceita
+
+**Contexto**: O Module 1 do Release 1.4 exige um tracker de completude de perfil (%) para o dashboard do lojista.
+
+**Decisão**: `computeProfileCompletion(merchant, stats)` é uma função pura em `services/merchant.service.ts` que retorna `MerchantProfileCompletion` sem tocar o banco. Os 7 critérios checados são: `company_name`, `contact_phone`, `contact_whatsapp`, `company_website`, `totalStores > 0`, `lastImportAt !== null`, `verified_level !== "none"`. O resultado é incluído no payload de `/api/merchant/dashboard/stats` e renderizado por `MerchantProgressCard`.
+
+**Alternativas descartadas**:
+- Coluna `profile_completion_pct` na tabela `merchants` — overhead de UPDATE a cada mudança; o cálculo é instantâneo e barato, não merece persistência.
+- Endpoint separado — adiciona latência e round-trip; o dado é suficientemente barato para ir junto com os stats.
+
+---
+
+## ADR-031 — Reputation Center: arquitetura sem reviews públicos (Release 1.4)
+
+**Data**: 2026-06-27 (Release 1.4)
+**Status**: Aceita
+
+**Contexto**: Reviews de compradores não existem ainda (tabela `reviews` não criada). O Release 1.4 pede "arquitetura de reputação" sem reviews públicos.
+
+**Decisão**: A reputação pública da loja é derivada de dados já existentes: `Merchant Score` (calculado por `computeMerchantScore`), `verified_level` (badge), `store.rating` (campo já na tabela `stores`), e `offerCount`/`productCount` (contados via query). Não há nova tabela. O `MerchantBadge` exibido em `/lojas/[slug]` e `/lojas` consolida esses sinais visualmente.
+
+A tabela `reviews` será criada no Release 1.5 junto com o sistema de moderação. O campo `store.rating` permanece como fonte de dados até lá.
+
+**Consequência**: qualquer feature que exiba "avaliação de compradores" deve verificar se a tabela `reviews` existe antes de fazer query.
+
+---
+
+## ADR-032 — Analytics Events: tabela `merchant_analytics_events` como write-only nesta fase
+
+**Data**: 2026-06-27 (Release 1.4)
+**Status**: Aceita
+
+**Contexto**: O Module 8 do Release 1.4 pede estrutura de analytics (clicks, views, conversions). A tabela `merchant_analytics_events` já existe (migration 0012).
+
+**Decisão**: O Release 1.4 não implementa tracking de eventos de compradores — apenas documenta a arquitetura. Qualquer evento (view_store, view_offer, click_whatsapp, etc.) deve ser registrado via `logAuditEvent()` adaptado, ou via um futuro endpoint `/api/merchant/analytics/track` usando a tabela existente. A página `/merchant/analytics` continua como stub. A razão: sem volume de dados real, não há como validar dashboards de analytics — construí-los agora seria over-engineering.
+
+**Alternativas descartadas**:
+- Usar posthog/mixpanel — custo e dependência externa antes de validar o modelo; a tabela própria é suficiente para 10k merchants no curto prazo.
+- Implementar dashboard de analytics agora — prematura sem eventos reais.

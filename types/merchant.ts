@@ -129,6 +129,21 @@ export interface NextStep {
   estimatedMinutes: number;
 }
 
+// Profile completion (Module 1 — Merchant Progress Engine)
+export interface ProfileCompletionItem {
+  id: string;
+  label: string;
+  done: boolean;
+  href: string;
+}
+
+export interface MerchantProfileCompletion {
+  percentage: number;
+  doneCount: number;
+  totalCount: number;
+  items: ProfileCompletionItem[];
+}
+
 // Growth goal with progress
 export interface MerchantGoal {
   id: string;

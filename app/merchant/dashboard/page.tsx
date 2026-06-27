@@ -7,6 +7,7 @@ import { ScoreCard } from "@/components/merchant/dashboard/ScoreCard";
 import { RecommendationsPanel } from "@/components/merchant/dashboard/RecommendationsPanel";
 import { NextStepCard } from "@/components/merchant/dashboard/NextStepCard";
 import { GoalsPanel } from "@/components/merchant/dashboard/GoalsPanel";
+import { MerchantProgressCard } from "@/components/merchant/dashboard/MerchantProgressCard";
 import type {
   MerchantDashboardStats,
   MerchantScoreBreakdown,
@@ -14,6 +15,7 @@ import type {
   MerchantLevel,
   NextStep,
   MerchantGoal,
+  MerchantProfileCompletion,
 } from "@/types/merchant";
 import { RefreshCw, Upload, Clock, AlertCircle, Settings } from "lucide-react";
 
@@ -23,6 +25,7 @@ interface DashboardData {
   level: MerchantLevel;
   nextStep: NextStep;
   goals: MerchantGoal[];
+  profileCompletion: MerchantProfileCompletion;
   recommendations: MerchantRecommendation[];
   merchant: {
     id: string;
@@ -276,10 +279,11 @@ export default function MerchantDashboardPage() {
                 {/* Stats */}
                 <StatsGrid stats={data.stats} />
 
-                {/* Score + Goals */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+                {/* Score + Goals + Progress */}
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
                   <ScoreCard score={data.scoreBreakdown} level={data.level} />
                   <GoalsPanel goals={data.goals} />
+                  <MerchantProgressCard completion={data.profileCompletion} />
                 </div>
 
                 {/* Growth Insights */}

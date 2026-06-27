@@ -738,3 +738,76 @@ Release exclusivamente de UX, navegação e branding. Nenhuma funcionalidade do 
 **Branding**: toda referência user-facing usa "Área do Lojista", "Painel do Lojista", "Central do Lojista". Nunca "Merchant Portal".
 
 **Validações**: lint 0, tsc 0, build OK (64 rotas — + `/para-lojistas`). Fluxo Home → Lojista → Dashboard intacto.
+
+---
+
+## 2026-06-27 — Release 1.4 — Merchant Growth Platform
+
+Transforma o Merchant OS em plataforma de crescimento. 10 módulos implementados ou arquitetados.
+
+### Module 1 — Merchant Progress Engine
+
+**`types/merchant.ts`**: novos tipos `ProfileCompletionItem` e `MerchantProfileCompletion`.
+
+**`services/merchant.service.ts`**: função pura `computeProfileCompletion(merchant, stats)` — 7 critérios (company_name, contact_phone, contact_whatsapp, company_website, loja vinculada, primeira importação, verificação). Retorna percentual, contagens e lista de itens com links de ação.
+
+**`components/merchant/dashboard/MerchantProgressCard.tsx`** (NOVO): barra de progresso colorida por faixa (azul <60%, amarelo 60-99%, verde 100%), checklist de itens pendentes com link direto para cada configuração.
+
+### Module 2 — Missions (GoalsPanel expandido)
+
+**`services/merchant.service.ts`** → `computeGoals`: adicionadas missões `products_500`, `score_80`, `score_100`, `profile_complete`. Substituído `score_70 → score_80` para alinhar com o spec (Merchant Score 80 e 100 como milestones principais).
+
+### Module 3 — Dashboard Intelligent
+
+`NextStepCard` já implementado no Release 1.3. Sem alterações.
+
+### Module 4 — Public Store Pages (`/lojas/[slug]`)
+
+**`services/stores-public.service.ts`** (NOVO): `getStorePublic(slug)` e `getStoresRanking(limit)` — service role server-only, retorna dados de loja + merchant (score, verifiedLevel) + contagens de oferta/produto. Ver ADR-029.
+
+**`app/lojas/[slug]/page.tsx`** (NOVO): página pública premium por loja. Hero banner + logo + badges (Verificada, Merchant Score), stats grid (ofertas, produtos, avaliação, score), sobre a loja, contato completo (telefone, WhatsApp, Instagram, site, e-mail, endereço, horário), serviços (entrega, retirada, Pix), ofertas reais via `StoreOffers`, lojas relacionadas. JSON-LD `LocalBusiness` embutido. `generateMetadata` com OG/Twitter por loja.
+
+**`app/lojas/[slug]/loading.tsx`** e **`not-found.tsx`** (NOVOs): skeleton animado e 404 com CTAs.
+
+### Module 5 — Reputation Center
+
+Arquitetura documentada via ADR-031. A reputação é derivada de `merchant_score` + `verified_level` + `store.rating`. Tabela `reviews` para Release 1.5.
+
+### Module 6 — Store Ranking (`/lojas`)
+
+**`app/lojas/page.tsx`** (NOVO): ranking de até 30 lojas, ordenado por Merchant Score → offerCount → rating. Cards com cover image, #rank badge, score badge, verified badge, descrição, contagem de ofertas. CTA para cadastro de lojistas. SEO completo (metadata, canonical, OG, Twitter).
+
+### Module 7 — Commercial Plan Architecture
+
+Arquitetura já documentada via ADR-028 (Release 1.2). Tabela `merchant_plans` com seed. Sem alteração nesta release.
+
+### Module 8 — Analytics Structure
+
+Arquitetura documentada via ADR-032. Tabela `merchant_analytics_events` existe (migration 0012). Dashboard `/merchant/analytics` permanece stub. Tracking será implementado no Release 1.5.
+
+### Module 9 — UX Improvements
+
+**`components/layout/Navbar.tsx`**: item "Lojas" adicionado ao menu (entre Produtos e Buscar). Item "IA" removido (hash link sem página real — noise de navegação).
+
+**`app/merchant/dashboard/page.tsx`**: grade ScoreCard + GoalsPanel + MerchantProgressCard em 3 colunas (era 2 colunas ScoreCard + GoalsPanel). Layout mais rico sem aumentar rolagem.
+
+**`components/layout/Footer.tsx`**: "Lojas" no coluna Plataforma agora link real (`/lojas`), antes "em breve".
+
+### Module 10 — Commercial SEO
+
+**`app/sitemap.ts`**: adicionadas `/lojas` (priority 0.9), `/para-lojistas` (priority 0.8), e rotas dinâmicas `/lojas/[slug]` (priority 0.85) — via `getStoresRanking(100)`.
+
+`/lojas/[slug]/page.tsx` tem `generateMetadata` com canonical, OG, Twitter, JSON-LD `LocalBusiness` (schema.org) por loja.
+
+### ADRs
+
+- ADR-029: Páginas públicas `/lojas` usam service role para dados de merchant
+- ADR-030: Merchant Progress Engine computado on-demand
+- ADR-031: Reputation Center — arquitetura sem reviews (Release 1.5)
+- ADR-032: Analytics Events — write-only nesta fase
+
+### Validações
+
+- `npm run lint` → 0 erros, 0 warnings
+- `npx tsc --noEmit` → 0 erros
+- `npm run build` → OK, 67 rotas (`/lojas`, `/lojas/[slug]`, `/para-lojistas` + 64 anteriores)

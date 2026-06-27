@@ -2,8 +2,16 @@
 
 Auditoria gerada por leitura completa do código-fonte. Substitui o conteúdo anterior deste arquivo.
 
-Última atualização: 2026-06-26 (Release 0.9 — Acquisition Engine aplicado)
-Branch auditada: `main` — Release 0.9 completo
+Última atualização: 2026-06-27 (Release 1.4 — Merchant Growth Platform)
+Branch auditada: `main` — Release 1.4 completo
+
+> ✅ **Release 1.4 — Merchant Growth Platform (2026-06-27)**: 10 módulos. Novos: `/lojas` ranking, `/lojas/[slug]` página pública premium, `MerchantProgressCard`, `GoalsPanel` expandido com 10 missões, `stores-public.service.ts` (service role). SEO: `/lojas` e `/lojas/[slug]` no sitemap. Navbar: "Lojas" adicionado. ADR-029 a ADR-032. Build: 67 rotas, lint 0, tsc 0.
+>
+> ✅ **Release 1.3.1 — ParaguAI Experience Integration (2026-06-27)**: `HeroCTAs`, `ForLojistasSection`, `/para-lojistas`, "Para Lojistas" no Navbar/Footer. Build: 64 rotas.
+>
+> ✅ **Release 1.3 — Dashboard Consultivo (2026-06-27)**: `NextStepCard`, `GoalsPanel`, 6 níveis de Merchant, `computeNextStep`/`computeGoals`/`getMerchantLevel`.
+>
+> ✅ **Release 1.2 — Merchant OS (2026-06-26)**: portal self-service completo, 10 endpoints, 11 rotas, migration 0012.
 
 > ✅ **Release 0.9 — Acquisition Engine (2026-06-26)**: pipeline universal de aquisição de dados implementado. Engines: Validation, Normalization, Deduplication, Canonical, Media, CatalogWriter. Parsers: JSON e CSV (RFC 4180). Conectores de referência: JsonFileConnector, CsvFileConnector. 33/33 asserções do validate-pipeline OK. Dry-run de import JSON e CSV: 4/4 itens por run, 0 erros. Lint: 0. TypeScript: 0. Build: sucesso. A partir desta Release, adicionar uma nova loja exige apenas implementar um novo conector.
 >
@@ -82,13 +90,19 @@ Nenhuma nesta auditoria — `ProductGrid.tsx` (única pendência apontada na aud
 
 | Rota | Tipo | Status |
 |---|---|---|
-| `/` | Server Component (`force-dynamic`) | **ADR-019 encerrado**: dados reais em todos os domínios (stores, brands, categories, products) |
+| `/` | Server Component (`force-dynamic`) | Dados reais, ForLojistasSection, HeroCTAs auth-aware |
 | `/search` | Server Component (com `<Suspense>`) | Completa, integrada ao Supabase |
 | `/products` | Server Component (com `<Suspense>`) | Completa, integrada ao Supabase |
-| `/product/[slug]` | **Server Component** + Server layout | **Sprint 4.1**: double-fetch eliminado; botão "Comparar preços" |
-| `/store/[slug]` | **Server Component** + Server layout | **Sprint 4.1**: double-fetch eliminado |
-| `/compare/[slug]` | Server Component | Sprint 4.0, integrada ao Supabase |
-| `/api/compare` | Route Handler | Sprint 4.0, integrada ao Supabase |
+| `/product/[slug]` | Server Component + Server layout | Double-fetch eliminado; botão "Comparar preços" |
+| `/store/[slug]` | Server Component + Server layout | Double-fetch eliminado |
+| `/compare/[slug]` | Server Component | Integrada ao Supabase |
+| `/lojas` | Server Component (`force-dynamic`) | **Release 1.4**: ranking de lojas com Merchant Score, SEO completo |
+| `/lojas/[slug]` | Server Component (`force-dynamic`) | **Release 1.4**: página pública premium, JSON-LD LocalBusiness |
+| `/para-lojistas` | Server Component (estático) | Landing institucional, planos, FAQ |
+| `/merchant/dashboard` | Client Component | Stats + Score + GoalsPanel + MerchantProgressCard + NextStepCard |
+| `/merchant/register` | Client Component | Cadastro PKCE flow |
+| `/merchant/login` | Client Component | Login com `?confirmed=true` banner |
+| `/api/merchant/dashboard/stats` | Route Handler | Stats + score + goals + profileCompletion |
 
 ## Componentes existentes
 

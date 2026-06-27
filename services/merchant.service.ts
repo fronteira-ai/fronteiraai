@@ -7,6 +7,8 @@ import type {
   MerchantLevel,
   NextStep,
   MerchantGoal,
+  MerchantProfileCompletion,
+  ProfileCompletionItem,
   AuditEventType,
 } from "@/types/merchant";
 
@@ -376,23 +378,33 @@ export function computeGoals(merchant: Merchant, stats: MerchantDashboardStats):
       icon: "🎯",
     },
     {
-      id: "score_70",
-      label: "Merchant Score 70",
-      description: "Nível Ouro — sua loja está bem posicionada",
-      achieved: stats.merchantScore >= 70,
-      current: Math.min(stats.merchantScore, 70),
-      target: 70,
-      progress: Math.min(100, Math.round((stats.merchantScore / 70) * 100)),
+      id: "products_500",
+      label: "500 produtos publicados",
+      description: "Catálogo de alto volume — posição de destaque garantida",
+      achieved: stats.totalProducts >= 500,
+      current: Math.min(stats.totalProducts, 500),
+      target: 500,
+      progress: Math.min(100, Math.round((stats.totalProducts / 500) * 100)),
+      icon: "🏆",
+    },
+    {
+      id: "score_80",
+      label: "Merchant Score 80",
+      description: "Nível Ouro — entre as lojas mais confiáveis",
+      achieved: stats.merchantScore >= 80,
+      current: Math.min(stats.merchantScore, 80),
+      target: 80,
+      progress: Math.min(100, Math.round((stats.merchantScore / 80) * 100)),
       icon: "🥇",
     },
     {
-      id: "score_90",
-      label: "Merchant Score 90",
-      description: "Nível Diamante — entre as melhores lojas",
-      achieved: stats.merchantScore >= 90,
-      current: Math.min(stats.merchantScore, 90),
-      target: 90,
-      progress: Math.min(100, Math.round((stats.merchantScore / 90) * 100)),
+      id: "score_100",
+      label: "Merchant Score 100",
+      description: "Nível Elite — a mais alta distinção do ParaguAI",
+      achieved: stats.merchantScore >= 100,
+      current: Math.min(stats.merchantScore, 100),
+      target: 100,
+      progress: Math.min(100, stats.merchantScore),
       icon: "💎",
     },
     {
@@ -405,12 +417,55 @@ export function computeGoals(merchant: Merchant, stats: MerchantDashboardStats):
       progress: merchant.verified_level !== "none" ? 100 : 0,
       icon: "✅",
     },
+    {
+      id: "profile_complete",
+      label: "Perfil Completo",
+      description: "Preencha todos os dados da sua empresa",
+      achieved: !!merchant.company_name && !!merchant.contact_phone &&
+        !!merchant.contact_whatsapp && !!merchant.company_website &&
+        stats.totalStores > 0 && stats.lastImportAt !== null,
+      current: [
+        merchant.company_name, merchant.contact_phone,
+        merchant.contact_whatsapp, merchant.company_website,
+        stats.totalStores > 0, stats.lastImportAt,
+      ].filter(Boolean).length,
+      target: 6,
+      progress: Math.round(
+        ([merchant.company_name, merchant.contact_phone, merchant.contact_whatsapp,
+          merchant.company_website, stats.totalStores > 0, stats.lastImportAt]
+          .filter(Boolean).length / 6) * 100
+      ),
+      icon: "📋",
+    },
   ];
 
   // Show achieved + next 2 unachieved
   const achieved = goals.filter((g) => g.achieved);
   const pending = goals.filter((g) => !g.achieved).slice(0, 3);
   return [...achieved, ...pending];
+}
+
+// ── Profile Completion (Module 1 — Merchant Progress Engine) ─────────────────
+
+export function computeProfileCompletion(
+  merchant: Merchant,
+  stats: MerchantDashboardStats
+): MerchantProfileCompletion {
+  const items: ProfileCompletionItem[] = [
+    { id: "company_name",     label: "Nome da empresa",      done: !!merchant.company_name,        href: "/merchant/settings" },
+    { id: "contact_phone",    label: "Telefone",             done: !!merchant.contact_phone,       href: "/merchant/settings" },
+    { id: "contact_whatsapp", label: "WhatsApp",             done: !!merchant.contact_whatsapp,    href: "/merchant/settings" },
+    { id: "company_website",  label: "Site da loja",         done: !!merchant.company_website,     href: "/merchant/settings" },
+    { id: "store_linked",     label: "Loja vinculada",       done: stats.totalStores > 0,          href: "/merchant/stores" },
+    { id: "first_import",     label: "Primeira importação",  done: stats.lastImportAt !== null,    href: "/merchant/imports/new" },
+    { id: "verified",         label: "Solicitar verificação",done: merchant.verified_level !== "none", href: "/merchant/settings" },
+  ];
+
+  const doneCount = items.filter((i) => i.done).length;
+  const totalCount = items.length;
+  const percentage = Math.round((doneCount / totalCount) * 100);
+
+  return { percentage, doneCount, totalCount, items };
 }
 
 // ── Trust Score (M06) — computed server-side ──────────────────────────────────

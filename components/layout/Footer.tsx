@@ -11,7 +11,7 @@ const columns: { title: string; links: FooterLink[] }[] = [
       { name: "Catálogo", href: "/products" },
       { name: "Buscar", href: "/search" },
       { name: "Categorias", href: "/#categorias" },
-      { name: "Lojas", soon: true },
+      { name: "Lojas", href: "/lojas" },
     ],
   },
   {

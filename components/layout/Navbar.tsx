@@ -9,8 +9,8 @@ import Button from "@/components/ui/Button";
 const menu = [
   { name: "Início", href: "/" },
   { name: "Produtos", href: "/products" },
+  { name: "Lojas", href: "/lojas" },
   { name: "Buscar", href: "/search" },
-  { name: "IA", href: "/#ia" },
   { name: "Para Lojistas", href: "/para-lojistas" },
 ];
 
