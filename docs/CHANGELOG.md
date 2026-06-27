@@ -2,6 +2,17 @@
 
 Reconstruído a partir do histórico real de commits (`git log`) e do estado atual do código. Formato: data, commit, o que mudou de fato (verificado no diff/estado resultante, não só na mensagem).
 
+## 2026-06-27 — Foundation 0.1 — AI_CONSTITUTION.md
+
+Pausa completa no desenvolvimento de funcionalidades para criação da documentação permanente do projeto.
+
+- **`docs/AI_CONSTITUTION.md`** (novo): Constituição do ParaguAI — 15 seções, ~2.400 linhas. Identidade, Missão, Visão 2030, North Star, Filosofia, Dados, Automação, IA (ParaguAI Brain), Engenharia, Produto, Negócio, Autonomia, Regras Permanentes (12 invioláveis), Processo de Desenvolvimento, Critério de Aceitação. Síntese de todos os ADRs (001–032), ROADMAP.md, ARCHITECTURE.md, DOMAIN_MODEL.md e histórico de sprints. Tecnologia-agnóstico por design — válido por 10+ anos.
+- **`CLAUDE.md`** (atualizado): Seção "PRIORITY: Read the Constitution first" adicionada no topo. Hierarquia explícita de documentos. AI_CONSTITUTION.md declarado como primeiro documento obrigatório antes de qualquer tarefa.
+- **`docs/MASTER_ROADMAP.md`** (reescrito): Era placeholder vazio de 1 linha. Agora contém seção "Foundation Documents" com tabela de hierarquia, e 4 fases estratégicas: Discovery Platform (✅ Fase 1 completa), Trust & Reputation (Fase 2 planejada), Intelligence Layer (Fase 3 visão), Scale & Expansion (Fase 4 visão).
+- **`docs/PROJECT_STATUS.md`** (atualizado): Registrada criação da Foundation 0.1 no topo do histórico.
+
+**Este commit não é uma Release.** É um documento permanente de identidade e princípios. Não deprecar; apenas estender com revisões versionadas.
+
 ## 2026-06-15 — `fd07de5` Primeira versão do ParaguAI
 
 Commit inicial do repositório.

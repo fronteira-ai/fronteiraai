@@ -2,6 +2,17 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## PRIORITY: Read the Constitution first
+
+**Before starting any task**, read `docs/AI_CONSTITUTION.md`. It is the highest-priority document in this project and defines permanent principles, engineering rules, acceptance criteria, and the development process. All other documents are subordinate to it.
+
+Document hierarchy:
+1. `docs/AI_CONSTITUTION.md` — permanent principles (read first, always)
+2. `docs/DECISIONS.md` — architectural decision records (ADRs)
+3. `CLAUDE.md` (this file) — operational development instructions
+4. `docs/ARCHITECTURE.md` — real current architecture
+5. `docs/PROJECT_STATUS.md` — real current project state
+
 ## Critical: Next.js version warning
 
 This project runs **Next.js 16.2.9** with **React 19.2.4** — versions newer than your training data, with breaking API/convention/file-structure changes. Before writing any App Router, routing, data-fetching, or config code, read the relevant guide under `node_modules/next/dist/docs/` (e.g. `01-app/`, `03-architecture/`) and heed any deprecation notices there rather than relying on memorized Next.js patterns.

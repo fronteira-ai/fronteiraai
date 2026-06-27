@@ -2,9 +2,11 @@
 
 Auditoria gerada por leitura completa do código-fonte. Substitui o conteúdo anterior deste arquivo.
 
-Última atualização: 2026-06-27 (Release 1.4 — Merchant Growth Platform)
-Branch auditada: `main` — Release 1.4 completo
+Última atualização: 2026-06-27 (Foundation 0.1 — AI_CONSTITUTION.md)
+Branch auditada: `main` — Release 1.4 + Foundation Documents completos
 
+> ✅ **Foundation 0.1 — AI_CONSTITUTION.md (2026-06-27)**: Constituição permanente do projeto criada em `docs/AI_CONSTITUTION.md`. `CLAUDE.md` atualizado com prioridade de leitura. `MASTER_ROADMAP.md` expandido com seção Foundation Documents e fases estratégicas. 15 seções: Identidade, Missão, Visão 2030, North Star, Filosofia, Dados, Automação, IA, Engenharia, Produto, Negócio, Autonomia, Regras Permanentes (12 regras), Processo de Desenvolvimento, Critério de Aceitação.
+>
 > ✅ **Release 1.4 — Merchant Growth Platform (2026-06-27)**: 10 módulos. Novos: `/lojas` ranking, `/lojas/[slug]` página pública premium, `MerchantProgressCard`, `GoalsPanel` expandido com 10 missões, `stores-public.service.ts` (service role). SEO: `/lojas` e `/lojas/[slug]` no sitemap. Navbar: "Lojas" adicionado. ADR-029 a ADR-032. Build: 67 rotas, lint 0, tsc 0.
 >
 > ✅ **Release 1.3.1 — ParaguAI Experience Integration (2026-06-27)**: `HeroCTAs`, `ForLojistasSection`, `/para-lojistas`, "Para Lojistas" no Navbar/Footer. Build: 64 rotas.
