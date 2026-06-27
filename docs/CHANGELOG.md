@@ -2,6 +2,15 @@
 
 Reconstruído a partir do histórico real de commits (`git log`) e do estado atual do código. Formato: data, commit, o que mudou de fato (verificado no diff/estado resultante, não só na mensagem).
 
+## 2026-06-27 — Foundation 0.2 — NORTH_STAR.md
+
+Criação do segundo documento permanente da Foundation: a bússola operacional do ParaguAI.
+
+- **`docs/NORTH_STAR.md`** (novo): 10 seções, ~1.400 palavras. Complementa a Constituição respondendo "como decidimos" em vez de "quem somos". Contém: A Pergunta Obrigatória, Os 10 Filtros Permanentes, Hierarquia de Prioridades (pirâmide de 8 níveis), Framework de Priorização com score (5 dimensões, 100 pontos), O que nunca deve ser prioridade, Como pensamos longo prazo, Como avaliamos sucesso, Checklist Final (11 pontos — obrigatório antes de todo merge/release/ADR).
+- **`CLAUDE.md`** (atualizado): segundo documento obrigatório declarado. Hierarquia de documentos expandida de 5 para 6 níveis. NORTH_STAR.md inserido como item 2.
+
+**Distinção de responsabilidade**: AI_CONSTITUTION.md = princípios permanentes. NORTH_STAR.md = critérios de decisão operacional. Nenhum substitui o outro; os dois são obrigatórios.
+
 ## 2026-06-27 — Foundation 0.1.1 — Revisão Estratégica da AI_CONSTITUTION.md
 
 Revisão estratégica de alto nível da Constituição do ParaguAI. Não altera funcionalidades — eleva a visão e adiciona capítulos estratégicos ausentes na v1.0.

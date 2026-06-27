@@ -2,9 +2,11 @@
 
 Auditoria gerada por leitura completa do código-fonte. Substitui o conteúdo anterior deste arquivo.
 
-Última atualização: 2026-06-27 (Foundation 0.1.1 — Revisão Estratégica da AI_CONSTITUTION.md)
-Branch auditada: `main` — Release 1.4 + Foundation Documents v1.1 completos
+Última atualização: 2026-06-27 (Foundation 0.2 — NORTH_STAR.md)
+Branch auditada: `main` — Release 1.4 + Foundation Documents completos (Constituição v1.1 + North Star v1.0)
 
+> ✅ **Foundation 0.2 — NORTH_STAR.md (2026-06-27)**: `docs/NORTH_STAR.md` criado — bússola operacional do ParaguAI. 10 seções: A Métrica Norte, A Pergunta Obrigatória, 10 Filtros Permanentes, Hierarquia de Prioridades, Framework de Priorização (score/100), O que nunca priorizar, Pensamento de longo prazo, Como avaliamos sucesso, Checklist Final. `CLAUDE.md` atualizado com NORTH_STAR como segundo documento obrigatório.
+>
 > ✅ **Foundation 0.1.1 — Revisão Estratégica da AI_CONSTITUTION.md (2026-06-27)**: `docs/AI_CONSTITUTION.md` revisado de v1.0 para v1.1. 3 novos capítulos: VII. Ativos, X. Efeito de Rede (Flywheel), XIV. Moat. Identidade reformulada: "Inteligência Operacional da Tríplice Fronteira". Organismo Vivo na Filosofia. ParaguAI Brain expandido. 14 Regras Permanentes (era 12). Missão: assimetria de informação. Total: 19 seções vs. 16 na v1.0.
 >
 > ✅ **Foundation 0.1 — AI_CONSTITUTION.md (2026-06-27)**: Constituição permanente do projeto criada em `docs/AI_CONSTITUTION.md`. `CLAUDE.md` atualizado com prioridade de leitura. `MASTER_ROADMAP.md` expandido com seção Foundation Documents e fases estratégicas. 16 seções: Identidade, Missão, Visão 2030, North Star, Filosofia, Dados, Automação, IA, Engenharia, Produto, Negócio, Autonomia, Regras Permanentes (12 regras), Processo de Desenvolvimento, Critério de Aceitação, Hierarquia de Documentos.

@@ -13,10 +13,11 @@ Documentos permanentes que governam todas as decisões de desenvolvimento.
 | Documento | Prioridade | Descrição |
 |---|---|---|
 | `docs/AI_CONSTITUTION.md` | 1 — Primeiro a ler | Princípios permanentes: identidade, missão, visão, filosofia, regras, processo |
-| `docs/DECISIONS.md` | 2 | Registro de decisões arquiteturais (ADR-001 a ADR-032+) |
-| `CLAUDE.md` | 3 | Instruções operacionais de desenvolvimento |
-| `docs/ARCHITECTURE.md` | 4 | Estado real da arquitetura |
-| `docs/PROJECT_STATUS.md` | 5 | Estado real do projeto |
+| `docs/NORTH_STAR.md` | 2 — Consultar diariamente | Bússola operacional: como decidir, 10 filtros, framework de priorização, checklist final |
+| `docs/DECISIONS.md` | 3 | Registro de decisões arquiteturais (ADR-001 a ADR-032+) |
+| `CLAUDE.md` | 4 | Instruções operacionais de desenvolvimento |
+| `docs/ARCHITECTURE.md` | 5 | Estado real da arquitetura |
+| `docs/PROJECT_STATUS.md` | 6 | Estado real do projeto |
 
 ---
 
