@@ -17,6 +17,7 @@ Documentos permanentes que governam todas as decisões de desenvolvimento.
 | `docs/BUSINESS_MODEL.md` | 3 — Consultar para estratégia | Como criamos e capturamos valor: flywheel, monetização, moat, network effects |
 | `docs/VISION_2035.md` | 4 — Consultar para alinhamento de visão | Para onde vamos: ecossistema maduro, legado, transformação regional |
 | `docs/ENGINEERING_PRINCIPLES.md` | 5 — Consultar para decisões arquiteturais | Como construímos: filosofia técnica permanente, 12 princípios invioláveis |
+| `docs/PRODUCT_PRINCIPLES.md` | 6 — Consultar para decisões de produto e UX | Como construímos produtos: decisões > cliques, simplicidade radical, confiança, neutralidade, ecossistema |
 | `docs/DECISIONS.md` | 7 | Registro de decisões arquiteturais (ADR-001 a ADR-032+) |
 | `CLAUDE.md` | 8 | Instruções operacionais de desenvolvimento |
 | `docs/ARCHITECTURE.md` | 9 | Estado real da arquitetura |

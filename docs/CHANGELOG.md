@@ -2,6 +2,16 @@
 
 Reconstruído a partir do histórico real de commits (`git log`) e do estado atual do código. Formato: data, commit, o que mudou de fato (verificado no diff/estado resultante, não só na mensagem).
 
+## 2026-06-27 — Foundation 0.6 — PRODUCT_PRINCIPLES.md
+
+Criação do sexto documento permanente da Foundation: a filosofia permanente de produto do ParaguAI.
+
+- **`docs/PRODUCT_PRINCIPLES.md`** (novo): 18 seções + 12 Princípios Permanentes. Responde "como construímos produtos?" — traduzindo a estratégia em princípios de produto e experiência. Contém: Filosofia de Produto (produto melhora decisões, não gera cliques; usuário que encontra em 2 cliques e sai é sucesso), Quem Servimos (4 públicos com necessidades distintas: comprador precisa de clareza, lojista de controle, turista de orientação antecipada, parceiro de previsibilidade), Simplicidade Radical (complexidade ao sistema, nunca ao usuário; opções demais são decisões que o produto não quis tomar), Transparência (origem/atualização/raciocínio/incerteza como funcionalidades, não documentação), IA como Assistente (transparência algorítmica: motivo visível, não autoridade opaca; amplificador não narrador), Automação Inteligente (dados vs. contexto humano; dry-run e falha como design), Produto Orientado a Dados (cada funcionalidade produz dados além de consumir; compounding vs. linear), Confiança como Produto (construída, nunca declarada; custo de quebra assimétrico e irreversível), Experiência Integrada (teste de integração: usuário começa em qualquer ponto sem sentir mudança de produto), Produto Modular (pergunta de aceite: se outro módulo precisar desta capacidade amanhã, está disponível?), Crescimento Invisível (IA absorve decisões, contextualização elimina opções, progressividade de capacidades avançadas), Feedback Contínuo (comportamento prevalece sobre pesquisa; sinais como dados de produto), Acessibilidade (4 dimensões: tecnológica, experiência, linguística, física), Neutralidade (rankings orgânicos, publicidade identificada, recomendações por relevância — linha absoluta), Efeito "Uau" (funcionalidades que mudam comportamento vs. que apenas existem; teste: "sem isso não dá"), Produto como Ecossistema (cada módulo tem duas perguntas: serve seu público? conecta-se ao ecossistema?), Produto para Décadas (implementação evolui; dados históricos são permanentes e nunca descartados por simplicidade presente).
+- **`CLAUDE.md`** (atualizado): PRODUCT_PRINCIPLES.md declarado como sexto documento obrigatório. Hierarquia expandida de 9 para 10 níveis.
+- **`docs/MASTER_ROADMAP.md`** (atualizado): PRODUCT_PRINCIPLES.md inserido como prioridade 6.
+
+**Foundation completa (6 documentos)**: AI_CONSTITUTION + NORTH_STAR + BUSINESS_MODEL + VISION_2035 + ENGINEERING_PRINCIPLES + PRODUCT_PRINCIPLES.
+
 ## 2026-06-27 — Foundation 0.5 — ENGINEERING_PRINCIPLES.md
 
 Criação do quinto documento permanente da Foundation: a filosofia técnica permanente do ParaguAI.

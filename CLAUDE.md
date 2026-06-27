@@ -11,6 +11,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 3. `docs/BUSINESS_MODEL.md` — how we create and capture value. Consult before any product, monetization or growth strategy decision.
 4. `docs/VISION_2035.md` — where we are going. The long-horizon picture: the mature state, the ecosystem, the legacy. Consult when evaluating whether a direction aligns with the company's ultimate purpose.
 5. `docs/ENGINEERING_PRINCIPLES.md` — how we build technology. Permanent engineering philosophy: evolutionary architecture, simplicity, asset-oriented systems, data contracts, observability, resilience. Consult when making architectural decisions not covered by specific rules.
+6. `docs/PRODUCT_PRINCIPLES.md` — how we build products. Permanent product philosophy: decisions over clicks, radical simplicity, transparency, AI as assistant, trust as product, neutrality, ecosystem thinking. Consult when conceiving new features or designing experiences.
 
 Document hierarchy:
 1. `docs/AI_CONSTITUTION.md` — permanent principles (read first, always)
@@ -18,10 +19,11 @@ Document hierarchy:
 3. `docs/BUSINESS_MODEL.md` — economic value model (read third, consult for strategy)
 4. `docs/VISION_2035.md` — long-horizon direction (read fourth, consult for vision alignment)
 5. `docs/ENGINEERING_PRINCIPLES.md` — engineering philosophy (read fifth, consult for architectural decisions)
-6. `docs/DECISIONS.md` — architectural decision records (ADRs)
-7. `CLAUDE.md` (this file) — operational development instructions
-8. `docs/ARCHITECTURE.md` — real current architecture
-9. `docs/PROJECT_STATUS.md` — real current project state
+6. `docs/PRODUCT_PRINCIPLES.md` — product philosophy (read sixth, consult for product and UX decisions)
+7. `docs/DECISIONS.md` — architectural decision records (ADRs)
+8. `CLAUDE.md` (this file) — operational development instructions
+9. `docs/ARCHITECTURE.md` — real current architecture
+10. `docs/PROJECT_STATUS.md` — real current project state
 
 ## Critical: Next.js version warning
 
