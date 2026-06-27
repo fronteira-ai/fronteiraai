@@ -1,7 +1,7 @@
 # AI_CONSTITUTION.md
 # Constituição do ParaguAI
 
-**Versão**: 1.1  
+**Versão**: 1.2  
 **Criado**: 2026-06-27  
 **Revisado**: 2026-06-27  
 **Status**: Permanente — não deprecar; apenas estender com revisões versionadas  
@@ -653,14 +653,25 @@ Qualquer "não" nesta lista é um bloqueador — não um item de backlog.
 
 Quando este documento conflitar com outro, a hierarquia é:
 
-1. **AI_CONSTITUTION.md** (este arquivo) — princípios permanentes
-2. **DECISIONS.md** (ADRs) — decisões específicas e contextualizadas
-3. **CLAUDE.md** (raiz) — instruções operacionais de desenvolvimento
-4. **ARCHITECTURE.md** — estado real da arquitetura
-5. **PROJECT_STATUS.md** — estado real do projeto
-6. Demais documentos em `docs/`
+**Foundation Empresarial** (documentos permanentes — princípios e processo):
+1. **AI_CONSTITUTION.md** (este arquivo) — identidade, princípios, regras permanentes
+2. **NORTH_STAR.md** — bússola de decisão: 10 filtros, priorização, tipo de decisão
+3. **BUSINESS_MODEL.md** — lógica econômica: valor, monetização, moat, network effects
+4. **VISION_2035.md** — horizonte de longo prazo: ecossistema, Brain, legado
+5. **ENGINEERING_PRINCIPLES.md** — filosofia técnica: arquitetura evolutiva, simplicidade, ativos
+6. **PRODUCT_PRINCIPLES.md** — filosofia de produto: decisões, simplicidade, confiança
+7. **DECISION_FILTER.md** — processo de aprovação: pipeline, filtros, checklist
+8. **RELEASE_STRATEGY.md** — processo de evolução: ciclo, tipos de Release, DoR, DoD
 
-Documentos de estado (PROJECT_STATUS, ARCHITECTURE, CHANGELOG) refletem o que é real agora. Documentos de princípio (este, DECISIONS, RULES) refletem o que é permanente. Quando os dois conflitam, o documento de estado está descrevendo uma exceção — não invalidando o princípio.
+**Decisões e operações** (documentos de execução):
+9. **DECISIONS.md** (ADRs) — decisões específicas e contextualizadas
+10. **CLAUDE.md** (raiz) — instruções operacionais de desenvolvimento
+11. **ARCHITECTURE.md** — estado real da arquitetura
+12. **PROJECT_STATUS.md** — estado real do projeto
+
+Documentos de estado (PROJECT_STATUS, ARCHITECTURE, CHANGELOG) refletem o que é real agora. Documentos de princípio (Foundation + ADRs) refletem o que é permanente. Quando os dois conflitam, o documento de estado está descrevendo uma exceção — não invalidando o princípio.
+
+Dentro da Foundation, a hierarquia é sequencial: cada documento subordina-se ao anterior. Quando houver conflito entre dois documentos da Foundation, o de numeração menor (mais próximo da Constituição) prevalece, e o conflito deve ser registrado como ADR para revisão futura.
 
 ---
 
@@ -670,6 +681,7 @@ Documentos de estado (PROJECT_STATUS, ARCHITECTURE, CHANGELOG) refletem o que é
 |---|---|---|---|
 | 1.0 | 2026-06-27 | Daniel Gonçalves (CTO) | Versão inicial — síntese de ADR-001 a ADR-032, ROADMAP.md, ARCHITECTURE.md, DOMAIN_MODEL.md, DECISIONS.md e todo o histórico de sprints do projeto |
 | 1.1 | 2026-06-27 | Daniel Gonçalves (CTO) | Revisão estratégica: Identidade reformulada (Inteligência Operacional da Tríplice Fronteira), nova seção VII (Ativos), nova seção X (Efeito de Rede / Flywheel), nova seção XIV (Moat), fortalecimento de IA (Brain), Missão, Automação, Escalabilidade, Organismo Vivo. 2 novas Regras Permanentes. Total: 19 seções vs. 16 na v1.0. |
+| 1.2 | 2026-06-27 | Daniel Gonçalves (CTO) | Foundation Validation: Seção XIX atualizada para refletir a hierarquia completa de 12 documentos (8 Foundation + 4 operacionais). Correção de inconsistência: a v1.1 não incluía os documentos NORTH_STAR, BUSINESS_MODEL, VISION_2035, ENGINEERING_PRINCIPLES, PRODUCT_PRINCIPLES, DECISION_FILTER e RELEASE_STRATEGY na hierarquia, pois foram criados após a v1.1. |
 
 ---
 

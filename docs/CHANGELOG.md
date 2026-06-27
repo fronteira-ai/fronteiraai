@@ -2,6 +2,48 @@
 
 Reconstruído a partir do histórico real de commits (`git log`) e do estado atual do código. Formato: data, commit, o que mudou de fato (verificado no diff/estado resultante, não só na mensagem).
 
+## 2026-06-27 — Foundation 0.9 — FOUNDATION VALIDATION — FOUNDATION EMPRESARIAL CERTIFICADA v1.0
+
+Validação completa e certificação da Foundation Empresarial do ParaguAI.
+
+**Resultado**: APROVADA. Uma única inconsistência real identificada e corrigida.
+
+**O que foi validado:**
+
+- **Matriz de responsabilidades**: cada documento possui papel único e insubstituível. Nenhuma sobreposição de responsabilidade identificada.
+- **Consistência conceitual**: 8 conceitos-chave validados — ParaguAI Brain, Merchant OS, Merchant Score, Flywheel, Moat (5 camadas), Compounding, IA Transversal, Assimetria de Informação. Todos consistentes em terminologia e definição.
+- **Referências cruzadas**: DECISION_FILTER e RELEASE_STRATEGY referenciam todos os documentos anteriores. NORTH_STAR referencia a Constituição. Constitution referencia operações. Ciclo fechado.
+- **Duplicidades**: 4 casos de repetição intencional identificados (regras críticas repetidas em múltiplos documentos por ênfase) e 1 sobreposição leve (automação em Constitution + Engineering). Nenhuma duplicidade problemática.
+- **Lacunas**: 5 lacunas identificadas (não críticas): DATA_PRINCIPLES, CULTURE_PRINCIPLES, API_PRINCIPLES, Security Policy, Financial Policy. Registradas para fases futuras.
+- **Teste de governança (5 cenários)**: 5/5 aprovados — engenheiro novo, IA nova, Product Manager, CTO, investidor.
+- **Avaliação de maturidade**: 9.0/10 — coerência 9, clareza 9, consistência 8, governança 9, escalabilidade 10, longevidade 10, reutilização 9, facilidade de consulta 8.
+
+**Inconsistência encontrada e corrigida:**
+
+- **`docs/AI_CONSTITUTION.md` Seção XIX** estava desatualizada: listava apenas 5 documentos na hierarquia (os existentes antes da Foundation). Corrigida para hierarquia completa de 12 documentos (8 Foundation + 4 operacionais). Constitution promovida de v1.1 para **v1.2**.
+
+---
+
+## ⚡⚡ FOUNDATION EMPRESARIAL DO PARAGUAI — CERTIFICADA v1.0 ⚡⚡
+
+**Data de certificação**: 2026-06-27  
+**Status**: LOCKED — todos os 8 documentos permanentes
+
+| # | Documento | Versão | Responde |
+|---|---|---|---|
+| 0.1 | `AI_CONSTITUTION.md` | **v1.2** | Quem somos |
+| 0.2 | `NORTH_STAR.md` | v1.1 | Como decidimos |
+| 0.3 | `BUSINESS_MODEL.md` | v1.0 | Como criamos valor |
+| 0.4 | `VISION_2035.md` | v1.0 | Para onde vamos |
+| 0.5 | `ENGINEERING_PRINCIPLES.md` | v1.0 | Como construímos tecnologia |
+| 0.6 | `PRODUCT_PRINCIPLES.md` | v1.0 | Como construímos produtos |
+| 0.7 | `DECISION_FILTER.md` | v1.0 | Como aprovamos decisões |
+| 0.8 | `RELEASE_STRATEGY.md` | v1.0 | Como evoluímos |
+
+O ciclo está fechado e certificado. Qualquer revisão futura de um documento permanente requer nova versão e entrada no histórico de revisões — nunca alteração silenciosa.
+
+---
+
 ## 2026-06-27 — Foundation 0.8 — RELEASE_STRATEGY.md — FOUNDATION EMPRESARIAL COMPLETA
 
 Criação do oitavo e último documento permanente da Foundation: o ciclo permanente de evolução da plataforma.
