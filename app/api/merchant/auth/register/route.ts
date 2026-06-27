@@ -18,17 +18,17 @@ export async function POST() {
     return NextResponse.json({ data: { merchantId: existing.id, alreadyExists: true } });
   }
 
-  // Upgrade profile role to merchant
+  // Best-effort: update profile role. Non-fatal if it fails (e.g. old constraint).
   const { error: profileErr } = await serviceClient
     .from("profiles")
     .update({ role: "merchant" })
     .eq("id", userId);
 
   if (profileErr) {
-    return NextResponse.json({ error: `profile update: ${profileErr.message}` }, { status: 500 });
+    console.error("[register] profiles.role update failed (non-fatal):", profileErr.message);
   }
 
-  // Create merchant record
+  // Create merchant record — this is the source of truth for merchant access
   const { data: merchant, error: merchantErr } = await serviceClient
     .from("merchants")
     .insert({
@@ -41,10 +41,11 @@ export async function POST() {
     .single();
 
   if (merchantErr) {
-    return NextResponse.json({ error: `merchant create: ${merchantErr.message}` }, { status: 500 });
+    console.error("[register] merchant insert failed:", merchantErr.message);
+    return NextResponse.json({ error: `Erro ao criar perfil: ${merchantErr.message}` }, { status: 500 });
   }
 
-  // Audit log
+  // Audit log (best-effort)
   await serviceClient.from("merchant_audit_logs").insert({
     merchant_id: merchant.id,
     user_id: userId,

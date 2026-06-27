@@ -11,7 +11,11 @@ export interface MerchantAuthResult {
   serviceClient: SupabaseClient;
 }
 
-/** Validates session + merchant role. Returns 401/403 NextResponse on failure. */
+/**
+ * Validates session + merchant record existence.
+ * Does NOT rely on profiles.role — the merchant record IS the source of truth.
+ * Returns 401/403 NextResponse on failure.
+ */
 export async function requireMerchant(): Promise<MerchantAuthResult | NextResponse> {
   const supabase = await createSupabaseServerClient();
   const { data: { user }, error } = await supabase.auth.getUser();
@@ -22,24 +26,14 @@ export async function requireMerchant(): Promise<MerchantAuthResult | NextRespon
 
   const serviceClient = getSupabaseServiceClient();
 
-  const { data: profile } = await serviceClient
-    .from("profiles")
-    .select("role")
-    .eq("id", user.id)
-    .single();
-
-  if (!profile || profile.role !== "merchant") {
-    return NextResponse.json({ error: "Acesso restrito a lojistas" }, { status: 403 });
-  }
-
-  const { data: merchant } = await serviceClient
+  const { data: merchant, error: merchantErr } = await serviceClient
     .from("merchants")
     .select("*")
     .eq("user_id", user.id)
     .single();
 
-  if (!merchant) {
-    return NextResponse.json({ error: "Perfil de lojista não encontrado" }, { status: 404 });
+  if (merchantErr || !merchant) {
+    return NextResponse.json({ error: "Acesso restrito a lojistas" }, { status: 403 });
   }
 
   return {
@@ -50,7 +44,7 @@ export async function requireMerchant(): Promise<MerchantAuthResult | NextRespon
   };
 }
 
-/** Validates session only — used during registration before role is set. */
+/** Validates session only — used during registration before merchant record is created. */
 export async function requireAuth(): Promise<{ userId: string; email: string; serviceClient: SupabaseClient } | NextResponse> {
   const supabase = await createSupabaseServerClient();
   const { data: { user }, error } = await supabase.auth.getUser();
