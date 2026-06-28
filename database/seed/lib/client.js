@@ -2,7 +2,7 @@
 // process.env diretamente (não via lib/env.ts) porque este código roda como
 // um script Node standalone (via `node database/seed/index.js`), fora da
 // árvore da aplicação Next.js que lib/env.ts/ADR-001 governam — ver
-// docs/DECISIONS.md, ADR-012, para a justificativa completa dessa fronteira.
+// docs/operations/DECISIONS.md, ADR-012, para a justificativa completa dessa fronteira.
 const path = require("path");
 const fs = require("fs");
 const { createClient } = require("@supabase/supabase-js");
@@ -43,7 +43,7 @@ function getClient() {
     console.warn(
       "[AVISO] SUPABASE_SERVICE_ROLE_KEY ausente — usando a chave anônima. " +
         "Inserts/updates podem falhar por RLS se a tabela não permitir escrita pública. " +
-        "Ver docs/TECH_DEBT.md."
+        "Ver docs/engineering/TECH_DEBT.md."
     );
   }
 

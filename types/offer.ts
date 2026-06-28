@@ -3,7 +3,7 @@ import { Product } from "@/types/product";
 
 // Campos confirmados via auditoria direta do Supabase (Sprint 3.4.1, ADR-008).
 // Não existem `price`/`stock`/`installments`/`url` no banco real — ver
-// docs/DOMAIN_MODEL.md e docs/DECISIONS.md (ADR-008/ADR-009).
+// docs/architecture/DOMAIN_MODEL.md e docs/operations/DECISIONS.md (ADR-008/ADR-009).
 export interface Offer {
   id: string;
   product_id: string;

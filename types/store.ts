@@ -1,6 +1,6 @@
 // Campos confirmados via auditoria direta do Supabase (Sprint 3.4.1, ADR-008).
 // `banner_url`/`verified` não existem no banco real (são `cover_image`/
-// `is_verified`) — ver docs/DOMAIN_MODEL.md e docs/DECISIONS.md (ADR-009).
+// `is_verified`) — ver docs/architecture/DOMAIN_MODEL.md e docs/operations/DECISIONS.md (ADR-009).
 export interface Store {
   id: string;
   name: string;

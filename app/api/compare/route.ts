@@ -9,7 +9,7 @@ import {
 //
 // Returns CompareResult JSON with product, ranked offers (with price metrics)
 // and summary stats. Reads with the anon key — requires 0007 RLS migration
-// to be applied to return real data (see docs/DECISIONS.md ADR-019).
+// to be applied to return real data (see docs/operations/DECISIONS.md ADR-019).
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const slug = searchParams.get("slug");

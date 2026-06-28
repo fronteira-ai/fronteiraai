@@ -1,0 +1,23 @@
+# PEF_IMPROVEMENTS.md
+
+> Registro de melhorias, limitações e ambiguidades identificadas no ParaguAI Engineering Framework (PEF), **congelado na versão 1.0 em 2026-06-23**. Este arquivo não é uma regra do PEF e não substitui nenhum documento de `.ai/` — é um log de oportunidades para uma futura Sprint de evolução do framework. Nenhum item aqui foi implementado; nenhum deve ser implementado fora de uma sprint dedicada à evolução do PEF.
+
+## Convenção deste arquivo
+
+- Cada item tem um identificador estável (`PEF-001`, `PEF-002`...), nunca reaproveitado mesmo se o item for descartado.
+- Itens resolvidos não são removidos — marcados `[x]` com a sprint que resolveu, preservando o histórico (mesmo princípio de `docs/operations/DECISIONS.md`: nunca reescrever, só acrescentar/atualizar status).
+- Novos itens encontrados durante sprints de produto entram no final da lista, sempre com a sprint de origem.
+
+## Itens pendentes
+
+- [ ] **PEF-001** — O conteúdo de `.ai/` (incluindo este arquivo) está **fora do controle de versão** (`git status` mostra `.ai/`, `context/`, `memory/` como untracked). Risco de perda total do framework se a working tree for descartada. *Origem: Sprint de Validação do PEF, 2026-06-23.*
+- [ ] **PEF-002** — `.ai/START.md`, na "Ordem obrigatória de leitura", omite `docs/archive/ROADMAP.md`, `docs/engineering/CONVENTIONS.md` e `docs/engineering/TECH_DEBT.md` — três documentos citados como companheiros obrigatórios por outros arquivos do próprio PEF (`ARCHITECTURE_RULES.md`, `CODING_RULES.md`, `PROJECT_RULES.md`), mas nunca incluídos na sequência prescrita de leitura. *Origem: Sprint de Validação do PEF, 2026-06-23.*
+- [ ] **PEF-003** — `.ai/CLAUDE_SYSTEM.md`, seção "Restrições Absolutas", afirma que a lista de restrições está em `CLAUDE.md` (raiz), seção "Claude Restrictions". Essa seção não existe em `CLAUDE.md` (raiz) — existe de fato em `docs/CLAUDE.md` (legado). Achado original na auditoria de Consolidação do PEF; não corrigido até o congelamento da v1.0, por instrução explícita de não alterar regras existentes nas etapas anteriores. *Origem: Missão de Consolidação do PEF; confirmado na Sprint de Validação, 2026-06-23.*
+- [ ] **PEF-004** — Não existe, hoje, nenhum dono de regras de **Segurança** dentro de `.ai/`. As únicas regras existentes (nunca expor chave secreta, nunca commitar credencial, validar todo input externo) vivem em `docs/CLAUDE.md`, documento legado e candidato a arquivamento. *Origem: Missão de Consolidação do PEF, confirmado na Sprint de Validação.*
+- [ ] **PEF-005** — Duplicação: a tabela "Responsabilidade da Documentação" existe quase identicamente em `.ai/PROJECT_RULES.md` e em `.ai/PEF_SPECIFICATION.md` (Seção 3.2) — viola o princípio "um tema, um dono" que ambos os documentos definem. *Origem: Sprint de Validação do PEF, 2026-06-23.*
+- [ ] **PEF-006** — Nenhuma das sprints de construção do próprio PEF (Bloco 1, Consolidação, Especificação, `START.md`, Validação) foi registrada em `docs/operations/CHANGELOG.md`, apesar de `.ai/PROJECT_RULES.md` exigir que toda sprint gere uma entrada de changelog. *Origem: Sprint de Validação do PEF, 2026-06-23.*
+- [ ] **PEF-007** — `.ai/PEF_SPECIFICATION.md`, Seção 3 ("Responsabilidade de cada arquivo"), não tem limite natural de crescimento — cada bloco novo do PEF adiciona uma entrada. Candidato a, no futuro, ser extraído para um registro/índice separado, deixando a Constituição só com princípios/governança/hierarquia/critérios de evolução. *Origem: Sprint de Validação do PEF, 2026-06-23.*
+- [ ] **PEF-008** — Não existe um gatilho explícito de "quando uma sprint de manutenção do próprio PEF é obrigatória" — `.ai/PROJECT_RULES.md` define "Auditorias Obrigatórias" só para o produto, nunca para o framework de governança em si. *Origem: Sprint de Validação do PEF, 2026-06-23.*
+- [ ] **PEF-009** — `docs/CLAUDE.md` continua sem banner de status "legado" e sem data de arquivamento definida, apesar de `.ai/PEF_SPECIFICATION.md` já registrar que a maior parte do seu conteúdo está substituída pelo PEF. *Origem: Missão de Consolidação do PEF.*
+- [ ] **PEF-010** — `docs/engineering/AGENTS.md`, `docs/RULES.md`, `docs/CODING_STANDARDS.md` e `docs/UI_GUIDELINES.md` continuam vazios e sem decisão final (migrar conteúdo, esvaziar formalmente ou remover). *Origem: Missão de Consolidação do PEF.*
+- [ ] **PEF-011** — Não havia, antes da Sprint de Validação, nenhum mecanismo que testasse `.ai/START.md` como bootloader contra um cenário real ("sessão nova, zero contexto"). Sugestão: incorporar esse tipo de validação ao Checklist de Release (`.ai/CHECKLIST.md`), em vez de depender de uma missão avulsa para descobrir lacunas como PEF-002. *Origem: Sprint de Validação do PEF, 2026-06-23.*

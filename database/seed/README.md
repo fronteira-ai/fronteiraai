@@ -27,7 +27,7 @@ padrão para que rodar o comando por engano nunca escreva nada.
 
 Sem `SUPABASE_SERVICE_ROLE_KEY` em `.env.local`, o script usa a chave
 anônima — inserts podem falhar por RLS dependendo das policies da tabela
-(ver `docs/TECH_DEBT.md`).
+(ver `docs/engineering/TECH_DEBT.md`).
 
 Cada entidade é resolvida por uma chave natural antes de inserir (idempotente):
 `slug` para `brands`/`categories`/`products`, `name` para a loja já existente,

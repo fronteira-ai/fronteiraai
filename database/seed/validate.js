@@ -1,7 +1,7 @@
 // Auditoria de qualidade de dados — somente leitura, segura para rodar a
 // qualquer momento (`node database/seed/validate.js`). Não corrige nada
-// automaticamente: só reporta. Ver docs/TECH_DEBT.md para o histórico de
-// achados e docs/DECISIONS.md para o que fica de fora deste script hoje
+// automaticamente: só reporta. Ver docs/engineering/TECH_DEBT.md para o histórico de
+// achados e docs/operations/DECISIONS.md para o que fica de fora deste script hoje
 // (detecção de FK "órfã" por anti-join real, que não escala via fetch-and-diff
 // e exige um RPC/SQL dedicado quando houver volume).
 const { getClient } = require("./lib/client");

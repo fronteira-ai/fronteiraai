@@ -105,7 +105,7 @@ type CatalogProductRow = ProductWithRelations & { offers: CatalogOfferRow[] };
 // Catálogo de produtos (/products): combina os filtros de category/brand/
 // search (colunas nativas de "products") com os de store/availability/price
 // (colunas de "offers", já que preço/estoque pertencem à oferta, não ao
-// produto — ver docs/DOMAIN_MODEL.md). Quando nenhum filtro de oferta está
+// produto — ver docs/architecture/DOMAIN_MODEL.md). Quando nenhum filtro de oferta está
 // ativo, usa "offers!left" para não esconder produtos ainda sem oferta
 // cadastrada; quando algum está, troca para "offers!inner" para de fato
 // restringir os produtos retornados.
@@ -150,7 +150,7 @@ export async function getProductsCatalog(
   // Ordenação por preço é uma agregação (MIN das ofertas) que o PostgREST
   // não resolve nativamente sem uma view/RPC dedicada (proposta em
   // database/migrations/0003_proposed_product_catalog_price_view.sql, não
-  // aplicada — ver docs/DECISIONS.md ADR-011). "best_selling"/"top_rated"
+  // aplicada — ver docs/operations/DECISIONS.md ADR-011). "best_selling"/"top_rated"
   // ainda não têm coluna de apoio (estrutura preparada, conforme missão) —
   // todos esses casos usam "created_at" como base e price_asc/price_desc é
   // corrigido depois, reordenando a página já buscada (best effort: correto
