@@ -1,8 +1,8 @@
 # ARCHITECTURE.md
 
-Mapeamento real da arquitetura, gerado por leitura completa do código. Complementa (e corrige pontos desatualizados de) `docs/CLAUDE.md`, que descreve a arquitetura *pretendida* — este documento descreve a arquitetura *como está implementada hoje*.
+Mapeamento real da arquitetura, gerado por leitura completa do código. Atualizado em 2026-06-27 (Release 1.4).
 
-Documentos relacionados, mais granulares: `docs/CONVENTIONS.md` (regras de estilo/nomenclatura), `docs/API_CONTRACTS.md` (contratos de cada service), `docs/DOMAIN_MODEL.md` (entidades e relacionamentos), `docs/COMPONENT_INDEX.md` (tabela de todos os componentes), `docs/DEPENDENCY_GRAPH.md` (grafo de imports entre camadas), `docs/DECISIONS.md` (histórico de decisões arquiteturais).
+Documentos relacionados: `docs/engineering/CONVENTIONS.md` (regras de estilo/nomenclatura), `docs/architecture/API_CONTRACTS.md` (contratos de cada service), `docs/architecture/DOMAIN_MODEL.md` (entidades e relacionamentos), `docs/architecture/COMPONENT_INDEX.md` (tabela de todos os componentes), `docs/architecture/DEPENDENCY_GRAPH.md` (grafo de imports entre camadas), `docs/operations/DECISIONS.md` (histórico de decisões arquiteturais).
 
 ---
 
@@ -10,171 +10,307 @@ Documentos relacionados, mais granulares: `docs/CONVENTIONS.md` (regras de estil
 
 ```
 app/                    rotas (App Router)
-  page.tsx              Home — Server Component, dados estáticos
-  search/                page.tsx (Server, lê searchParams.q + generateMetadata), loading.tsx, error.tsx (Client, unstable_retry)
-  products/              page.tsx (Server, lê searchParams de filtro/ordenação/página + generateMetadata, <Suspense>), loading.tsx, error.tsx (Client, unstable_retry) — Sprint 3.5
-  product/[slug]/       layout.tsx (Server, fetch+metadata+JSON-LD) + page.tsx (Client, refetch via hook)
-  store/[slug]/         layout.tsx (Server, fetch+metadata+JSON-LD LocalBusiness) + page.tsx (Client, refetch via hook) — Sprint 3.4, espelha product/[slug]/
+  page.tsx              Home — async Server Component, force-dynamic, dados reais
+  search/               page.tsx (Server), loading.tsx, error.tsx (Client, unstable_retry)
+  products/             page.tsx (Server, filtros + paginação SSR), loading.tsx, error.tsx
+  product/[slug]/       layout.tsx (Server, metadata+JSON-LD) + page.tsx (Server) + _cache.ts
+  store/[slug]/         layout.tsx (Server, metadata+JSON-LD) + page.tsx (Server) + _cache.ts
+  compare/[slug]/       page.tsx (Server, generateMetadata + compare engine)
+  lojas/                page.tsx (Server, ranking público de lojas)
+  lojas/[slug]/         page.tsx (Server, página premium por loja), loading.tsx, not-found.tsx
+  para-lojistas/        page.tsx (Server, landing page institucional)
+  admin/                layout.tsx (middleware auth) + 12+ páginas de gestão
+  merchant/             layout.tsx (middleware auth) + 11 páginas do portal self-service
+  auth/callback/        route.ts (Route Handler — exchange PKCE code por sessão)
+  api/
+    admin/              Route Handlers: products, stores, offers, brands, categories, import, quality
+    merchant/           Route Handlers: dashboard/stats, offers, import, settings, plans, analytics
+    compare/            route.ts (API pública de comparação)
+  sitemap.ts            sitemap dinâmico (produtos, compare, lojas, /lojas, /para-lojistas)
+  robots.ts             robots.txt gerado dinamicamente
+  not-found.tsx         404 global com design de marca
+  icon.tsx / apple-icon.tsx  favicon dinâmico (ImageResponse)
+  manifest.ts           manifesto PWA
+
+acquisition/            pipeline universal de dados (standalone Node.js — não importado pela app Next.js)
+  types/                contratos (RawOffer, NormalizedOffer, PipelineContext…)
+  core/                 AcquisitionPipeline (orquestrador), ConnectorRegistry
+  parsers/              JSONParser, CSVParser
+  engines/              Validation, Normalization, Deduplication, Canonical, Media
+  persistence/          CatalogWriter (escrita no Supabase via service role)
+  observability/        métricas, relatório
+  lib/                  cliente Supabase com service role (scripts)
+  connectors/           JsonFileConnector, CsvFileConnector, ShoppingChinaConnector
+  datasets/             dados de teste
+  scripts/              import-json, import-csv, validate-pipeline
+
 components/
-  home/                 10 componentes, todos Server Components exceto SearchBar ("use client", via useSearch)
+  home/                 10+ componentes — Server exceto SearchBar e HeroCTAs ("use client")
   layout/               Navbar ("use client", scroll listener), Footer (Server)
-  product/              11 componentes, Server exceto FavoriteButton/ShareButton/ProductGallery/ProductFilters ("use client") — Sprint 3.5: ProductGrid saiu de vazio, ganhou ProductGridSkeleton/ProductFilters, ProductHighlightCard/ProductBreadcrumb removidos (unificados/extraídos, ver COMPONENT_INDEX.md)
-  store/                 StoreCard, StoreDetails, StoreOffers, StoreGrid — todos implementados (Sprint 3.4)
-  search/                SearchResults (Server, resultados reais agrupados por tipo), SearchResultsSkeleton
-  ui/                    kit compartilhado, 19 arquivos (16 implementados, 3 vazios) — Sprint 3.5: Input/Select preenchidos, Breadcrumb/Pagination novos
-hooks/                  useProduct, useFavorites, useSearch, useStore, useProductFilters (Sprint 3.5) implementados; useOffers vazio
-services/               product/offer/store/search/brand/category implementados e em uso (brand/category preenchidos na Sprint 3.5); ai vazio
-types/                  Product (+ ProductCatalogItem, Sprint 3.5)/Offer (+ OfferWithProduct)/Store/Brand/Category/Favorite/Search implementados; User/Review vazios
-lib/                    supabase.ts (cliente), env.ts (única fonte de process.env)
-constants/              routes.ts (product/search/store/products paths, Sprint 3.5)/categories.ts implementados; demais (config/colors/navigation/currencies/countries/restrictedProducts) vazios
-utils/                  currency.ts (sem convertToUSD/convertToBRL desde a Sprint 3.5, ADR-009)/search.ts (Sprint 3.5, escapeLikePattern compartilhado) implementados; format/slug/validators vazios
-styles/                 animations.ts implementado e amplamente usado; theme/typography/spacing/radius/shadows vazios
-database/               DATABASE.md/ERD.md (documentação descritiva); migrations/ tem 3 propostas não aplicadas (0001 superada, 0002 integridade de stores, 0003 view de agregação de preço — Sprint 3.5); seed/sql só .gitkeep — sem SQL versionado de verdade
+  product/              11 componentes — Server exceto FavoriteButton/ShareButton/ProductFilters
+  store/                StoreCard, StoreDetails, StoreOffers, StoreGrid — todos implementados
+  compare/              CompareOfferCard, CompareHeader, CompareTable
+  search/               SearchResults (Server), SearchResultsSkeleton
+  merchant/
+    dashboard/          ScoreCard, RecommendationsPanel, StatsGrid, NextStepCard, GoalsPanel, MerchantProgressCard
+    ui/                 ToastContext, ToastContainer, componentes compartilhados admin+merchant
+  admin/                AdminSidebar, AdminStats, ImportQueue, QualityCenter, ui/*
+  analytics/            Analytics.tsx (GA4 + Microsoft Clarity)
+  ui/                   kit compartilhado: Button, Input, Select, Breadcrumb, Pagination, EmptyState, etc.
+
+hooks/                  useProduct, useFavorites, useSearch, useStore, useProductFilters, useCompare implementados; useOffers vazio
+services/               product, offer, store, search, brand, category, compare implementados; ai vazio
+                        stores-public.service.ts (service role, server-only, para /lojas público)
+                        merchant.service.ts (score, level, progress, goals, next step)
+types/                  Product, Offer, Store, Brand, Category, Favorite, Search, PriceHistory, Merchant implementados
+                        User, Review vazios
+
+lib/
+  supabase.ts           cliente legado (anon key) — usado pela app pública (catálogo, busca, produto, loja)
+  supabase/
+    server.ts           createServerClient com await cookies() — Server Components com sessão
+    client.ts           createBrowserClient — Client Components autenticados
+    service.ts          service role (SUPABASE_SERVICE_ROLE_KEY) — API routes e stores-public.service.ts
+  env.ts                única fonte de process.env (ADR-001)
+  admin-auth.ts         requireAdmin() — valida sessão + role admin/operator, retorna serviceClient
+  merchant-auth.ts      requireMerchant() — valida sessão + role merchant, retorna serviceClient
+
+constants/              routes.ts, categories.ts implementados; demais vazios
+utils/                  currency.ts, search.ts, storage.ts, slug.ts, analytics.ts implementados; format/validators vazios
+styles/                 animations.ts implementado; theme/typography/spacing/radius/shadows vazios
+database/
+  DATABASE.md / ERD.md  documentação descritiva do esquema
+  migrations/           0001–0013 (propostas; algumas aplicadas manualmente pelo CTO)
+  seed/                 sistema modular com dry-run por padrão; validate.js, validate_adr019.js
+  storage/              init.js (cria bucket catalog)
 ai/                     só .gitkeep — nada implementado
 assets/                 só .gitkeep — nada implementado
-docs/                   documentação de produto/processo (este arquivo e os irmãos)
 ```
+
+---
 
 ## Dependências
 
-`package.json`: `@supabase/supabase-js ^2.108.2`, `lucide-react ^1.21.0`, `next 16.2.9`, `react`/`react-dom 19.2.4`. Dev: `tailwindcss ^4`, `@tailwindcss/postcss`, `eslint 9` + `eslint-config-next 16.2.9`, `typescript ^5`. Sem libs de state management, data-fetching (React Query/SWR), validação (zod) ou testes — tudo é `useState`/`useEffect` manual e tipagem direta do retorno do Supabase (`as Product[]`, sem validação em runtime).
-
-## Camadas e fluxo de dados (intencional vs. real)
-
-Fluxo declarado em `docs/CLAUDE.md`:
-
-```
-Page → Hook → Service → Supabase → Database
-```
-
-Na prática, **três padrões coexistem**:
-
-1. **Produto e Loja** (os dois fluxos "completos", Loja espelhando Produto deliberadamente na Sprint 3.4): o **layout** (Server Component) chama os services diretamente via `cache()` do React para metadata + JSON-LD; a **page** (Client Component) chama os mesmos dados de novo através de um hook (`useProduct`/`useStore`, que internamente chama os mesmos services). Resultado: **a mesma query ao Supabase roda duas vezes por request** em ambos os domínios — uma no servidor (layout, para SEO) e uma no cliente (page, para render). Isso funciona, mas é redundante e gasta uma chamada extra a cada acesso. Ver "Melhorias identificadas" abaixo — resolver os dois ao mesmo tempo é mais eficiente que resolver um e deixar o outro divergir.
-2. **Busca**: fluxo "single-fetch" — só a página (Server Component) busca dados, dentro de `<Suspense>`; `generateMetadata` não chama `searchEverything`, só lê `searchParams.q`. Não tem o problema de double-fetch dos dois itens acima.
-3. **Home**: não há fluxo nenhum até o service — os componentes recebem arrays mockados criados inline em `app/page.tsx`/`constants/categories.ts`, tipados com os tipos reais (`Store`, `Brand`, `ProductHighlight`) para que a troca por dados reais não exija mudar os componentes — mas a troca ainda não foi feita.
-
-## Fluxo da busca (Sprint 3.3)
-
-```
-SearchBar (client, via useSearch) --router.push(searchPath(q))--> /search?q=X
-                                        │
-                                        ▼
-                          SearchPage (Server Component)
-                          lê searchParams.q, gera metadata (canonical/OG/robots)
-                                        │
-                                        ▼
-                          <Suspense fallback={SearchResultsSkeleton}>
-                            SearchResultsAsync → getCachedSearch(q) → searchEverything(q)
-                          </Suspense>
-                                        │
-                                        ▼
-                          SearchResults (Server) — agrupa por tipo,
-                          EmptyState se total === 0 ou sem query
+```json
+{
+  "@supabase/supabase-js": "^2.108.2",
+  "@supabase/ssr": "^0.12.0",
+  "lucide-react": "^1.21.0",
+  "next": "16.2.9",
+  "react": "19.2.4",
+  "react-dom": "19.2.4"
+}
 ```
 
-`services/search.service.ts` (`searchEverything`) faz `Promise.all` de quatro `ilike` queries (`products`/`stores`/`brands`/`categories`), escapando `%`/`_` do termo do usuário antes de montar o padrão (evita que o usuário injete wildcards do Postgres), limita 8 resultados por seção, e lança erro apenas se todas as queries falharem — capturado por `app/search/error.tsx` (Client Component, usa a prop `unstable_retry` do Next 16.2, distingue erro genérico de estado offline via `navigator.onLine`). `hooks/useSearch.ts` é puramente de apresentação: mantém o valor do input e empurra a navegação via `searchPath()`, sem chamar o service diretamente — a busca real acontece no servidor, dentro do Server Component da página, com `React.cache` evitando refetch entre `generateMetadata` (que não chama `searchEverything`, só lê `q`) e o corpo da página.
+Dev: `tailwindcss ^4`, `@tailwindcss/postcss`, `eslint 9 + eslint-config-next`, `typescript ^5`, `tsx ^4.19.0` (Acquisition Engine), `sharp ^0.33.0` (imagens no Acquisition Engine).
 
-## Fluxo dos produtos
+Sem libs de state management, data-fetching (React Query/SWR), validação (zod) ou testes — tipagem direta do retorno do Supabase (`as Product[]`) sem validação em runtime.
 
+---
+
+## Clientes Supabase — três variantes (ADR-028)
+
+| Cliente | Arquivo | Chave | Contexto permitido | Propósito |
+|---|---|---|---|---|
+| Legado/público | `lib/supabase.ts` | anon | Client + Server (app pública) | Leitura pública do catálogo |
+| Server SSR | `lib/supabase/server.ts` | anon | Server Components, Route Handlers | Validar sessão admin/merchant |
+| Browser | `lib/supabase/client.ts` | anon | Client Components autenticados | Leitura com sessão ativa |
+| Service Role | `lib/supabase/service.ts` | service role | Somente Server | Writes admin/merchant + dados merchant em páginas públicas |
+
+**Regra crítica**: `lib/supabase/service.ts` NUNCA deve ser importado por Client Components. `SUPABASE_SERVICE_ROLE_KEY` não tem prefixo `NEXT_PUBLIC_*` e não é exposta ao navegador.
+
+---
+
+## Camadas e fluxo de dados
+
+### App pública (leitura de catálogo)
 ```
-ProductPage (client, useParams) → useProduct(slug)
-                                       │
-                       getProductBySlug ─┼─ getOffersByProduct
-                       getRelatedProducts┘
-                                       │
-                          supabase.from("products"/"offers")
-```
-
-Em paralelo, `app/product/[slug]/layout.tsx` roda no servidor: `getCachedProduct`/`getCachedOffers` (memorizados com `React.cache`, mas só dentro do próprio request do layout — não compartilhado com o client component da page) para `generateMetadata` + JSON-LD.
-
-`notFound()` é chamado dentro do corpo de um Client Component (`"use client"` + `useParams`), que funciona no Next 16 mas é atípico — o padrão recomendado em App Router é resolver `params`/`notFound` no Server Component e passar os dados como props para um Client Component apenas onde há interatividade (favoritar, galeria). Aqui a página inteira é client-side, perdendo streaming/SSR para o conteúdo principal (só o `layout` é SSR, para metadata/SEO).
-
-## Fluxo das lojas (Sprint 3.4)
-
-```
-StorePage (client, useParams) → useStore(slug)
-                                      │
-                      getStoreBySlug ─┼─ getOffersByStore
-                      getRelatedStores┘
-                                      │
-                         supabase.from("stores"/"offers")
+Page (Server) → service (lib/supabase.ts, anon key) → Supabase → Database
 ```
 
-Em paralelo, `app/store/[slug]/layout.tsx` roda no servidor: `getCachedStore` (`React.cache`, só dentro do request do layout) para `generateMetadata` + JSON-LD `LocalBusiness` — exatamente o mesmo padrão de `app/product/[slug]/layout.tsx`, incluindo a mesma ressalva sobre `notFound()` ser chamado dentro de um Client Component e sobre a página inteira não ser SSR (só o layout é, para metadata/SEO).
-
-`StoreOffers` (componente novo) cobre, em um único lugar, os pedidos de "produtos da loja" e "ofertas" da missão da sprint: cada oferta já mostra o produto vinculado (nome + link para `/product/[slug]`) e os termos da oferta (preço, estoque, garantia, cashback), evitando duas seções redundantes. `StoreGrid` mostra outras lojas (top-rated, excluindo a atual), espelhando `RelatedProducts`.
-
-**Contato e horário de funcionamento agora fazem parte deste fluxo** (Sprint 3.5, ADR-009 — ADR-006 estava baseado em uma premissa incorreta, corrigida na Sprint 3.4.1): `StoreDetails.tsx` exibe telefone/WhatsApp/e-mail/site/endereço/horário quando preenchidos; a seção de avaliações continua usando `EmptyState` sem dados reais (domínio de Reviews não existe ainda).
-
-## Fluxo do catálogo de produtos (Sprint 3.5)
-
+### Autenticação admin / merchant
 ```
-ProductsPage (Server) lê searchParams (q/category/brand/store/minPrice/
-maxPrice/availability/sort/page), gera metadata (canonical/OG/robots —
-noindex,follow quando há filtro/página > 1, mesmo padrão de /search)
-        │
-        ├── getCategories()/getBrands()/getStores() em paralelo,
-        │   fora do <Suspense> (alimentam ProductFilters, client,
-        │   sincronizado com a URL via hooks/useProductFilters.ts)
-        │
-        └── <Suspense fallback={ProductGridSkeleton}>
-              ProductCatalogAsync → getProductsCatalog(filters)
-            </Suspense>
-                  │
-                  ├── resolve category/brand/store slug → id
-                  ├── products + offers!inner|offers!left (filtro de
-                  │   loja/disponibilidade/preço via embedding PostgREST)
-                  ├── .range() + count: "exact" (paginação real)
-                  └── ProductGrid (Server) — ProductCard por item,
-                      EmptyState se zero resultados
+Route Handler → requireAdmin() / requireMerchant()
+  → lib/supabase/server.ts (valida sessão + profiles.role)
+  → se autorizado: lib/supabase/service.ts (bypassa RLS para writes)
 ```
 
-`services/product.service.ts` (`getProductsCatalog`) é o único ponto que combina filtros de `products` (categoria/marca/busca, colunas nativas) com filtros de `offers` (loja/disponibilidade/faixa de preço, via embedding `!inner`/`!left`). Filtros e paginação são corretos e escaláveis nativamente; ordenação por preço (`price_asc`/`price_desc`) é corrigida em memória por página, uma limitação documentada (ver `docs/DECISIONS.md`, ADR-011) com proposta de correção via materialized view (`database/migrations/0003_proposed_product_catalog_price_view.sql`, não aplicada). `ProductFilters` (client) e `hooks/useProductFilters.ts` mantêm a URL como única fonte de verdade dos filtros, no mesmo princípio de `hooks/useSearch.ts`.
+### Páginas públicas de merchant (lojas)
+```
+app/lojas/page.tsx (Server) → stores-public.service.ts (service role)
+  → merchants + stores → Supabase
+```
+
+Quatro padrões coexistem no app público:
+
+**1. Produto e Loja** (`/product/[slug]`, `/store/[slug]`): `layout.tsx` e `page.tsx` são ambos Server Components e compartilham fetches via `_cache.ts` (ADR-021 — double-fetch eliminado no Sprint 4.1). Antes do Sprint 4.1, essas páginas eram inteiramente `"use client"` + hook, resultando em double-fetch a cada visita.
+
+**2. Compare** (`/compare/[slug]`): Server Component puro; sem layout separado — `generateMetadata` e o corpo usam o mesmo `cache()` inline. Zero double-fetch.
+
+**3. Busca e Catálogo** (`/search`, `/products`): Server Components com `<Suspense>` para a seção de resultados; filtros/cabeçalho renderizam fora do Suspense. Single-fetch.
+
+**4. Home** (`/`): `async` Server Component com `force-dynamic`; dados reais em paralelo via `Promise.all`.
+
+---
+
+## Padrão `_cache.ts` (ADR-021)
+
+Problema resolvido no Sprint 4.1: em rotas com `layout.tsx` + `page.tsx` ambos Server Components, `generateMetadata` no layout e o render da page chamavam os mesmos services independentemente — double-fetch por visita.
+
+Solução: módulo `_cache.ts` por rota dinâmica, exportando funções envoltas em `React.cache()`:
+
+```
+app/product/[slug]/layout.tsx ──┐
+                                 ├── importam getCachedProduct, getCachedOffers
+app/product/[slug]/page.tsx  ──┘       do mesmo módulo:
+                                    app/product/[slug]/_cache.ts
+                                         │
+                          export const getCachedProduct = cache(getProductBySlug)
+                          export const getCachedOffers  = cache(getOffersByProduct)
+```
+
+`React.cache()` garante que, dentro de um único render pass, ambos (layout e page) reusam o mesmo resultado de query — 1 fetch por entidade por visita.
+
+---
+
+## Fluxo da busca
+
+```
+SearchBar (client) --router.push(?q=X)--> /search?q=X
+                                  │
+                      SearchPage (Server Component)
+                      lê searchParams.q, gera metadata (canonical/OG/robots)
+                                  │
+                    <Suspense fallback={SearchResultsSkeleton}>
+                      SearchResultsAsync → getCachedSearch(q) → searchEverything(q)
+                    </Suspense>
+                                  │
+                      SearchResults (Server) — agrupa por tipo
+                      EmptyState se total === 0 ou sem query
+```
+
+`searchEverything` faz `Promise.all` de 4 queries `ilike` (products/stores/brands/categories), com `escapeLikePattern` aplicado antes de montar o padrão. Máximo 8 resultados por seção.
+
+---
+
+## Fluxo do compare
+
+```
+/compare/[slug]  (Server Component)
+       │
+  cache(getProductComparisonBySlug) — 3 queries batch (ADR-020):
+    1. products JOIN brands + categories
+    2. offers JOIN stores
+    3. price_history.in("offer_id", offerIds)
+       │
+  ranking em memória (ADR-014): pontuação composta 0–100
+       │
+  CompareOfferCard × N
+```
+
+---
+
+## Fluxo do catálogo de produtos
+
+```
+ProductsPage (Server) lê searchParams → getCategories/getBrands/getStores em paralelo
+                                      → <Suspense>
+                                           ProductCatalogAsync → getProductsCatalog(filters)
+                                         </Suspense>
+                                           ├── resolve slug → id (category/brand/store)
+                                           ├── products + offers!inner|!left (PostgREST)
+                                           ├── .range() + count: "exact" (paginação real)
+                                           └── ProductGrid → ProductCard × N
+```
+
+Ordenação por preço (`price_asc`/`price_desc`) é corrigida em memória por página — limitação conhecida (ADR-011). View materializada proposta mas não aplicada.
+
+---
+
+## Fluxo do Merchant OS
+
+```
+/merchant/login → supabase.auth.signInWithPassword() → /merchant/dashboard
+                                                             │
+                                         requireMerchant() (lib/merchant-auth.ts)
+                                         valida sessão + profiles.role = 'merchant'
+                                                             │
+                                         /api/merchant/dashboard/stats (serviceClient)
+                                         computa Score, Level, NextStep, Goals on-demand
+```
+
+---
+
+## Acquisition Engine (standalone)
+
+`acquisition/` é um módulo Node.js autônomo — não é importado por nenhuma rota Next.js. Executa via `tsx` (devDependency). Usa `process.env` diretamente (ADR-012).
+
+```
+ConnectorRegistry.get("loja:v1").fetch()
+    │
+ ConnectorBatch → AcquisitionPipeline.run()
+    │
+ Validation → Normalization → Deduplication → MediaPipeline → CatalogWriter → PipelineMetrics
+```
+
+`CatalogWriter` usa `getServiceClient()` (service role) para bypassar RLS. A chave anônima não tem permissão de INSERT em catálogo.
+
+---
 
 ## Server Components vs. Client Components
 
-- **Server (default)**: `app/page.tsx`, `app/search/page.tsx`, `app/products/page.tsx` (Sprint 3.5, inteiramente Server — única das três páginas de listagem/detalhe sem hook client equivalente), `app/product/[slug]/layout.tsx`, `app/store/[slug]/layout.tsx`, todos os componentes de `home/` exceto `SearchBar`, `Footer`, a maioria de `ui/`, `ProductHeader`/`ProductSpecifications`/`ProductOffers`/`RelatedProducts`/`ProductCard`/`ProductGrid`/`ProductGridSkeleton`, `StoreCard`/`StoreDetails`/`StoreOffers`/`StoreGrid`, `SearchResults`, `Breadcrumb`, `Pagination`.
-- **Client (`"use client"`)**: `SearchBar`, `Navbar` (scroll listener), `Reveal`/`StatCard` (IntersectionObserver), `ProductGallery` (estado de imagem ativa), `FavoriteButton`/`ShareButton` (interação + `localStorage`/clipboard), `ProductFilters` (Sprint 3.5, via `useProductFilters`), `useFavorites`/`useProduct`/`useStore`/`useSearch`/`useProductFilters` (hooks), e as **páginas inteiras** `app/product/[slug]/page.tsx` e `app/store/[slug]/page.tsx`.
+**Server (default)**: `app/page.tsx`, `app/search/page.tsx`, `app/products/page.tsx`, `app/product/[slug]/layout.tsx` e `page.tsx` (desde Sprint 4.1), `app/store/[slug]/layout.tsx` e `page.tsx` (desde Sprint 4.1), `app/compare/[slug]/page.tsx`, `app/lojas/*`, `app/para-lojistas/`, `Footer`, maioria de `ui/`, todos os componentes de store/product/compare/search, `components/home/*` exceto SearchBar e HeroCTAs.
 
-A separação segue a convenção do CLAUDE.md ("client só quando precisa de estado/eventos"), exceto pelas pages de produto e loja serem inteiramente client quando poderiam ser majoritariamente server com ilhas de interatividade.
+**Client (`"use client"`)**: `SearchBar`, `HeroCTAs` (estado de auth), `Navbar` (scroll listener), `Reveal`/`StatCard` (IntersectionObserver), `ProductGallery` (imagem ativa), `FavoriteButton`/`ShareButton`, `ProductFilters` (useProductFilters), formulários de admin/merchant, `ToastContext`, `ToastContainer`. Hooks (`useFavorites`, `useSearch`, `useProductFilters`, `useCompare`) são client-only mas não há mais nenhuma page pública inteiramente client-side — padrão resolvido no Sprint 4.1.
+
+---
 
 ## Roteamento
 
-App Router puro, sem route groups, sem paralelo/intercepting routes. Parâmetros dinâmicos: `app/product/[slug]`, `app/store/[slug]` (Sprint 3.4). `app/search` lê `?q=` via `searchParams`; `app/products` (Sprint 3.5) lê `?q=&category=&brand=&store=&minPrice=&maxPrice=&availability=&sort=&page=`. Várias rotas continuam referenciadas em `Navbar`/`Footer` mas não existem: `/stores`, `/compare`, `/favorites`, `/price-history`, `/about`, `/contact`, `/privacy`, `/terms`, `/#categorias`, `/#ia` (os dois últimos são anchors válidos dentro de `/`) — `/products` deixou de ser um link morto nesta sprint.
+App Router puro. Sem route groups, paralelo ou intercepting routes. Parâmetros dinâmicos: `[slug]` em produto, loja, compare, lojas.
+
+| Rota | Tipo | Propósito |
+|---|---|---|
+| `/` | Server, dynamic | Home com dados reais |
+| `/search?q=` | Server | Busca global |
+| `/products?filtros` | Server | Catálogo filtrado |
+| `/product/[slug]` | Server | Detalhe de produto |
+| `/store/[slug]` | Server | Detalhe de loja |
+| `/compare/[slug]` | Server | Comparação de lojas por produto |
+| `/lojas` | Server | Ranking público de lojas |
+| `/lojas/[slug]` | Server | Página premium por loja |
+| `/para-lojistas` | Server | Landing page |
+| `/admin/*` | Server (autenticado) | Plataforma de operações |
+| `/merchant/*` | Server (autenticado) | Portal do lojista |
+| `/auth/callback` | Route Handler | PKCE auth exchange |
+| `/api/admin/*` | Route Handlers | CRUD admin |
+| `/api/merchant/*` | Route Handlers | APIs do portal |
+| `/api/compare` | Route Handler | API pública de comparação |
+
+**Rotas mortas** (referenciadas em Navbar/Footer mas sem `page.tsx`): `/stores` (listagem genérica), `/categories/[slug]`.
+
+---
 
 ## Providers
 
-Nenhum. Sem `ThemeProvider`, sem `AuthProvider`, sem `QueryClientProvider`. `app/layout.tsx` é o root layout padrão do `create-next-app` (título/descrição ainda "Create Next App" — nunca customizado).
+Admin e merchant têm `ToastContext`/`ToastContainer` compartilhados. Sem `ThemeProvider` ou `QueryClientProvider`. A app pública não tem nenhum provider global.
 
-## Services
+---
 
-Ver inventário em `PROJECT_STATUS.md`. Convenção consistente: toda função retorna o tipo esperado ou `[]`/`null` em erro, loga via `console.error`, nunca lança. Bem seguida nos 4 services implementados (`product`, `offer`, `store`, `search`); `getStore(id)` continua sendo a única exceção (sem tipo de retorno explícito), mantida como código morto desde antes da Sprint 3.4.
+## Services — convenção
 
-## Tipos
+Toda função que consulta Supabase: retorna tipo esperado ou `[]`/`null` em erro, loga via `console.error`, nunca lança. Convenção seguida em todos os services implementados.
 
-Modelagem 1:1 com tabelas do Supabase (`Product`, `Offer`, `Store`, `Brand`, `Category`, `Favorite`), mais tipos de composição (`ProductWithRelations`, `OfferWithStore`, `OfferWithProduct` — novo na Sprint 3.4, `ProductHighlight`) para os `select()` com joins. Padrão saudável e consistente onde implementado.
+**Exceção documentada**: `stores-public.service.ts` usa `getSupabaseServiceClient()` em vez do cliente anon padrão. Importável apenas por Server Components — nunca por Client Components.
 
-## Camadas — avaliação
+---
 
-A camada que está **mais madura** é `types/` + os 4 services implementados — modelagem de dados consistente e sem duplicação. A camada `hooks/` melhorou bastante desde a Sprint 3.2: de 5 hooks declarados (`useProduct`, `useStore`, `useSearch`, `useOffers`, `useFavorites`), agora 4 têm corpo — só `useOffers` continua vazio.
+## Melhorias identificadas (abertas)
 
-## Duplicações identificadas
-
-1. **Fetch duplicado de produto e de loja** — em ambos os domínios, `layout.tsx` (server) e `page.tsx` (client, via `useProduct`/`useStore`) buscam os mesmos dados de forma independente, sem compartilhar cache entre os dois (o `React.cache()` usado no layout não atravessa a fronteira server/client). Toda visita a essas páginas dispara a query ao Supabase ao menos duas vezes. O padrão foi replicado deliberadamente na Sprint 3.4 para manter consistência arquitetural — resolver os dois ao mesmo tempo é mais eficiente do que resolver só um. `/products` (Sprint 3.5) **não tem esse problema**: é inteiramente Server Component, sem hook client-side equivalente.
-2. ~~`components/product/ProductCard.tsx` vs `components/product/ProductHighlightCard.tsx`~~ — **resolvido na Sprint 3.5** (ver `docs/DECISIONS.md`, ADR-010): unificados em um único `ProductCard` com props achatadas; `ProductHighlightCard.tsx` removido.
-3. ~~Validação de env do Supabase duplicada~~ — **resolvido na Sprint 3.2** (ver `docs/DECISIONS.md`, ADR-001): `lib/env.ts` é agora a única fonte de `process.env`, `lib/supabase.ts` e `constants/routes.ts` consomem `env` de lá.
-4. ~~`constants/routes.ts` só cobria `product*`~~ — **resolvido na Sprint 3.4**: `storePath()`/`storeUrl()` adicionados; `StoreCard` não usa mais string literal. Sprint 3.5 adicionou `productsPath()`/`productsUrl()`.
-5. ~~`escapeLikePattern` duplicada~~ — **resolvido na Sprint 3.5**: extraída para `utils/search.ts` (antes vazio), reaproveitada por `search.service.ts` e `product.service.ts`.
-6. ~~Trilha de breadcrumb duplicada (`ProductBreadcrumb` + nav inline em `/store/[slug]`)~~ — **resolvido na Sprint 3.5**: `components/ui/Breadcrumb.tsx` genérico, com JSON-LD `BreadcrumbList`, reaproveitado pelos três domínios.
-
-## Melhorias identificadas
-
-- Unificar o fetch de produto e de loja: mover toda a busca para o Server Component (layout/page server) e passar os dados como props para um Client Component pequeno só para as partes interativas (galeria, favoritar, compartilhar), eliminando `useProduct`/`useStore` client-side ou reduzindo seu uso a casos que realmente precisam de refetch no cliente. `/products` (Sprint 3.5) já segue esse padrão integralmente e pode servir de referência.
-- Versionar o schema do banco (`database/migrations`) em vez de mantê-lo só no painel do Supabase e em markdown descritivo — há 3 propostas não aplicadas (`0001` superada, `0002` integridade de `stores`, `0003` view de agregação de preço para o catálogo, Sprint 3.5), mas ainda não há processo formal de aplicação.
-- Adicionar tipagem de retorno do Supabase com validação em runtime (ou ao menos `zod`) em vez de `as Product[]`/`as Store[]` — hoje uma mudança de schema no banco não quebra o TypeScript, só quebra em runtime (foi exatamente assim que os bugs de `offer`/`store` corrigidos na Sprint 3.5, ADR-009, passaram 3 sprints sem serem pegos por lint/TS/build).
-- Popular dados reais (`stores.slug`, `products`/`offers`) — ver `docs/DECISIONS.md`, ADR-007. Não é uma melhoria de arquitetura, mas bloqueia qualquer validação end-to-end com dados de produção, incluindo os filtros do novo catálogo.
-- Aplicar a view de agregação de preço proposta em `0003_proposed_product_catalog_price_view.sql` para eliminar a limitação de ordenação por preço "best effort" do catálogo (ver ADR-011).
-
-## Definição de sucesso da arquitetura (mantida do documento original)
-
-Um desenvolvedor novo deve entender, em minutos: onde o código pertence, como os dados fluem, como os módulos interagem e onde adicionar novas features. Com a estrutura atual isso é majoritariamente verdade — a maior fonte de confusão é justamente a duplicação de fetch entre layout e page do produto, e a quantidade de arquivos vazios que parecem implementados até serem abertos.
+- **Offer Ranking (ADR-014)**: estratégia documentada e implementada no Compare Engine (`/compare/[slug]`), mas `getOffersByProduct` (página de produto) ainda ordena só por `price_usd`.
+- **View materializada de preço (ADR-011)**: proposta em `0003_proposed_product_catalog_price_view.sql`, não aplicada. Ordenação por preço no catálogo é "best effort" (correta dentro da página, não garante ordem global entre páginas).
+- **Constraints de integridade (migration 0008)**: UNIQUE em slugs e índices de performance — criados e prontos mas não aplicados via SQL Editor.
+- **Tipagem sem validação em runtime**: todos os services fazem `data as Tipo[]`. Mudança de schema no banco não quebra TypeScript, só quebra em runtime.
+- **`validate.js`**: detecta FKs órfãs por `IS NULL`, não por anti-join real. Adequado para volume atual; precisará de RPC quando o volume crescer.
+- **`getStore(id)`**: código morto sem consumidor real desde Sprint 3.4 (substituído por `getStoreBySlug`). Sem tipo de retorno explícito.
+- **`app/layout.tsx`**: título/descrição ainda "Create Next App" do template — nunca customizados para ParaguAI.

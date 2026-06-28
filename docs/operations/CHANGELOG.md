@@ -20,7 +20,7 @@ Validação completa e certificação da Foundation Empresarial do ParaguAI.
 
 **Inconsistência encontrada e corrigida:**
 
-- **`docs/AI_CONSTITUTION.md` Seção XIX** estava desatualizada: listava apenas 5 documentos na hierarquia (os existentes antes da Foundation). Corrigida para hierarquia completa de 12 documentos (8 Foundation + 4 operacionais). Constitution promovida de v1.1 para **v1.2**.
+- **`docs/foundation/AI_CONSTITUTION.md` Seção XIX** estava desatualizada: listava apenas 5 documentos na hierarquia (os existentes antes da Foundation). Corrigida para hierarquia completa de 12 documentos (8 Foundation + 4 operacionais). Constitution promovida de v1.1 para **v1.2**.
 
 ---
 
@@ -48,9 +48,9 @@ O ciclo está fechado e certificado. Qualquer revisão futura de um documento pe
 
 Criação do oitavo e último documento permanente da Foundation: o ciclo permanente de evolução da plataforma.
 
-- **`docs/RELEASE_STRATEGY.md`** (novo): 15 seções. Fecha a Foundation respondendo "como o ParaguAI evolui?" Filosofia de Releases: evolução mensurável, não conjunto de tarefas; o que fica (ativo/dado/contrato/aprendizado) é mais importante do que o que entra (código). O Ciclo Permanente de 11 estágios com diagrama: Missão → Observação → Formulação → Decision Filter → ADR → Planejamento → Implementação → Validação → Release → Observação → Aprendizado → Missão. Definição de Release (coeso + evolução identificável + 5 propriedades) e anti-exemplos. 10 Tipos de Release com objetivos e Quality Gates específicos: Foundation, Architecture, Platform, Feature, Quality, Infrastructure, Security, Performance, Data, AI. Critérios para criação de Release vs. ajuste vs. agrupamento. Planejamento como ato de pensar o que pode dar errado (sem cerimônias, sem prazo de calendário). Compounding Releases: motor reutilizável, dados acumuláveis, contrato estabilizado, capacidade de IA alimentada, conhecimento documentado — pergunta de compounding obrigatória. Definition of Ready (8 condições) e Definition of Done (10 condições). Quality Gates universais (build, typecheck, lint, consistência arquitetural, consistência com Foundation, sem regressões) + gates por tipo. Versionamento: Foundation F.x / Major x.0 / Minor x.y / Patch x.y.z — CHANGELOG como significado, versão como escala. Comunicação: CHANGELOG (o quê + por quê), PROJECT_STATUS (fotografia do presente), ADRs (por que decidido assim), NEXT_STEPS (direção emergente). Aprendizado Contínuo: 4 dimensões (problema, solução, processo, próxima Release). O Compromisso: 7 compromissos permanentes; nunca apenas adicionar código. Tabela final: 8 documentos com posição no ciclo.
+- **`docs/foundation/RELEASE_STRATEGY.md`** (novo): 15 seções. Fecha a Foundation respondendo "como o ParaguAI evolui?" Filosofia de Releases: evolução mensurável, não conjunto de tarefas; o que fica (ativo/dado/contrato/aprendizado) é mais importante do que o que entra (código). O Ciclo Permanente de 11 estágios com diagrama: Missão → Observação → Formulação → Decision Filter → ADR → Planejamento → Implementação → Validação → Release → Observação → Aprendizado → Missão. Definição de Release (coeso + evolução identificável + 5 propriedades) e anti-exemplos. 10 Tipos de Release com objetivos e Quality Gates específicos: Foundation, Architecture, Platform, Feature, Quality, Infrastructure, Security, Performance, Data, AI. Critérios para criação de Release vs. ajuste vs. agrupamento. Planejamento como ato de pensar o que pode dar errado (sem cerimônias, sem prazo de calendário). Compounding Releases: motor reutilizável, dados acumuláveis, contrato estabilizado, capacidade de IA alimentada, conhecimento documentado — pergunta de compounding obrigatória. Definition of Ready (8 condições) e Definition of Done (10 condições). Quality Gates universais (build, typecheck, lint, consistência arquitetural, consistência com Foundation, sem regressões) + gates por tipo. Versionamento: Foundation F.x / Major x.0 / Minor x.y / Patch x.y.z — CHANGELOG como significado, versão como escala. Comunicação: CHANGELOG (o quê + por quê), PROJECT_STATUS (fotografia do presente), ADRs (por que decidido assim), NEXT_STEPS (direção emergente). Aprendizado Contínuo: 4 dimensões (problema, solução, processo, próxima Release). O Compromisso: 7 compromissos permanentes; nunca apenas adicionar código. Tabela final: 8 documentos com posição no ciclo.
 - **`CLAUDE.md`** (atualizado): RELEASE_STRATEGY.md declarado como oitavo documento obrigatório. Hierarquia expandida de 11 para 12 níveis.
-- **`docs/MASTER_ROADMAP.md`** (atualizado): RELEASE_STRATEGY.md inserido como prioridade 8.
+- **`docs/product/MASTER_ROADMAP.md`** (atualizado): RELEASE_STRATEGY.md inserido como prioridade 8.
 
 ---
 
@@ -77,9 +77,9 @@ O ciclo está fechado: Identidade → Decisão → Valor → Visão → Engenhar
 
 Criação do sétimo documento permanente da Foundation: o processo permanente de aprovação de decisões.
 
-- **`docs/DECISION_FILTER.md`** (novo): 12 seções. Transforma os princípios da Foundation em processo operacional. O papel do Filter (4 propriedades: alinhamento, valor, coerência, experiência). A Pergunta Fundamental ("Esta iniciativa reduz a assimetria de informação ou fortalece a infraestrutura que reduz?"). Pipeline de Decisão de 10 estágios sequenciais com diagrama: problema real → valor gerado (ativo/dado/problema) → alinhamento com missão → filtros North Star → impacto no Business Model → coerência com Vision → Engineering Principles → Product Principles → custo e reversibilidade → decisão (✅/⏸/❌). 12 Filtros Permanentes com 4 críticos bloqueadores. Critérios de Priorização: valor para missão, compounding, habilitadora, fundacional, esforço/risco — como método de raciocínio, não fórmula matemática. 3 Tipos de Decisão: Nível 1 (operacional, Filter simplificado), Nível 2 (produto, Pipeline completo), Nível 3 (estratégico, Pipeline + ADR obrigatório). Critérios de "Não" (9 situações com diagnóstico). Critérios de "Sim" (8 situações com raciocínio). Conflitos Entre Critérios: velocidade vs. qualidade (Tipo 1/2), curto vs. longo prazo (custo de bloqueio), receita vs. confiança (confiança sempre), automação vs. controle humano (dados vs. contexto), completude vs. entrega (incrementos funcionais), Foundation vs. circunstância (exceções documentadas nunca silenciosas). Checklist Obrigatório reutilizável. 10 Anti-Patterns: feature por vaidade, arquitetura por moda, escalamento prematuro, automação desnecessária, duplicação de solução, tecnologia acima do problema, consenso por exaustão, urgência fabricada, exceção que vira regra, decisão pela ausência de questionamento. O Compromisso (4 compromissos permanentes).
+- **`docs/foundation/DECISION_FILTER.md`** (novo): 12 seções. Transforma os princípios da Foundation em processo operacional. O papel do Filter (4 propriedades: alinhamento, valor, coerência, experiência). A Pergunta Fundamental ("Esta iniciativa reduz a assimetria de informação ou fortalece a infraestrutura que reduz?"). Pipeline de Decisão de 10 estágios sequenciais com diagrama: problema real → valor gerado (ativo/dado/problema) → alinhamento com missão → filtros North Star → impacto no Business Model → coerência com Vision → Engineering Principles → Product Principles → custo e reversibilidade → decisão (✅/⏸/❌). 12 Filtros Permanentes com 4 críticos bloqueadores. Critérios de Priorização: valor para missão, compounding, habilitadora, fundacional, esforço/risco — como método de raciocínio, não fórmula matemática. 3 Tipos de Decisão: Nível 1 (operacional, Filter simplificado), Nível 2 (produto, Pipeline completo), Nível 3 (estratégico, Pipeline + ADR obrigatório). Critérios de "Não" (9 situações com diagnóstico). Critérios de "Sim" (8 situações com raciocínio). Conflitos Entre Critérios: velocidade vs. qualidade (Tipo 1/2), curto vs. longo prazo (custo de bloqueio), receita vs. confiança (confiança sempre), automação vs. controle humano (dados vs. contexto), completude vs. entrega (incrementos funcionais), Foundation vs. circunstância (exceções documentadas nunca silenciosas). Checklist Obrigatório reutilizável. 10 Anti-Patterns: feature por vaidade, arquitetura por moda, escalamento prematuro, automação desnecessária, duplicação de solução, tecnologia acima do problema, consenso por exaustão, urgência fabricada, exceção que vira regra, decisão pela ausência de questionamento. O Compromisso (4 compromissos permanentes).
 - **`CLAUDE.md`** (atualizado): DECISION_FILTER.md declarado como sétimo documento obrigatório. Hierarquia expandida de 10 para 11 níveis.
-- **`docs/MASTER_ROADMAP.md`** (atualizado): DECISION_FILTER.md inserido como prioridade 7.
+- **`docs/product/MASTER_ROADMAP.md`** (atualizado): DECISION_FILTER.md inserido como prioridade 7.
 
 **Foundation completa (7 documentos)**: AI_CONSTITUTION + NORTH_STAR + BUSINESS_MODEL + VISION_2035 + ENGINEERING_PRINCIPLES + PRODUCT_PRINCIPLES + DECISION_FILTER.
 
@@ -87,9 +87,9 @@ Criação do sétimo documento permanente da Foundation: o processo permanente d
 
 Criação do sexto documento permanente da Foundation: a filosofia permanente de produto do ParaguAI.
 
-- **`docs/PRODUCT_PRINCIPLES.md`** (novo): 18 seções + 12 Princípios Permanentes. Responde "como construímos produtos?" — traduzindo a estratégia em princípios de produto e experiência. Contém: Filosofia de Produto (produto melhora decisões, não gera cliques; usuário que encontra em 2 cliques e sai é sucesso), Quem Servimos (4 públicos com necessidades distintas: comprador precisa de clareza, lojista de controle, turista de orientação antecipada, parceiro de previsibilidade), Simplicidade Radical (complexidade ao sistema, nunca ao usuário; opções demais são decisões que o produto não quis tomar), Transparência (origem/atualização/raciocínio/incerteza como funcionalidades, não documentação), IA como Assistente (transparência algorítmica: motivo visível, não autoridade opaca; amplificador não narrador), Automação Inteligente (dados vs. contexto humano; dry-run e falha como design), Produto Orientado a Dados (cada funcionalidade produz dados além de consumir; compounding vs. linear), Confiança como Produto (construída, nunca declarada; custo de quebra assimétrico e irreversível), Experiência Integrada (teste de integração: usuário começa em qualquer ponto sem sentir mudança de produto), Produto Modular (pergunta de aceite: se outro módulo precisar desta capacidade amanhã, está disponível?), Crescimento Invisível (IA absorve decisões, contextualização elimina opções, progressividade de capacidades avançadas), Feedback Contínuo (comportamento prevalece sobre pesquisa; sinais como dados de produto), Acessibilidade (4 dimensões: tecnológica, experiência, linguística, física), Neutralidade (rankings orgânicos, publicidade identificada, recomendações por relevância — linha absoluta), Efeito "Uau" (funcionalidades que mudam comportamento vs. que apenas existem; teste: "sem isso não dá"), Produto como Ecossistema (cada módulo tem duas perguntas: serve seu público? conecta-se ao ecossistema?), Produto para Décadas (implementação evolui; dados históricos são permanentes e nunca descartados por simplicidade presente).
+- **`docs/foundation/PRODUCT_PRINCIPLES.md`** (novo): 18 seções + 12 Princípios Permanentes. Responde "como construímos produtos?" — traduzindo a estratégia em princípios de produto e experiência. Contém: Filosofia de Produto (produto melhora decisões, não gera cliques; usuário que encontra em 2 cliques e sai é sucesso), Quem Servimos (4 públicos com necessidades distintas: comprador precisa de clareza, lojista de controle, turista de orientação antecipada, parceiro de previsibilidade), Simplicidade Radical (complexidade ao sistema, nunca ao usuário; opções demais são decisões que o produto não quis tomar), Transparência (origem/atualização/raciocínio/incerteza como funcionalidades, não documentação), IA como Assistente (transparência algorítmica: motivo visível, não autoridade opaca; amplificador não narrador), Automação Inteligente (dados vs. contexto humano; dry-run e falha como design), Produto Orientado a Dados (cada funcionalidade produz dados além de consumir; compounding vs. linear), Confiança como Produto (construída, nunca declarada; custo de quebra assimétrico e irreversível), Experiência Integrada (teste de integração: usuário começa em qualquer ponto sem sentir mudança de produto), Produto Modular (pergunta de aceite: se outro módulo precisar desta capacidade amanhã, está disponível?), Crescimento Invisível (IA absorve decisões, contextualização elimina opções, progressividade de capacidades avançadas), Feedback Contínuo (comportamento prevalece sobre pesquisa; sinais como dados de produto), Acessibilidade (4 dimensões: tecnológica, experiência, linguística, física), Neutralidade (rankings orgânicos, publicidade identificada, recomendações por relevância — linha absoluta), Efeito "Uau" (funcionalidades que mudam comportamento vs. que apenas existem; teste: "sem isso não dá"), Produto como Ecossistema (cada módulo tem duas perguntas: serve seu público? conecta-se ao ecossistema?), Produto para Décadas (implementação evolui; dados históricos são permanentes e nunca descartados por simplicidade presente).
 - **`CLAUDE.md`** (atualizado): PRODUCT_PRINCIPLES.md declarado como sexto documento obrigatório. Hierarquia expandida de 9 para 10 níveis.
-- **`docs/MASTER_ROADMAP.md`** (atualizado): PRODUCT_PRINCIPLES.md inserido como prioridade 6.
+- **`docs/product/MASTER_ROADMAP.md`** (atualizado): PRODUCT_PRINCIPLES.md inserido como prioridade 6.
 
 **Foundation completa (6 documentos)**: AI_CONSTITUTION + NORTH_STAR + BUSINESS_MODEL + VISION_2035 + ENGINEERING_PRINCIPLES + PRODUCT_PRINCIPLES.
 
@@ -97,9 +97,9 @@ Criação do sexto documento permanente da Foundation: a filosofia permanente de
 
 Criação do quinto documento permanente da Foundation: a filosofia técnica permanente do ParaguAI.
 
-- **`docs/ENGINEERING_PRINCIPLES.md`** (novo): 15 seções + 12 Princípios Permanentes. Responde "como construímos tecnologia?" — complementando a Constituição (que tem regras operacionais) com a filosofia que permite derivar regras para situações novas. Contém: Filosofia de Engenharia (tecnologia como meio), Arquitetura Evolutiva (composição, baixo acoplamento, contratos > implementações), Simplicidade como Estratégia (complexidade conquistada, não presumida), Sistemas Orientados a Ativos (módulos que produzem ativos reutilizáveis), Dados como Contrato (origem, ciclo de vida, propriedade, imutabilidade histórica), APIs e Fronteiras (contratos explícitos, evolução compatível, dependência unidirecional), Escalabilidade (O(1) vs O(n) no design, idempotência como pré-condição), Observabilidade (logs + métricas + rastreabilidade de automações), Automação (dry-run obrigatório, falha ruidosa, idempotência, escopo delimitado), Inteligência Artificial (capacidade transversal, dados como insumo, modelos como contratos), Evolução Contínua (cada Release melhora a arquitetura, débito intencional vs. acidental), Qualidade (design constraint: testabilidade, legibilidade, zero warnings), Segurança (menor privilégio, defesa em profundidade, privacidade como restrição de design), Resiliência (falha previsível, degradação graciosa, recuperabilidade), Princípios Permanentes (12 princípios invioláveis).
+- **`docs/foundation/ENGINEERING_PRINCIPLES.md`** (novo): 15 seções + 12 Princípios Permanentes. Responde "como construímos tecnologia?" — complementando a Constituição (que tem regras operacionais) com a filosofia que permite derivar regras para situações novas. Contém: Filosofia de Engenharia (tecnologia como meio), Arquitetura Evolutiva (composição, baixo acoplamento, contratos > implementações), Simplicidade como Estratégia (complexidade conquistada, não presumida), Sistemas Orientados a Ativos (módulos que produzem ativos reutilizáveis), Dados como Contrato (origem, ciclo de vida, propriedade, imutabilidade histórica), APIs e Fronteiras (contratos explícitos, evolução compatível, dependência unidirecional), Escalabilidade (O(1) vs O(n) no design, idempotência como pré-condição), Observabilidade (logs + métricas + rastreabilidade de automações), Automação (dry-run obrigatório, falha ruidosa, idempotência, escopo delimitado), Inteligência Artificial (capacidade transversal, dados como insumo, modelos como contratos), Evolução Contínua (cada Release melhora a arquitetura, débito intencional vs. acidental), Qualidade (design constraint: testabilidade, legibilidade, zero warnings), Segurança (menor privilégio, defesa em profundidade, privacidade como restrição de design), Resiliência (falha previsível, degradação graciosa, recuperabilidade), Princípios Permanentes (12 princípios invioláveis).
 - **`CLAUDE.md`** (atualizado): ENGINEERING_PRINCIPLES.md declarado como quinto documento obrigatório. Hierarquia expandida de 8 para 9 níveis.
-- **`docs/MASTER_ROADMAP.md`** (atualizado): ENGINEERING_PRINCIPLES.md inserido como prioridade 5.
+- **`docs/product/MASTER_ROADMAP.md`** (atualizado): ENGINEERING_PRINCIPLES.md inserido como prioridade 5.
 
 **Foundation completa (5 documentos)**: AI_CONSTITUTION + NORTH_STAR + BUSINESS_MODEL + VISION_2035 + ENGINEERING_PRINCIPLES.
 
@@ -107,9 +107,9 @@ Criação do quinto documento permanente da Foundation: a filosofia técnica per
 
 Criação do quarto documento permanente da Foundation: o horizonte estratégico do ParaguAI.
 
-- **`docs/VISION_2035.md`** (novo): 15 seções. Responde "para onde vamos?" — completando o núcleo estratégico com a visão de longo prazo. Contém: Introdução (por que visão importa), Nossa Ambição (infraestrutura de inteligência da Tríplice Fronteira), Nossa Transformação (6 estágios evolutivos sem descontinuidade), O Ecossistema ParaguAI (9 pilares conectados), ParaguAI Brain (visão de convergência de inteligência), Experiência do Usuário 2035, Experiência do Lojista 2035, Turismo Inteligente integrado, Plataforma Aberta (API + ecossistema de parceiros), Inteligência Regional (bem público privado com ética de dados), Expansão (por consequência, não por meta), Cultura Permanente (5 princípios), O Legado (transformação para compradores, lojistas, região e ecossistema digital), Indicadores da Visão (6 qualitative success signals), Manifesto Final, e tabela de integração do núcleo estratégico completo.
+- **`docs/foundation/VISION_2035.md`** (novo): 15 seções. Responde "para onde vamos?" — completando o núcleo estratégico com a visão de longo prazo. Contém: Introdução (por que visão importa), Nossa Ambição (infraestrutura de inteligência da Tríplice Fronteira), Nossa Transformação (6 estágios evolutivos sem descontinuidade), O Ecossistema ParaguAI (9 pilares conectados), ParaguAI Brain (visão de convergência de inteligência), Experiência do Usuário 2035, Experiência do Lojista 2035, Turismo Inteligente integrado, Plataforma Aberta (API + ecossistema de parceiros), Inteligência Regional (bem público privado com ética de dados), Expansão (por consequência, não por meta), Cultura Permanente (5 princípios), O Legado (transformação para compradores, lojistas, região e ecossistema digital), Indicadores da Visão (6 qualitative success signals), Manifesto Final, e tabela de integração do núcleo estratégico completo.
 - **`CLAUDE.md`** (atualizado): VISION_2035.md declarado como quarto documento obrigatório. Hierarquia expandida de 7 para 8 níveis.
-- **`docs/MASTER_ROADMAP.md`** (atualizado): VISION_2035.md inserido como prioridade 4 na tabela Foundation Documents.
+- **`docs/product/MASTER_ROADMAP.md`** (atualizado): VISION_2035.md inserido como prioridade 4 na tabela Foundation Documents.
 
 **Núcleo estratégico completo**: AI_CONSTITUTION (quem somos) + NORTH_STAR (como decidimos) + BUSINESS_MODEL (como criamos valor) + VISION_2035 (para onde vamos) formam os quatro pilares permanentes do ParaguAI.
 
@@ -117,9 +117,9 @@ Criação do quarto documento permanente da Foundation: o horizonte estratégico
 
 Criação do terceiro documento permanente da Foundation: o modelo econômico do ParaguAI.
 
-- **`docs/BUSINESS_MODEL.md`** (novo): 18 seções. Responde "como criamos valor?" — complementando a Constituição ("quem somos") e o North Star ("como decidimos"). Contém: Nossa Tese (o problema econômico da assimetria de informação na Tríplice Fronteira), A Assimetria de Informação (4 públicos afetados), Proposta de Valor por segmento (5 grupos), Flywheel Econômico completo, 6 tipos de Network Effects, Estratégia de Monetização (7 pilares), Estratégia de Crescimento (orgânico, sem gasto linear de marketing), Moat (5 camadas), Ativos Estratégicos (8 ativos), O Papel da IA / Dados / Turismo / Merchant OS / API, Como nos tornamos Indispensáveis, Visão Econômica (alinhamento de incentivos), Riscos Estratégicos (6 riscos + mitigação), Princípios Permanentes do Modelo de Negócio (7 princípios), e tabela de integração do núcleo estratégico.
+- **`docs/foundation/BUSINESS_MODEL.md`** (novo): 18 seções. Responde "como criamos valor?" — complementando a Constituição ("quem somos") e o North Star ("como decidimos"). Contém: Nossa Tese (o problema econômico da assimetria de informação na Tríplice Fronteira), A Assimetria de Informação (4 públicos afetados), Proposta de Valor por segmento (5 grupos), Flywheel Econômico completo, 6 tipos de Network Effects, Estratégia de Monetização (7 pilares), Estratégia de Crescimento (orgânico, sem gasto linear de marketing), Moat (5 camadas), Ativos Estratégicos (8 ativos), O Papel da IA / Dados / Turismo / Merchant OS / API, Como nos tornamos Indispensáveis, Visão Econômica (alinhamento de incentivos), Riscos Estratégicos (6 riscos + mitigação), Princípios Permanentes do Modelo de Negócio (7 princípios), e tabela de integração do núcleo estratégico.
 - **`CLAUDE.md`** (atualizado): BUSINESS_MODEL.md declarado como terceiro documento obrigatório. Hierarquia expandida de 6 para 7 níveis.
-- **`docs/MASTER_ROADMAP.md`** (atualizado): BUSINESS_MODEL.md inserido como prioridade 3 na tabela Foundation Documents.
+- **`docs/product/MASTER_ROADMAP.md`** (atualizado): BUSINESS_MODEL.md inserido como prioridade 3 na tabela Foundation Documents.
 
 **Núcleo estratégico completo**: AI_CONSTITUTION (quem somos) + NORTH_STAR (como decidimos) + BUSINESS_MODEL (como criamos valor) formam o sistema de governança permanente do ParaguAI.
 
@@ -127,13 +127,13 @@ Criação do terceiro documento permanente da Foundation: o modelo econômico do
 
 Revisão de maturidade do NORTH_STAR.md (v1.0 → v1.1). Preserva 100% do conteúdo existente. Adiciona 4 novos capítulos e fortalece 1 seção existente.
 
-- **`docs/NORTH_STAR.md`** (revisado v1.1): 14 seções totais (era 10). Seção 8 (Como Pensamos Longo Prazo) fortalecida com o princípio "infraestrutura antes de solução específica". Nova Seção 11 (Anti Goals): 9 itens com justificativa de por que cada um viola a missão. Nova Seção 12 (Tipos de Decisão): Tipo 1 (irreversíveis, análise profunda + ADR) vs Tipo 2 (reversíveis, decidir rápido); critério prático "qual é o custo real de voltar atrás?". Nova Seção 13 (Compounding Decisions): toda Release deve tornar a próxima mais fácil; pergunta obrigatória de compounding; distinção entre compounding e over-engineering. Nova Seção 14 (O Compromisso): fechamento permanente — 4 compromissos implícitos de todo desenvolvedor e sistema de IA no projeto.
+- **`docs/foundation/NORTH_STAR.md`** (revisado v1.1): 14 seções totais (era 10). Seção 8 (Como Pensamos Longo Prazo) fortalecida com o princípio "infraestrutura antes de solução específica". Nova Seção 11 (Anti Goals): 9 itens com justificativa de por que cada um viola a missão. Nova Seção 12 (Tipos de Decisão): Tipo 1 (irreversíveis, análise profunda + ADR) vs Tipo 2 (reversíveis, decidir rápido); critério prático "qual é o custo real de voltar atrás?". Nova Seção 13 (Compounding Decisions): toda Release deve tornar a próxima mais fácil; pergunta obrigatória de compounding; distinção entre compounding e over-engineering. Nova Seção 14 (O Compromisso): fechamento permanente — 4 compromissos implícitos de todo desenvolvedor e sistema de IA no projeto.
 
 ## 2026-06-27 — Foundation 0.2 — NORTH_STAR.md
 
 Criação do segundo documento permanente da Foundation: a bússola operacional do ParaguAI.
 
-- **`docs/NORTH_STAR.md`** (novo): 10 seções, ~1.400 palavras. Complementa a Constituição respondendo "como decidimos" em vez de "quem somos". Contém: A Pergunta Obrigatória, Os 10 Filtros Permanentes, Hierarquia de Prioridades (pirâmide de 8 níveis), Framework de Priorização com score (5 dimensões, 100 pontos), O que nunca deve ser prioridade, Como pensamos longo prazo, Como avaliamos sucesso, Checklist Final (11 pontos — obrigatório antes de todo merge/release/ADR).
+- **`docs/foundation/NORTH_STAR.md`** (novo): 10 seções, ~1.400 palavras. Complementa a Constituição respondendo "como decidimos" em vez de "quem somos". Contém: A Pergunta Obrigatória, Os 10 Filtros Permanentes, Hierarquia de Prioridades (pirâmide de 8 níveis), Framework de Priorização com score (5 dimensões, 100 pontos), O que nunca deve ser prioridade, Como pensamos longo prazo, Como avaliamos sucesso, Checklist Final (11 pontos — obrigatório antes de todo merge/release/ADR).
 - **`CLAUDE.md`** (atualizado): segundo documento obrigatório declarado. Hierarquia de documentos expandida de 5 para 6 níveis. NORTH_STAR.md inserido como item 2.
 
 **Distinção de responsabilidade**: AI_CONSTITUTION.md = princípios permanentes. NORTH_STAR.md = critérios de decisão operacional. Nenhum substitui o outro; os dois são obrigatórios.
@@ -142,7 +142,7 @@ Criação do segundo documento permanente da Foundation: a bússola operacional 
 
 Revisão estratégica de alto nível da Constituição do ParaguAI. Não altera funcionalidades — eleva a visão e adiciona capítulos estratégicos ausentes na v1.0.
 
-- **`docs/AI_CONSTITUTION.md`** (revisado — v1.0 → v1.1): 3 novos capítulos, 19 seções totais (vs. 16 na v1.0). Nova Identidade: "Inteligência Operacional da Tríplice Fronteira". Organismo Vivo adicionado à Seção V. Nova Seção VII (Ativos): "O ParaguAI não desenvolve funcionalidades — desenvolve ativos." Efeito de Rede elevado a capítulo dedicado (Seção X) com Flywheel completo. ParaguAI Brain expandido (Seção IX). Moat explicitado como capítulo próprio (Seção XIV). 14 Regras Permanentes (antes 12). Missão reformulada em torno de assimetria de informação. Turismo e infraestrutura regional na Visão 2030. Tom CTO/CPO/CAI.
+- **`docs/foundation/AI_CONSTITUTION.md`** (revisado — v1.0 → v1.1): 3 novos capítulos, 19 seções totais (vs. 16 na v1.0). Nova Identidade: "Inteligência Operacional da Tríplice Fronteira". Organismo Vivo adicionado à Seção V. Nova Seção VII (Ativos): "O ParaguAI não desenvolve funcionalidades — desenvolve ativos." Efeito de Rede elevado a capítulo dedicado (Seção X) com Flywheel completo. ParaguAI Brain expandido (Seção IX). Moat explicitado como capítulo próprio (Seção XIV). 14 Regras Permanentes (antes 12). Missão reformulada em torno de assimetria de informação. Turismo e infraestrutura regional na Visão 2030. Tom CTO/CPO/CAI.
 
 **Princípio adicionado**: toda funcionalidade nova deve produzir dados reutilizáveis. Uma feature que não gera conhecimento tem retorno zero de longo prazo.
 
@@ -150,10 +150,10 @@ Revisão estratégica de alto nível da Constituição do ParaguAI. Não altera 
 
 Pausa completa no desenvolvimento de funcionalidades para criação da documentação permanente do projeto.
 
-- **`docs/AI_CONSTITUTION.md`** (novo): Constituição do ParaguAI — 15 seções, ~2.400 linhas. Identidade, Missão, Visão 2030, North Star, Filosofia, Dados, Automação, IA (ParaguAI Brain), Engenharia, Produto, Negócio, Autonomia, Regras Permanentes (12 invioláveis), Processo de Desenvolvimento, Critério de Aceitação. Síntese de todos os ADRs (001–032), ROADMAP.md, ARCHITECTURE.md, DOMAIN_MODEL.md e histórico de sprints. Tecnologia-agnóstico por design — válido por 10+ anos.
+- **`docs/foundation/AI_CONSTITUTION.md`** (novo): Constituição do ParaguAI — 15 seções, ~2.400 linhas. Identidade, Missão, Visão 2030, North Star, Filosofia, Dados, Automação, IA (ParaguAI Brain), Engenharia, Produto, Negócio, Autonomia, Regras Permanentes (12 invioláveis), Processo de Desenvolvimento, Critério de Aceitação. Síntese de todos os ADRs (001–032), ROADMAP.md, ARCHITECTURE.md, DOMAIN_MODEL.md e histórico de sprints. Tecnologia-agnóstico por design — válido por 10+ anos.
 - **`CLAUDE.md`** (atualizado): Seção "PRIORITY: Read the Constitution first" adicionada no topo. Hierarquia explícita de documentos. AI_CONSTITUTION.md declarado como primeiro documento obrigatório antes de qualquer tarefa.
-- **`docs/MASTER_ROADMAP.md`** (reescrito): Era placeholder vazio de 1 linha. Agora contém seção "Foundation Documents" com tabela de hierarquia, e 4 fases estratégicas: Discovery Platform (✅ Fase 1 completa), Trust & Reputation (Fase 2 planejada), Intelligence Layer (Fase 3 visão), Scale & Expansion (Fase 4 visão).
-- **`docs/PROJECT_STATUS.md`** (atualizado): Registrada criação da Foundation 0.1 no topo do histórico.
+- **`docs/product/MASTER_ROADMAP.md`** (reescrito): Era placeholder vazio de 1 linha. Agora contém seção "Foundation Documents" com tabela de hierarquia, e 4 fases estratégicas: Discovery Platform (✅ Fase 1 completa), Trust & Reputation (Fase 2 planejada), Intelligence Layer (Fase 3 visão), Scale & Expansion (Fase 4 visão).
+- **`docs/operations/PROJECT_STATUS.md`** (atualizado): Registrada criação da Foundation 0.1 no topo do histórico.
 
 **Este commit não é uma Release.** É um documento permanente de identidade e princípios. Não deprecar; apenas estender com revisões versionadas.
 
@@ -163,7 +163,7 @@ Commit inicial do repositório.
 
 ## 2026-06-20 — `70e0698` feat: initialize ParaguAI architecture
 
-Define a estrutura de pastas oficial (`app/`, `components/`, `hooks/`, `services/`, `types/`, `lib/`, `utils/`, `database/`, `docs/`, `ai/`, `assets/`), os documentos de processo (`docs/CLAUDE.md`, `docs/ARCHITECTURE.md`, `docs/ROADMAP.md`, `docs/PROJECT_STATUS.md`), o `lib/supabase.ts`, e a maior parte dos placeholders vazios (services, types, hooks, utils, styles) que ainda existem hoje. Estabelece o convênio "arquivo vazio = trabalho planejado, não esquecido".
+Define a estrutura de pastas oficial (`app/`, `components/`, `hooks/`, `services/`, `types/`, `lib/`, `utils/`, `database/`, `docs/`, `ai/`, `assets/`), os documentos de processo (`docs/CLAUDE.md`, `docs/architecture/ARCHITECTURE.md`, `docs/archive/ROADMAP.md`, `docs/operations/PROJECT_STATUS.md`), o `lib/supabase.ts`, e a maior parte dos placeholders vazios (services, types, hooks, utils, styles) que ainda existem hoje. Estabelece o convênio "arquivo vazio = trabalho planejado, não esquecido".
 
 ## 2026-06-21 — `1c5319a` feat(product): implementa Release 0.2 e Sprint 2.2 do domínio Produto
 
@@ -193,10 +193,10 @@ Commit vazio/trivial para forçar um novo build na Vercel após as correções a
 
 Sprint declarada como "sem funcionalidades de negócio", focada em consolidar a base técnica:
 
-- **`lib/env.ts`** passa a ser a única fonte de acesso a `process.env` no projeto. `lib/supabase.ts` e `constants/routes.ts` (que tinham cada um sua própria leitura de env var) agora importam `env` de lá. Mensagens de erro distinguem ambiente local (`.env.local`) de Vercel (painel do projeto), usando `process.env.VERCEL === "1"` para diferenciar. Ver ADR-001 em `docs/DECISIONS.md`.
+- **`lib/env.ts`** passa a ser a única fonte de acesso a `process.env` no projeto. `lib/supabase.ts` e `constants/routes.ts` (que tinham cada um sua própria leitura de env var) agora importam `env` de lá. Mensagens de erro distinguem ambiente local (`.env.local`) de Vercel (painel do projeto), usando `process.env.VERCEL === "1"` para diferenciar. Ver ADR-001 em `docs/operations/DECISIONS.md`.
 - **`.gitignore`** corrigido: a regra `.env*` bloqueava silenciosamente `.env.example` (um template sem segredos, pensado para ser commitado). Adicionada a exceção `!.env.example`. O arquivo, que existia no lugar errado (`lib/.env.example`), foi movido para a raiz do projeto e ganhou a variável `NEXT_PUBLIC_SITE_URL` que faltava. Ver ADR-002.
 - **`package.json`**: removido o script `format` (referenciava `prettier`, nunca instalado como dependência — script quebrado); `clean` reescrito de sintaxe `cmd.exe` (Windows-only) para um one-liner Node multiplataforma. Scripts `dev`/`build`/`start`/`lint`/`typecheck`/`check` confirmados presentes e funcionais. Ver ADR-003 e ADR-004.
-- **Documentação**: criados `docs/DECISIONS.md`, `docs/CONVENTIONS.md`, `docs/API_CONTRACTS.md`, `docs/DOMAIN_MODEL.md`, `docs/COMPONENT_INDEX.md`, `docs/DEPENDENCY_GRAPH.md`. Atualizados `docs/PROJECT_STATUS.md`, `docs/ARCHITECTURE.md`, `docs/TECH_DEBT.md`, `docs/NEXT_STEPS.md` para refletir as mudanças acima.
+- **Documentação**: criados `docs/operations/DECISIONS.md`, `docs/engineering/CONVENTIONS.md`, `docs/architecture/API_CONTRACTS.md`, `docs/architecture/DOMAIN_MODEL.md`, `docs/architecture/COMPONENT_INDEX.md`, `docs/architecture/DEPENDENCY_GRAPH.md`. Atualizados `docs/operations/PROJECT_STATUS.md`, `docs/architecture/ARCHITECTURE.md`, `docs/engineering/TECH_DEBT.md`, `docs/operations/NEXT_STEPS.md` para refletir as mudanças acima.
 - Validado: `npm run lint` (0 erros), `npm run typecheck` (0 erros), `npm run build` (sucesso) — incluindo um teste manual de remover/restaurar `.env.local` para confirmar a nova mensagem de erro.
 
 Nenhuma rota, componente, hook ou comportamento visível ao usuário foi alterado nesta sprint.
@@ -229,9 +229,9 @@ Fecha o terceiro domínio central da Home, replicando deliberadamente a arquitet
 - **`constants/routes.ts`**: `storePath()`/`storeUrl()` adicionados; `StoreCard.tsx` migrado de string literal (`` `/store/${store.slug}` ``) para `storePath()`.
 - **Seção de avaliações**: `EmptyState` ("Avaliações em breve") sem nenhum dado mocado — `types/review.ts` e a tabela `reviews` ainda não existem.
 
-**Não implementado nesta sprint, por decisão explícita do CTO**: contato (telefone/WhatsApp/e-mail) e horário de funcionamento. Essas colunas não existem em `types/store.ts` nem na tabela `stores` real (confirmado consultando o Supabase diretamente). Em vez de adicionar campos especulativos ao tipo ou usar mocks, foi gerada uma **proposta** de migration em `database/migrations/0001_proposed_store_contact_hours.sql` (`phone`, `whatsapp`, `email`, `website_url`, `address`, `business_hours jsonb`, todas nullable) — **não aplicada ao banco**, aguardando avaliação. Ver `docs/DECISIONS.md`, ADR-006.
+**Não implementado nesta sprint, por decisão explícita do CTO**: contato (telefone/WhatsApp/e-mail) e horário de funcionamento. Essas colunas não existem em `types/store.ts` nem na tabela `stores` real (confirmado consultando o Supabase diretamente). Em vez de adicionar campos especulativos ao tipo ou usar mocks, foi gerada uma **proposta** de migration em `database/migrations/0001_proposed_store_contact_hours.sql` (`phone`, `whatsapp`, `email`, `website_url`, `address`, `business_hours jsonb`, todas nullable) — **não aplicada ao banco**, aguardando avaliação. Ver `docs/operations/DECISIONS.md`, ADR-006.
 
-**Achado de dados (não é um bug desta sprint)**: testando a página `/store/[slug]` manualmente contra o Supabase real, descobriu-se que as 5 lojas cadastradas (Cellshop, Nissei, Shopping China, Mega Eletrônicos, Atacado Games) têm `slug: null`, e a tabela `products` está vazia (0 linhas). O código está correto — `getStoreBySlug`/`getProductBySlug` retornam `null` corretamente para um slug que não existe em nenhuma linha — mas isso significa que nenhuma página de loja ou produto é navegável com dados reais até que alguém popule esses campos no painel do Supabase. Ver `docs/DECISIONS.md`, ADR-007.
+**Achado de dados (não é um bug desta sprint)**: testando a página `/store/[slug]` manualmente contra o Supabase real, descobriu-se que as 5 lojas cadastradas (Cellshop, Nissei, Shopping China, Mega Eletrônicos, Atacado Games) têm `slug: null`, e a tabela `products` está vazia (0 linhas). O código está correto — `getStoreBySlug`/`getProductBySlug` retornam `null` corretamente para um slug que não existe em nenhuma linha — mas isso significa que nenhuma página de loja ou produto é navegável com dados reais até que alguém popule esses campos no painel do Supabase. Ver `docs/operations/DECISIONS.md`, ADR-007.
 
 Validado com `npm run lint` (0 erros, 6 warnings — 5 pré-existentes + 1 novo de `<img>` no banner de `/store/[slug]`), `npx tsc --noEmit` (0 erros, após `npm run clean` para descartar tipos de rota desatualizados em `.next/`) e `npm run build` (sucesso — `/store/[slug]` nova rota dinâmica).
 
@@ -244,10 +244,10 @@ Sprint de diagnóstico puro, a pedido explícito do CTO ("não implemente novas 
 - `types/store.ts` diverge do schema real: `banner_url`/`verified` não existem (o banco usa `cover_image`/`is_verified`). Bug latente confirmado: banner e badge "Verificada" nunca aparecem.
 - A conclusão da Sprint 3.4 (ADR-006) de que contato/horário "não existiam no schema" estava **errada** — essas colunas (`phone`, `whatsapp`, `email`, `website`, `address`, `opening_hours`) já existem; a investigação só checou os campos que o tipo já declarava, sem `select("*")` real.
 - 4 relacionamentos (FKs) confirmados reais e funcionando (`offers→stores`, `offers→products`, `products→brands`, `products→categories`).
-- Nenhuma das 14 tabelas "futuras" de `database/DATABASE.md` existe ainda (`reviews` incluída) — documentação correta nesse ponto.
+- Nenhuma das 14 tabelas "futuras" de `docs/database/DATABASE.md` existe ainda (`reviews` incluída) — documentação correta nesse ponto.
 - Duas tabelas reais não documentadas descobertas: `profiles` (possível scaffold de Supabase Auth) e `favorites` (paralela e desconectada do `localStorage` usado por `useFavorites.ts`).
 
-**Ações**: `database/migrations/0001_proposed_store_contact_hours.sql` marcado como **superado**; `database/migrations/0002_revised_store_data_layer.sql` criado em seu lugar, propondo apenas `UNIQUE (slug)` — nenhuma coluna nova é necessária. `docs/DOMAIN_MODEL.md` reescrito com o schema real lado a lado com cada tipo TypeScript. `docs/DECISIONS.md` ganhou ADR-008 (achado completo) e ADR-006 foi marcado como tendo a premissa corrigida. Nenhuma migration foi aplicada, nenhum dado foi inserido, nenhum arquivo de código de produção (`types/`, `services/`, `components/`) foi alterado — correção fica para a Sprint 3.5, pendente de aprovação.
+**Ações**: `database/migrations/0001_proposed_store_contact_hours.sql` marcado como **superado**; `database/migrations/0002_revised_store_data_layer.sql` criado em seu lugar, propondo apenas `UNIQUE (slug)` — nenhuma coluna nova é necessária. `docs/architecture/DOMAIN_MODEL.md` reescrito com o schema real lado a lado com cada tipo TypeScript. `docs/operations/DECISIONS.md` ganhou ADR-008 (achado completo) e ADR-006 foi marcado como tendo a premissa corrigida. Nenhuma migration foi aplicada, nenhum dado foi inserido, nenhum arquivo de código de produção (`types/`, `services/`, `components/`) foi alterado — correção fica para a Sprint 3.5, pendente de aprovação.
 
 ## 2026-06-23 — Sprint 3.5: Catálogo Premium de Produtos (Release 0.2, parte 2)
 
@@ -282,7 +282,7 @@ Validado com `npm run lint`, `npx tsc --noEmit` e `npm run build` — ver relat�
 
 ## 2026-06-23 — Sprint 3.6: Data Foundation (auditoria, sem código de produção alterado)
 
-Sprint de diagnóstico puro, a pedido explícito do CTO, consolidando o entendimento da camada de dados antes de implementar o Comparador de Produtos. Divergência registrada em relação à proposta anterior de `docs/NEXT_STEPS.md` (que bundlava seed + início do Comparador numa só "Sprint 3.6"): o CTO redefiniu o escopo desta sprint para ser só auditoria, deixando seed e Comparador para a sprint seguinte — mesmo padrão já visto nas Sprints 3.3 e 3.5 (missão recebida divergindo do `NEXT_STEPS.md`, decisão do CTO prevalece, divergência documentada).
+Sprint de diagnóstico puro, a pedido explícito do CTO, consolidando o entendimento da camada de dados antes de implementar o Comparador de Produtos. Divergência registrada em relação à proposta anterior de `docs/operations/NEXT_STEPS.md` (que bundlava seed + início do Comparador numa só "Sprint 3.6"): o CTO redefiniu o escopo desta sprint para ser só auditoria, deixando seed e Comparador para a sprint seguinte — mesmo padrão já visto nas Sprints 3.3 e 3.5 (missão recebida divergindo do `NEXT_STEPS.md`, decisão do CTO prevalece, divergência documentada).
 
 - **Banco**: relacionamentos `products↔brands/categories` e `offers↔products/stores` reconfirmados via PostgREST sem erro. Auditoria de índices/constraints reais não foi possível com a chave anônima — registrada como limitação, não inferida.
 - **Dados**: consulta ao vivo ao Supabase confirma `products: 0`, `offers: 0`, `brands: 0`, `categories: 0`, `stores: 5` (todas com `slug`/`active`/`cover_image` nulos). Achado novo: `website` e `opening_hours` já estão preenchidos nas 5 lojas reais; `address` em 4/5; `whatsapp` é string vazia (não nula) em 1 loja.
@@ -303,7 +303,7 @@ Transforma o plano de seed da Sprint 3.6 em código real, propõe constraints/í
   - `eslint.config.mjs`: `database/seed/**` adicionado a `globalIgnores` (CommonJS fora do escopo das regras de import de `eslint-config-next/typescript`).
 - **`database/migrations/0004_proposed_catalog_integrity_and_indexes.sql`** (novo, não aplicada): `UNIQUE (slug)` em `products`/`brands`/`categories`; índices em `offers.product_id`/`offers.store_id`/`offers.price_usd`/`products.brand_id`/`products.category_id`.
 - **`database/migrations/0005_proposed_store_ranking_view.sql`** (novo, não aplicada): `store_ranking_summary` (rating, contagem de ofertas, proporção em estoque, última atualização) — insumo do Offer Ranking. As métricas por produto (menor/maior preço, contagem de ofertas) já são cobertas por `0003` (Sprint 3.5) — não duplicadas.
-- **`docs/DECISIONS.md`**: ADR-012 (seed em JS puro), ADR-013 (arquitetura do Price Engine, futura), ADR-014 (algoritmo de Offer Ranking v1, futuro), ADR-015 (consolidação das views de apoio) — todas documentam direção arquitetural, nenhuma implementada em código/schema.
+- **`docs/operations/DECISIONS.md`**: ADR-012 (seed em JS puro), ADR-013 (arquitetura do Price Engine, futura), ADR-014 (algoritmo de Offer Ranking v1, futuro), ADR-015 (consolidação das views de apoio) — todas documentam direção arquitetural, nenhuma implementada em código/schema.
 - **Services**: `product`/`offer`/`store`/`search` revisados de novo — nenhuma divergência nova, nenhuma correção necessária.
 
 Validado com `npm run lint` (0 erros, 5 warnings pré-existentes — `database/seed/**` excluído do lint por ser tooling fora da árvore TypeScript), `npx tsc --noEmit` (0 erros) e `npm run build` (sucesso, mesmas 6 rotas, sem regressão).
@@ -318,8 +318,8 @@ Primeira escrita real de dados em produção do projeto, com aprovação explíc
 - **Resolução**: CTO adicionou `SUPABASE_SERVICE_ROLE_KEY` a `.env.local`. Ver ADR-016.
 - **Tentativa 2 (chave de serviço)**: dry-run reconfirmado, depois `--execute` com sucesso total — `stores` (5/5 backfill), `brands` (5), `categories` (5), `products` (6), `offers` (9). Reexecução confirmou idempotência (tudo `[SKIP]`, sem duplicata).
 - **Auditoria**: `npm run db:validate` (0 problemas) + auditoria extra com anti-join real via chave de serviço (0 FKs órfãs, 0 slugs duplicados, 0 pares `product_id+store_id` duplicados, 0 produtos inativos). Nenhuma correção de dados necessária.
-- **`docs/DECISIONS.md`**: ADR-016 (achado da RLS/chave de serviço + bug de log falso-positivo em `index.js`, não corrigido nesta sprint — fora do escopo "nenhuma funcionalidade nova").
-- **`docs/PROJECT_STATUS.md`/`docs/NEXT_STEPS.md`/`docs/TECH_DEBT.md`**: atualizados para refletir ADR-007 resolvido e o novo achado.
+- **`docs/operations/DECISIONS.md`**: ADR-016 (achado da RLS/chave de serviço + bug de log falso-positivo em `index.js`, não corrigido nesta sprint — fora do escopo "nenhuma funcionalidade nova").
+- **`docs/operations/PROJECT_STATUS.md`/`docs/operations/NEXT_STEPS.md`/`docs/engineering/TECH_DEBT.md`**: atualizados para refletir ADR-007 resolvido e o novo achado.
 
 **Não incluído, por instrução explícita**: nenhuma migration (`0004`, `0005`) aplicada; nenhuma alteração de RLS policy; nenhuma feature de interface (Comparação de Produtos fica para a Sprint 3.9); o bug de log falso-positivo em `index.js` foi documentado, não corrigido (não era necessário para concluir a carga de dados).
 
@@ -332,8 +332,8 @@ Implementa em código (não só arquitetura) o Price Engine proposto na Sprint 3
 - **`services/offer.service.ts`**: `updateOfferPrice()` — único caminho de escrita de preço permitido a partir de agora; grava `price_history` antes de atualizar `offers`, é no-op se o preço não mudou, e confirma linhas afetadas no `update` final (mesmo padrão do ADR-016). `getOfferPriceMetrics()` — menor/maior preço histórico, variação percentual, última mudança; degrada graciosamente (preço atual real, histórico `null`) quando `price_history` não existe.
 - **`database/seed/index.js`**: corrigido o backfill de `stores` — agora usa `.select("id")` no `UPDATE` e loga `[AVISO]` (não `[OK]`) quando a RLS filtra a escrita silenciosamente.
 - **Testes funcionais ao vivo** (somente leitura/degradação controlada, sem dado real alterado): `getOfferPriceMetrics`/tentativa de `insert` em `price_history` contra o Supabase real, confirmando degradação graciosa; reprodução do cenário do bug do ADR-016 com a chave anônima, confirmando que a correção detecta corretamente a escrita silenciosamente bloqueada.
-- **`docs/DECISIONS.md`**: ADR-017 (schema do Price Engine, caminho único de escrita, bloqueio de DDL).
-- **`docs/DOMAIN_MODEL.md`/`docs/API_CONTRACTS.md`/`docs/TECH_DEBT.md`**: atualizados com o novo schema/serviço/limitações.
+- **`docs/operations/DECISIONS.md`**: ADR-017 (schema do Price Engine, caminho único de escrita, bloqueio de DDL).
+- **`docs/architecture/DOMAIN_MODEL.md`/`docs/architecture/API_CONTRACTS.md`/`docs/engineering/TECH_DEBT.md`**: atualizados com o novo schema/serviço/limitações.
 
 **Bloqueio real**: `database/migrations/0006` não foi aplicada — nenhuma ferramenta deste projeto executa DDL contra o Supabase (sem `pg`/`DATABASE_URL`, sem CLI, sem RPC de SQL exposta, confirmado por introspecção do OpenAPI do PostgREST). Diferente de `0002`/`0004`/`0005` (propostas por decisão pendente), esta ficou proposta por impossibilidade técnica — corresponde a uma das condições de parada explícitas da missão ("necessidade de credencial inexistente").
 
@@ -349,7 +349,7 @@ O CTO aplicou `0006_proposed_price_history.sql` manualmente no SQL Editor do Sup
 - **Validação funcional completa** (chave de serviço, oferta real `iphone-16-pro-256gb-titanio-preto@cellshop`): 27 asserções — leitura de histórico, métricas baseline, duas mudanças reais de preço (999→949→1050), detecção de no-op, restauração ao preço original preservando 3 entradas reais de histórico, métricas finais corretas. Todas passaram.
 - **Confirmado**: a chave anônima (a que a aplicação usa) não escreve em `price_history` (erro explícito de RLS) nem em `offers` (bloqueio silencioso) — consistente com o padrão do ADR-016.
 - **Achado crítico (ADR-019), não corrigido**: testando a leitura da chave anônima, confirmou-se que ela **também não vê nenhuma linha** de `price_history`, nem de `brands`/`categories`/`products`/`offers` — só `stores` tem leitura pública funcionando. Isso passou despercebido em todas as auditorias da Sprint 3.8 porque elas usam `database/seed/lib/client.js`, que prefere a chave de serviço (presente desde a Sprint 3.8) — nunca a chave anônima que a aplicação real usa. Por dedução direta do código (`lib/supabase.ts` usa só a chave anônima, em qualquer ambiente), o catálogo real provavelmente está vazio para usuários reais agora. Correção proposta: `database/migrations/0007_proposed_public_read_policies.sql` (policies de `SELECT` público, sem alterar nenhuma policy de escrita).
-- **`docs/DECISIONS.md`**: ADR-018 (validação do Price Engine, bug corrigido, classificação "Backend Production Ready") e ADR-019 (achado crítico de leitura pública).
+- **`docs/operations/DECISIONS.md`**: ADR-018 (validação do Price Engine, bug corrigido, classificação "Backend Production Ready") e ADR-019 (achado crítico de leitura pública).
 - **`database/migrations/0006_proposed_price_history.sql`**: cabeçalho atualizado para refletir que foi aplicada manualmente em produção (arquivo não renomeado, por convenção de histórico).
 
 Revalidado: `npm run lint`/`npx tsc --noEmit`/`npm run build` (sem regressão), `npm run db:validate` (0 problemas).
@@ -474,7 +474,7 @@ Transição do ParaguAI de uma plataforma tecnicamente funcional para um MVP nav
 - **`app/store/[slug]/layout.tsx`**: refatorado para importar `getCachedStore` do `_cache.ts`.
 - **`types/product.ts`**: `ProductHighlight.priceUSD` e `storeName` tornados opcionais (`number | undefined` e `string | undefined`) — permite mapear `ProductCatalogItem` (onde `lowestPriceUSD` pode ser `null` e não há campo `storeName`) para `ProductHighlight` sem forçar dados falsos.
 - **`constants/categories.ts`**: conteúdo substituído por comentário — os dados de exemplo (`sampleCategories`) foram migrados para `getCategories()` real via `category.service.ts`. O arquivo é preservado (sem `git rm`) por convenção do projeto.
-- **`docs/DECISIONS.md`**: ADR-021 adicionado (módulo `_cache.ts` compartilhado).
+- **`docs/operations/DECISIONS.md`**: ADR-021 adicionado (módulo `_cache.ts` compartilhado).
 
 **Performance obtida**:
 - Double-fetch eliminado em `/product/[slug]` e `/store/[slug]`: de 2 fetches por entidade principal por visita para 1 (compartilhado via `React.cache()` entre layout e page).
@@ -561,7 +561,7 @@ Validado com `npm run lint` (0 erros, 5 warnings pré-existentes — nenhum novo
 **Arquivos alterados**:
 - **`package.json`**: scripts `db:validate:43` e `storage:init` adicionados
 - **`eslint.config.mjs`**: `database/storage/**` adicionado ao `globalIgnores` (tooling Node, fora da árvore TS/Next.js)
-- **`docs/DECISIONS.md`**: ADR-022 (Storage Foundation) + ADR-023 (Migration 0008) adicionados
+- **`docs/operations/DECISIONS.md`**: ADR-022 (Storage Foundation) + ADR-023 (Migration 0008) adicionados
 
 **Validações executadas**:
 - `npm run lint`: 0 erros, 0 warnings
@@ -620,9 +620,9 @@ Validado com `npm run lint` (0 erros, 5 warnings pré-existentes — nenhum novo
 
 ### Documentação
 
-- `docs/ACQUISITION.md` — visão geral da arquitetura, pipeline, modelo de dados, scripts
-- `docs/CONNECTOR_GUIDE.md` — guia completo para novos conectores com checklist
-- ADR-024 a ADR-027 adicionados em `docs/DECISIONS.md`
+- `docs/engineering/ACQUISITION.md` — visão geral da arquitetura, pipeline, modelo de dados, scripts
+- `docs/engineering/CONNECTOR_GUIDE.md` — guia completo para novos conectores com checklist
+- ADR-024 a ADR-027 adicionados em `docs/operations/DECISIONS.md`
 
 ### Dependências novas (devDependencies)
 
@@ -804,11 +804,11 @@ Validado com `npm run lint` (0 erros, 5 warnings pré-existentes — nenhum novo
 - `npm run build` → OK, 11 rotas /merchant compiladas
 
 ### ADRs
-- ADR-024: Role `merchant` no `profiles` compartilhado
-- ADR-025: Junction table `merchant_stores` para multi-tenancy
-- ADR-026: Portal `/merchant/*` reutiliza design system do admin
-- ADR-027: Merchant Score computado on-demand
-- ADR-028: Plans Engine como tabela seed sem gateway de pagamento
+- ADR-031: Role `merchant` no `profiles` compartilhado
+- ADR-032: Junction table `merchant_stores` para multi-tenancy
+- ADR-033: Portal `/merchant/*` reutiliza design system do admin
+- ADR-034: Merchant Score computado on-demand
+- ADR-035: Plans Engine como tabela seed sem gateway de pagamento
 
 ---
 
@@ -918,7 +918,7 @@ Transforma o Merchant OS em plataforma de crescimento. 10 módulos implementados
 
 ### Module 4 — Public Store Pages (`/lojas/[slug]`)
 
-**`services/stores-public.service.ts`** (NOVO): `getStorePublic(slug)` e `getStoresRanking(limit)` — service role server-only, retorna dados de loja + merchant (score, verifiedLevel) + contagens de oferta/produto. Ver ADR-029.
+**`services/stores-public.service.ts`** (NOVO): `getStorePublic(slug)` e `getStoresRanking(limit)` — service role server-only, retorna dados de loja + merchant (score, verifiedLevel) + contagens de oferta/produto. Ver ADR-036.
 
 **`app/lojas/[slug]/page.tsx`** (NOVO): página pública premium por loja. Hero banner + logo + badges (Verificada, Merchant Score), stats grid (ofertas, produtos, avaliação, score), sobre a loja, contato completo (telefone, WhatsApp, Instagram, site, e-mail, endereço, horário), serviços (entrega, retirada, Pix), ofertas reais via `StoreOffers`, lojas relacionadas. JSON-LD `LocalBusiness` embutido. `generateMetadata` com OG/Twitter por loja.
 
@@ -926,7 +926,7 @@ Transforma o Merchant OS em plataforma de crescimento. 10 módulos implementados
 
 ### Module 5 — Reputation Center
 
-Arquitetura documentada via ADR-031. A reputação é derivada de `merchant_score` + `verified_level` + `store.rating`. Tabela `reviews` para Release 1.5.
+Arquitetura documentada via ADR-038. A reputação é derivada de `merchant_score` + `verified_level` + `store.rating`. Tabela `reviews` para Release 1.5.
 
 ### Module 6 — Store Ranking (`/lojas`)
 
@@ -934,11 +934,11 @@ Arquitetura documentada via ADR-031. A reputação é derivada de `merchant_scor
 
 ### Module 7 — Commercial Plan Architecture
 
-Arquitetura já documentada via ADR-028 (Release 1.2). Tabela `merchant_plans` com seed. Sem alteração nesta release.
+Arquitetura já documentada via ADR-035 (Release 1.2). Tabela `merchant_plans` com seed. Sem alteração nesta release.
 
 ### Module 8 — Analytics Structure
 
-Arquitetura documentada via ADR-032. Tabela `merchant_analytics_events` existe (migration 0012). Dashboard `/merchant/analytics` permanece stub. Tracking será implementado no Release 1.5.
+Arquitetura documentada via ADR-039. Tabela `merchant_analytics_events` existe (migration 0012). Dashboard `/merchant/analytics` permanece stub. Tracking será implementado no Release 1.5.
 
 ### Module 9 — UX Improvements
 
@@ -956,10 +956,10 @@ Arquitetura documentada via ADR-032. Tabela `merchant_analytics_events` existe (
 
 ### ADRs
 
-- ADR-029: Páginas públicas `/lojas` usam service role para dados de merchant
-- ADR-030: Merchant Progress Engine computado on-demand
-- ADR-031: Reputation Center — arquitetura sem reviews (Release 1.5)
-- ADR-032: Analytics Events — write-only nesta fase
+- ADR-036: Páginas públicas `/lojas` usam service role para dados de merchant
+- ADR-037: Merchant Progress Engine computado on-demand
+- ADR-038: Reputation Center — arquitetura sem reviews (Release 1.5)
+- ADR-039: Analytics Events — write-only nesta fase
 
 ### Validações
 

@@ -1,6 +1,6 @@
 # MASTER_ROADMAP.md
 
-Roadmap estratégico de longo prazo do ParaguAI. Complementa `docs/ROADMAP.md` (detalhamento técnico por release) com a visão macro de fases, marcos e direção.
+Roadmap estratégico de longo prazo do ParaguAI. Documenta a visão macro de fases, marcos e direção. Para o histórico detalhado de cada Release, ver `docs/operations/CHANGELOG.md`. Para próximos passos imediatos, ver `docs/operations/NEXT_STEPS.md`.
 
 Última atualização: 2026-06-27
 
@@ -12,18 +12,18 @@ Documentos permanentes que governam todas as decisões de desenvolvimento.
 
 | Documento | Prioridade | Descrição |
 |---|---|---|
-| `docs/AI_CONSTITUTION.md` | 1 — Primeiro a ler | Princípios permanentes: identidade, missão, visão, filosofia, regras, processo |
-| `docs/NORTH_STAR.md` | 2 — Consultar diariamente | Bússola operacional: como decidir, 10 filtros, framework de priorização, checklist final |
-| `docs/BUSINESS_MODEL.md` | 3 — Consultar para estratégia | Como criamos e capturamos valor: flywheel, monetização, moat, network effects |
-| `docs/VISION_2035.md` | 4 — Consultar para alinhamento de visão | Para onde vamos: ecossistema maduro, legado, transformação regional |
-| `docs/ENGINEERING_PRINCIPLES.md` | 5 — Consultar para decisões arquiteturais | Como construímos: filosofia técnica permanente, 12 princípios invioláveis |
-| `docs/PRODUCT_PRINCIPLES.md` | 6 — Consultar para decisões de produto e UX | Como construímos produtos: decisões > cliques, simplicidade radical, confiança, neutralidade, ecossistema |
-| `docs/DECISION_FILTER.md` | 7 — Executar antes de qualquer iniciativa significativa | Como aprovamos decisões: pipeline de 10 estágios, 12 filtros permanentes, checklist obrigatório |
-| `docs/RELEASE_STRATEGY.md` | 8 — Executar antes de iniciar e antes de entregar qualquer Release | Como o ParaguAI evolui: ciclo de 11 estágios, 10 tipos de Release, DoR, DoD, Quality Gates, compounding |
-| `docs/DECISIONS.md` | 9 | Registro de decisões arquiteturais (ADR-001 a ADR-032+) |
-| `CLAUDE.md` | 8 | Instruções operacionais de desenvolvimento |
-| `docs/ARCHITECTURE.md` | 9 | Estado real da arquitetura |
-| `docs/PROJECT_STATUS.md` | 10 | Estado real do projeto |
+| `docs/foundation/AI_CONSTITUTION.md` | 1 — Primeiro a ler | Princípios permanentes: identidade, missão, visão, filosofia, regras, processo |
+| `docs/foundation/NORTH_STAR.md` | 2 — Consultar diariamente | Bússola operacional: como decidir, 10 filtros, framework de priorização, checklist final |
+| `docs/foundation/BUSINESS_MODEL.md` | 3 — Consultar para estratégia | Como criamos e capturamos valor: flywheel, monetização, moat, network effects |
+| `docs/foundation/VISION_2035.md` | 4 — Consultar para alinhamento de visão | Para onde vamos: ecossistema maduro, legado, transformação regional |
+| `docs/foundation/ENGINEERING_PRINCIPLES.md` | 5 — Consultar para decisões arquiteturais | Como construímos: filosofia técnica permanente, 12 princípios invioláveis |
+| `docs/foundation/PRODUCT_PRINCIPLES.md` | 6 — Consultar para decisões de produto e UX | Como construímos produtos: decisões > cliques, simplicidade radical, confiança, neutralidade, ecossistema |
+| `docs/foundation/DECISION_FILTER.md` | 7 — Executar antes de qualquer iniciativa significativa | Como aprovamos decisões: pipeline de 10 estágios, 12 filtros permanentes, checklist obrigatório |
+| `docs/foundation/RELEASE_STRATEGY.md` | 8 — Executar antes de iniciar e antes de entregar qualquer Release | Como o ParaguAI evolui: ciclo de 11 estágios, 10 tipos de Release, DoR, DoD, Quality Gates, compounding |
+| `docs/operations/DECISIONS.md` | 9 | Registro de decisões arquiteturais (ADR-001 a ADR-039+) |
+| `CLAUDE.md` | 10 | Instruções operacionais de desenvolvimento |
+| `docs/architecture/ARCHITECTURE.md` | 11 | Estado real da arquitetura |
+| `docs/operations/PROJECT_STATUS.md` | 12 | Estado real do projeto |
 
 ---
 
@@ -55,8 +55,8 @@ Marcos:
 **Status**: Planejado
 
 Marcos prioritários:
-- Sistema de reviews de compradores (tabela `reviews`, moderação, ADR-031)
-- Analytics dashboard para merchants com dados reais (ADR-032)
+- Sistema de reviews de compradores (tabela `reviews`, moderação, ADR-038)
+- Analytics dashboard para merchants com dados reais (ADR-039)
 - Migration 0013 aplicada (`profiles_role_check`)
 - `/merchant/settings` com salvamento de WhatsApp/phone/website
 - Expansão do catálogo via novos conectores (Nissei, Cellshop, Mega Eletrônicos, Atacado Games)
@@ -103,4 +103,4 @@ Marcos:
 3. **Fundação antes de features.** Cada fase consolida a anterior antes de construir a próxima.
 4. **Merchants antes de compradores.** A plataforma cresce pelo lado da oferta — mais lojas → mais produtos → mais valor para compradores.
 
-Ver `docs/AI_CONSTITUTION.md` para os princípios permanentes completos.
+Ver `docs/foundation/AI_CONSTITUTION.md` para os princípios permanentes completos.

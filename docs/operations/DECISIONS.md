@@ -63,9 +63,9 @@ Registro de decisões arquiteturais (ADR leve). Cada entrada documenta o que foi
 **Data**: 2026-06-22
 **Status**: Aceita
 
-**Contexto**: `docs/PROJECT_STATUS.md` e `docs/ARCHITECTURE.md` originais foram escritos antes da implementação do domínio de Produto e descreviam um estado de planejamento ("Sprint 0", 15% de progresso, "Release 0.2: Planned") que não correspondia mais ao código.
+**Contexto**: `docs/operations/PROJECT_STATUS.md` e `docs/architecture/ARCHITECTURE.md` originais foram escritos antes da implementação do domínio de Produto e descreviam um estado de planejamento ("Sprint 0", 15% de progresso, "Release 0.2: Planned") que não correspondia mais ao código.
 
-**Decisão**: esses dois arquivos passam a ser gerados/atualizados a partir de leitura real do código a cada sprint de consolidação, não editados manualmente como plano. `docs/ROADMAP.md` e `docs/CLAUDE.md` (a versão em `docs/`, distinta da raiz) permanecem como documentos de visão/processo de longo prazo e não são reescritos por essa auditoria — eles descrevem intenção, não estado.
+**Decisão**: esses dois arquivos passam a ser gerados/atualizados a partir de leitura real do código a cada sprint de consolidação, não editados manualmente como plano. `docs/archive/ROADMAP.md` e `docs/CLAUDE.md` (a versão em `docs/`, distinta da raiz) permanecem como documentos de visão/processo de longo prazo e não são reescritos por essa auditoria — eles descrevem intenção, não estado.
 
 **Consequência**: ao final de cada sprint de consolidação, repetir a leitura completa do código antes de tocar em `PROJECT_STATUS.md`/`ARCHITECTURE.md`/`FEATURES.md`/`TECH_DEBT.md`/`CHANGELOG.md`/`NEXT_STEPS.md`.
 
@@ -76,13 +76,13 @@ Registro de decisões arquiteturais (ADR leve). Cada entrada documenta o que foi
 **Data**: 2026-06-22 (Sprint 3.4)
 **Status**: ⚠️ Premissa corrigida na Sprint 3.4.1 (ver ADR-008) — a conclusão de que as colunas "não existem no banco real" estava **errada**. A Sprint 3.4 só consultou o subconjunto de colunas que `types/store.ts` já declarava, sem fazer `select("*")` real contra o Supabase. A auditoria da Sprint 3.4.1 (com `select("*")` de verdade) encontrou `phone`, `whatsapp`, `email`, `website`, `address` e `opening_hours` já existentes. A migration `0001` gerada por este ADR está marcada como **superada** — ver `0002_revised_store_data_layer.sql`. Decisão original preservada abaixo para histórico.
 
-**Contexto**: a missão da Sprint 3.4 pedia que a página de loja (`app/store/[slug]/`) exibisse contato e horário de funcionamento. Nenhum dos dois existe em `types/store.ts` nem na tabela real `stores` no Supabase (confirmado via query direta nesta sprint: colunas atuais são `id, name, slug, description, city, country, rating, logo_url, banner_url, verified, created_at`). `database/DATABASE.md` também não documenta essas colunas.
+**Contexto**: a missão da Sprint 3.4 pedia que a página de loja (`app/store/[slug]/`) exibisse contato e horário de funcionamento. Nenhum dos dois existe em `types/store.ts` nem na tabela real `stores` no Supabase (confirmado via query direta nesta sprint: colunas atuais são `id, name, slug, description, city, country, rating, logo_url, banner_url, verified, created_at`). `docs/database/DATABASE.md` também não documenta essas colunas.
 
 **Decisão**: não adicionar campos ao tipo `Store` que não existem no banco real (evita repetir o incidente de `types/store.ts` vazio documentado no `CHANGELOG.md`, e respeita a regra do projeto de nunca alterar schema sem aprovação). A página de loja foi implementada usando exclusivamente os campos hoje existentes; as seções de Contato e Horário simplesmente não são renderizadas (sem mocks, sem valores fixos, sem props opcionais especulativas no tipo `Store`). Uma proposta de migration foi gerada em `database/migrations/0001_proposed_store_contact_hours.sql` (`phone`, `whatsapp`, `email`, `website_url`, `address`, `business_hours jsonb`, todas nullable) para avaliação — **não aplicada**.
 
 **Alternativas descartadas**: (a) adicionar os campos como opcionais no tipo `Store` mesmo sem confirmação de que existem no banco — rejeitada por criar uma mentira de tipo (`Store` afirmaria ter campos que `select("*")` nunca preencheria) e por já ter causado problemas similares neste projeto; (b) usar dados fictícios/mocados para essas seções — rejeitada por instrução explícita do CTO ("não utilize mocks, não utilize valores fixos").
 
-**Consequência**: quando a migration proposta for revisada e aplicada manualmente no Supabase, atualizar `types/store.ts`, `services/store.service.ts` (se necessário) e adicionar as seções de Contato/Horário em `StoreDetails.tsx` (ou um componente novo). Até então, a ausência dessas seções na UI é o comportamento correto, não uma lacuna esquecida — ver `docs/TECH_DEBT.md`.
+**Consequência**: quando a migration proposta for revisada e aplicada manualmente no Supabase, atualizar `types/store.ts`, `services/store.service.ts` (se necessário) e adicionar as seções de Contato/Horário em `StoreDetails.tsx` (ou um componente novo). Até então, a ausência dessas seções na UI é o comportamento correto, não uma lacuna esquecida — ver `docs/engineering/TECH_DEBT.md`.
 
 ---
 
@@ -95,7 +95,7 @@ Registro de decisões arquiteturais (ADR leve). Cada entrada documenta o que foi
 
 **Decisão**: não alterar dados de produção (inserir/popular `slug`) sem aprovação explícita — é uma ação sobre um sistema externo compartilhado, não uma decisão de código. Registrado aqui para que a causa de "página de loja/produto retorna 404 mesmo após o código estar pronto" não seja confundida com um bug de implementação em sprints futuras.
 
-**Consequência**: antes de considerar o Domínio de Loja (ou Produto) "pronto para usuários reais", alguém com acesso ao painel do Supabase precisa popular `stores.slug` (slugificar `name`, ex. "Shopping China" → "shopping-china") e cadastrar ao menos alguns `products`/`offers` reais. Ver `docs/TECH_DEBT.md`.
+**Consequência**: antes de considerar o Domínio de Loja (ou Produto) "pronto para usuários reais", alguém com acesso ao painel do Supabase precisa popular `stores.slug` (slugificar `name`, ex. "Shopping China" → "shopping-china") e cadastrar ao menos alguns `products`/`offers` reais. Ver `docs/engineering/TECH_DEBT.md`.
 
 ---
 
@@ -104,22 +104,22 @@ Registro de decisões arquiteturais (ADR leve). Cada entrada documenta o que foi
 **Data**: 2026-06-22 (Sprint 3.4.1 — Consolidação da Camada de Dados)
 **Status**: Registrado — **nenhuma alteração de código ou schema aplicada nesta sprint**, decisão de correção pendente de aprovação.
 
-**Contexto**: a Sprint 3.4.1 auditou o banco real consultando o Supabase diretamente — via `select("*")` (para tabelas com dados, como `stores`) e via teste coluna-por-coluna lendo o erro "column does not exist" do PostgREST (para tabelas vazias, como `products`/`offers`/`brands`/`categories` — método somente-leitura, sem precisar de service-role key). O resultado contradiz partes do que ADR-006/ADR-007 e `docs/DOMAIN_MODEL.md` assumiam, porque aquelas sprints nunca fizeram um `select("*")` real — só verificaram os campos que os tipos TypeScript já declaravam.
+**Contexto**: a Sprint 3.4.1 auditou o banco real consultando o Supabase diretamente — via `select("*")` (para tabelas com dados, como `stores`) e via teste coluna-por-coluna lendo o erro "column does not exist" do PostgREST (para tabelas vazias, como `products`/`offers`/`brands`/`categories` — método somente-leitura, sem precisar de service-role key). O resultado contradiz partes do que ADR-006/ADR-007 e `docs/architecture/DOMAIN_MODEL.md` assumiam, porque aquelas sprints nunca fizeram um `select("*")` real — só verificaram os campos que os tipos TypeScript já declaravam.
 
 **Achados**:
 
 1. **`stores`** (24 colunas reais vs. 11 no tipo): `banner_url` (tipo) deveria ser `cover_image` (banco); `verified` (tipo) deveria ser `is_verified` (banco). Resultado em produção: o banner da loja nunca aparece e o badge "Verificada" nunca aparece, mesmo quando a loja tem capa/é verificada. Faltam no tipo: `whatsapp`, `website`, `address`, `instagram`, `opening_hours`, `latitude`, `longitude`, `delivery`, `pickup`, `pix_br`, `active`, `phone`, `email` — todos já existem no banco e **invalidam a proposta de migration `0001`** (ADR-006), que tentava criar colunas que já existiam.
-2. **`offers`** (16 colunas reais vs. 12 no tipo) — **divergência mais grave**: `price` não existe (o banco usa `price_usd`/`price_brl`, dois valores independentes, não um valor + taxa de conversão); `stock` não existe (o banco usa `in_stock`/`available`/`stock_quantity`); `installments` não existe (nenhum campo de parcelamento encontrado); `url` não existe (o banco usa `product_url`). Resultado: assim que existir uma oferta real, `ProductOffers.tsx`/`StoreOffers.tsx` vão exibir preço como `NaN` (via `convertToUSD(undefined, ...)`), o badge de estoque vai sempre mostrar "Sem estoque", e o botão "Ver oferta" nunca vai aparecer — apesar do `npm run build`/`lint`/`typecheck` passarem limpos (o TypeScript não pega isso porque `data as Offer[]` é um cast manual, não validado em runtime — risco já registrado em `docs/TECH_DEBT.md` antes desta sprint, agora confirmado como real, não hipotético).
+2. **`offers`** (16 colunas reais vs. 12 no tipo) — **divergência mais grave**: `price` não existe (o banco usa `price_usd`/`price_brl`, dois valores independentes, não um valor + taxa de conversão); `stock` não existe (o banco usa `in_stock`/`available`/`stock_quantity`); `installments` não existe (nenhum campo de parcelamento encontrado); `url` não existe (o banco usa `product_url`). Resultado: assim que existir uma oferta real, `ProductOffers.tsx`/`StoreOffers.tsx` vão exibir preço como `NaN` (via `convertToUSD(undefined, ...)`), o badge de estoque vai sempre mostrar "Sem estoque", e o botão "Ver oferta" nunca vai aparecer — apesar do `npm run build`/`lint`/`typecheck` passarem limpos (o TypeScript não pega isso porque `data as Offer[]` é um cast manual, não validado em runtime — risco já registrado em `docs/engineering/TECH_DEBT.md` antes desta sprint, agora confirmado como real, não hipotético).
 3. **`products`** (16 colunas reais vs. 9 no tipo) — sem nomes trocados, só campos faltantes no tipo (`sku`, `weight`, `model`, `updated_at`, `active`, `gtin`, `release_date`). Não bloqueante.
 4. **`brands`/`categories`** — tipos corretos, sem divergência encontrada.
 5. Os 4 relacionamentos usados pelos services (`offers→stores`, `offers→products`, `products→brands`, `products→categories`) foram confirmados como FKs reais (PostgREST resolveu os joins sem erro). A modelagem relacional está correta — o problema é só nos nomes/forma dos campos de preço e estoque.
-6. Tabelas reais não documentadas: `profiles` (id, email, created_at — possível scaffold de Supabase Auth) e `favorites` (id, product_id, created_at — paralela e desconectada do `useFavorites.ts` via `localStorage`). Nenhuma das 14 tabelas listadas como "futuras" em `database/DATABASE.md` existe de fato (confirmado, documentação correta nesse ponto).
+6. Tabelas reais não documentadas: `profiles` (id, email, created_at — possível scaffold de Supabase Auth) e `favorites` (id, product_id, created_at — paralela e desconectada do `useFavorites.ts` via `localStorage`). Nenhuma das 14 tabelas listadas como "futuras" em `docs/database/DATABASE.md` existe de fato (confirmado, documentação correta nesse ponto).
 
 **Decisão**: registrar o achado e **não corrigir o código nesta sprint** — a missão da Sprint 3.4.1 foi explicitamente de auditoria/diagnóstico ("não implemente novas funcionalidades de interface"), e corrigir `types/offer.ts`/`types/store.ts` + os componentes que os consomem é uma mudança de código real, não documentação. Fica como decisão explícita para o CTO aprovar antes da Sprint 3.5: corrigir agora (como parte da consolidação de dados) ou abrir uma sprint dedicada.
 
 **Alternativas descartadas**: corrigir os tipos silenciosamente durante esta auditoria — rejeitada porque a missão pediu diagnóstico antes de ação, e uma mudança nos tipos/services tocaria componentes já em produção (`ProductOffers`, `StoreOffers`, `StoreCard`, `StoreDetails`) sem o usuário ter visto o tamanho real do problema primeiro.
 
-**Consequência**: `database/migrations/0001_proposed_store_contact_hours.sql` marcado como superado; `0002_revised_store_data_layer.sql` propõe apenas constraints de integridade (`UNIQUE (slug)`), já que nenhuma coluna nova é necessária. `docs/DOMAIN_MODEL.md` reescrito com o schema real lado a lado com o tipo. Qualquer sprint futura que toque `offers`/`stores` deve assumir os nomes reais (`price_usd`/`price_brl`, `in_stock`/`available`, `product_url`, `cover_image`, `is_verified`), não os do tipo atual, até a correção ser aprovada e aplicada.
+**Consequência**: `database/migrations/0001_proposed_store_contact_hours.sql` marcado como superado; `0002_revised_store_data_layer.sql` propõe apenas constraints de integridade (`UNIQUE (slug)`), já que nenhuma coluna nova é necessária. `docs/architecture/DOMAIN_MODEL.md` reescrito com o schema real lado a lado com o tipo. Qualquer sprint futura que toque `offers`/`stores` deve assumir os nomes reais (`price_usd`/`price_brl`, `in_stock`/`available`, `product_url`, `cover_image`, `is_verified`), não os do tipo atual, até a correção ser aprovada e aplicada.
 
 ---
 
@@ -139,7 +139,7 @@ Registro de decisões arquiteturais (ADR leve). Cada entrada documenta o que foi
 
 **Decisão de produto incluída**: entre `in_stock`/`available`, `in_stock` foi escolhido como a fonte da UI para "disponível para compra" — é o nome mais direto e o que mais se aproxima semanticamente do campo antigo `stock` que a UI já usava. `available` fica modelado no tipo, sem consumidor, para uma decisão futura caso sua semântica (ex.: "produto descontinuado" vs. "temporariamente esgotado") precise aparecer separadamente na UI.
 
-**Consequência**: bugs de `NaN`/"Sem estoque sempre"/botão "Ver oferta" ausente (ADR-008) ficam resolvidos assim que existir uma oferta real. `docs/DOMAIN_MODEL.md`, `API_CONTRACTS.md`, `TECH_DEBT.md` atualizados para remover o aviso de divergência tipo↔schema.
+**Consequência**: bugs de `NaN`/"Sem estoque sempre"/botão "Ver oferta" ausente (ADR-008) ficam resolvidos assim que existir uma oferta real. `docs/architecture/DOMAIN_MODEL.md`, `API_CONTRACTS.md`, `TECH_DEBT.md` atualizados para remover o aviso de divergência tipo↔schema.
 
 ---
 
@@ -148,13 +148,13 @@ Registro de decisões arquiteturais (ADR leve). Cada entrada documenta o que foi
 **Data**: 2026-06-23 (Sprint 3.5)
 **Status**: Aceita e aplicada
 
-**Contexto**: `docs/ARCHITECTURE.md`/`TECH_DEBT.md` já apontavam `ProductCard` e `ProductHighlightCard` como quase-duplicados (mesmo layout de card — imagem, nome, preço, link —, divergindo só em campos extras de desconto/estoque/loja e no tipo de entrada). A Sprint 3.5 precisava de um card de produto para o novo `ProductGrid` (catálogo); criar um terceiro componente teria piorado a duplicação em vez de resolvê-la, e a missão da sprint pede explicitamente para corrigir duplicações encontradas durante a auditoria.
+**Contexto**: `docs/architecture/ARCHITECTURE.md`/`TECH_DEBT.md` já apontavam `ProductCard` e `ProductHighlightCard` como quase-duplicados (mesmo layout de card — imagem, nome, preço, link —, divergindo só em campos extras de desconto/estoque/loja e no tipo de entrada). A Sprint 3.5 precisava de um card de produto para o novo `ProductGrid` (catálogo); criar um terceiro componente teria piorado a duplicação em vez de resolvê-la, e a missão da sprint pede explicitamente para corrigir duplicações encontradas durante a auditoria.
 
 **Decisão**: unificar em um único `components/product/ProductCard.tsx`, com props já achatadas (`slug`, `name`, `imageUrl`, `priceUSD?`, `originalPriceUSD?`, `subtitle?`, `inStock?`) em vez de receber o tipo de domínio inteiro (`Product`/`ProductHighlight`/`ProductCatalogItem`) — cada call site (`RelatedProducts`, `SearchResults`, `ProductGrid`, `home/Offers.tsx`) faz seu próprio mapeamento simples na hora de renderizar. O visual adotado é o do antigo `ProductHighlightCard` (mais completo: badge de desconto, badge "Esgotado", CTA com seta) para todos os usos, elevando a consistência visual em vez de manter dois padrões. `components/product/ProductHighlightCard.tsx` foi removido (aprovação explícita do CTO antes da remoção, por restrição do `CLAUDE.md`).
 
 **Alternativas descartadas**: manter os dois componentes e só adicionar um terceiro para o catálogo — rejeitada por aumentar a duplicação já identificada como dívida técnica; fazer `ProductCard` aceitar genericamente `Product | ProductHighlight | ProductCatalogItem` via union type — rejeitada por acoplar o componente de apresentação a três tipos de domínio diferentes, quando props achatadas o tornam agnóstico e mais simples de testar/reutilizar.
 
-**Consequência**: qualquer tela nova que precise de um card de produto reaproveita `ProductCard` com um mapeamento de poucas linhas, sem decidir entre dois componentes quase iguais. `docs/COMPONENT_INDEX.md` atualizado.
+**Consequência**: qualquer tela nova que precise de um card de produto reaproveita `ProductCard` com um mapeamento de poucas linhas, sem decidir entre dois componentes quase iguais. `docs/architecture/COMPONENT_INDEX.md` atualizado.
 
 ---
 
@@ -163,7 +163,7 @@ Registro de decisões arquiteturais (ADR leve). Cada entrada documenta o que foi
 **Data**: 2026-06-23 (Sprint 3.5)
 **Status**: Aceita — limitação documentada, com proposta de correção não aplicada
 
-**Contexto**: o catálogo de produtos (`getProductsCatalog`, `services/product.service.ts`) precisa ordenar produtos por "menor preço"/"maior preço", mas preço pertence à oferta, não ao produto (`docs/DOMAIN_MODEL.md`) — um produto pode ter N ofertas, e "o preço do produto" para fins de ordenação é o mínimo entre elas. PostgREST/Supabase resolvem filtros sobre tabelas relacionadas via embedding (`offers!inner`), o que cobre corretamente os filtros de loja/disponibilidade/faixa de preço sem precisar de view nenhuma — mas **ordenar** as linhas de `products` por uma agregação (`MIN(offers.price_usd)`) por grupo não é algo que o PostgREST resolve nativamente numa única query paginada, sem uma view/RPC dedicada.
+**Contexto**: o catálogo de produtos (`getProductsCatalog`, `services/product.service.ts`) precisa ordenar produtos por "menor preço"/"maior preço", mas preço pertence à oferta, não ao produto (`docs/architecture/DOMAIN_MODEL.md`) — um produto pode ter N ofertas, e "o preço do produto" para fins de ordenação é o mínimo entre elas. PostgREST/Supabase resolvem filtros sobre tabelas relacionadas via embedding (`offers!inner`), o que cobre corretamente os filtros de loja/disponibilidade/faixa de preço sem precisar de view nenhuma — mas **ordenar** as linhas de `products` por uma agregação (`MIN(offers.price_usd)`) por grupo não é algo que o PostgREST resolve nativamente numa única query paginada, sem uma view/RPC dedicada.
 
 **Decisão**: para esta sprint, implementar a ordenação por preço como correção client-side da página já buscada: a query principal continua paginando por `created_at` (ou pelos filtros ativos) no banco, embute as ofertas relevantes por produto, calcula `lowestPriceUSD` em memória, e — somente quando o usuário pede `price_asc`/`price_desc` — reordena o array da página atual por esse valor antes de devolver ao componente. Isso garante que **a página exibida está sempre corretamente ordenada**, mas não garante ordem global perfeita entre páginas diferentes em catálogos com muitos produtos (ex.: o produto mais barato da página 3 pode, em teoria, ser mais barato que algum da página 2, se a paginação de base não foi feita por preço). Dado que a tabela `products` está vazia em produção hoje (ADR-007), esse limite é teórico, não observável, e documentado para ser resolvido antes de qualquer carga real de dados.
 
@@ -171,7 +171,7 @@ Registro de decisões arquiteturais (ADR leve). Cada entrada documenta o que foi
 
 **Alternativas descartadas**: "sobrebuscar" (overfetch) um lote maior de ofertas ordenadas por preço e deduplicar por produto — rejeitada por ser uma solução frágil ("temporária" no sentido que `CLAUDE.md` proíbe), que falha silenciosamente em catálogos com produtos de muitas ofertas duplicadas e não escala para "milhões de produtos" (objetivo explícito da missão); chamar um `rpc()` que ainda não existe no banco e mascarar o erro com fallback silencioso — rejeitada por esconder a limitação em vez de documentá-la.
 
-**Consequência**: filtros (categoria/marca/loja/disponibilidade/faixa de preço) e paginação são 100% corretos e escaláveis hoje, sem depender de nenhuma migration. Apenas a ordenação por preço tem o limite descrito acima, documentado em código (`services/product.service.ts`) e aqui. Ver `docs/TECH_DEBT.md`.
+**Consequência**: filtros (categoria/marca/loja/disponibilidade/faixa de preço) e paginação são 100% corretos e escaláveis hoje, sem depender de nenhuma migration. Apenas a ordenação por preço tem o limite descrito acima, documentado em código (`services/product.service.ts`) e aqui. Ver `docs/engineering/TECH_DEBT.md`.
 
 ---
 
@@ -195,7 +195,7 @@ Registro de decisões arquiteturais (ADR leve). Cada entrada documenta o que foi
 **Data**: 2026-06-23 (Sprint 3.7 — Data Foundation v2)
 **Status**: Aceita como direção arquitetural — nenhum código/schema novo implementado
 
-**Contexto**: o ParaguAI compara **ofertas**, não produtos — preço vive em `offers.price_usd`/`price_brl`, independentes entre si (ADR-009). Histórico de preços (`price_history`, já prevista em `database/DATABASE.md` como tabela futura), alertas de preço e a ordenação do catálogo (ADR-011) todos vão depender, no futuro, de uma única fonte de verdade para "o preço atual" de uma oferta e de como ele mudou ao longo do tempo. Hoje, nada escreve em `offers.price_usd`/`price_brl` em produção (sem Admin/Crawler implementados) — é o momento certo para definir a arquitetura antes que múltiplos pontos de escrita apareçam.
+**Contexto**: o ParaguAI compara **ofertas**, não produtos — preço vive em `offers.price_usd`/`price_brl`, independentes entre si (ADR-009). Histórico de preços (`price_history`, já prevista em `docs/database/DATABASE.md` como tabela futura), alertas de preço e a ordenação do catálogo (ADR-011) todos vão depender, no futuro, de uma única fonte de verdade para "o preço atual" de uma oferta e de como ele mudou ao longo do tempo. Hoje, nada escreve em `offers.price_usd`/`price_brl` em produção (sem Admin/Crawler implementados) — é o momento certo para definir a arquitetura antes que múltiplos pontos de escrita apareçam.
 
 **Decisão (arquitetura proposta, não implementada nesta sprint)**:
 - **Fluxo de atualização**: toda alteração de `price_usd`/`price_brl` em `offers` é tratada como um evento, não uma sobrescrita silenciosa. Quando o Admin (Release 0.7) ou o Crawler (Release 0.8) existirem, ambos devem escrever através de um único caminho (um futuro `updateOfferPrice()` em `services/offer.service.ts`, não múltiplos call sites) — esse caminho grava a linha anterior em `price_history` antes/junto de atualizar `offers`.
@@ -249,7 +249,7 @@ Esta pontuação é a candidata natural a consumir a `store_ranking_summary` pro
 **Data**: 2026-06-24 (Sprint 3.8 — Seed Execution & Catalog Validation)
 **Status**: Registrado — achado de ambiente/segurança, resolvido operacionalmente nesta sprint (sem alterar policy de RLS)
 
-**Contexto**: a Sprint 3.7 já registrava como risco não verificado (`docs/TECH_DEBT.md`) que `NEXT_PUBLIC_SUPABASE_ANON_KEY` podia não ter permissão de escrita por RLS. A Sprint 3.8 confirmou isso ao vivo, com duas variantes distintas do mesmo problema:
+**Contexto**: a Sprint 3.7 já registrava como risco não verificado (`docs/engineering/TECH_DEBT.md`) que `NEXT_PUBLIC_SUPABASE_ANON_KEY` podia não ter permissão de escrita por RLS. A Sprint 3.8 confirmou isso ao vivo, com duas variantes distintas do mesmo problema:
 
 1. **`INSERT` em `brands`/`categories`/`products`** com a chave anônima falhou de forma explícita: `new row violates row-level security policy for table "<tabela>"`. Comportamento esperado de uma policy de RLS bem configurada.
 2. **`UPDATE` de `stores.slug`/`active`** com a chave anônima **não retornou erro nenhum**, mas também não alterou nenhuma linha — a policy de RLS filtrou as linhas pela cláusula `USING` antes do `UPDATE` ser aplicado, e o PostgREST/Supabase não reporta isso como erro quando a chamada não usa `.select()` para confirmar o que foi afetado. `database/seed/index.js` não verifica o resultado da escrita (só a ausência de `error`), então logou `[OK]` para as 5 lojas mesmo sem ter escrito nada — confirmado comparando snapshots antes/depois da tentativa (`stores.slug` continuava `null` em todas).
@@ -258,7 +258,7 @@ Esta pontuação é a candidata natural a consumir a `store_ranking_summary` pro
 
 **Alternativas descartadas**: afrouxar as policies de RLS para aceitar `INSERT`/`UPDATE` pela chave anônima — rejeitada por expor a tabela a escrita pública não autenticada, regressão de segurança real para resolver um problema de tooling.
 
-**Achado adicional, não corrigido nesta sprint**: o "falso positivo" de log em `database/seed/index.js` (passo 1, backfill de `stores`) é um bug de tooling — o `UPDATE` deveria confirmar linhas afetadas (ex. `.select("id")` no retorno e checar se veio vazio) antes de logar `[OK]`. Não corrigido porque não era necessário para concluir a carga de dados desta sprint (a causa raiz era a chave, não o script) e a missão pediu para não implementar funcionalidades novas. Registrado em `docs/TECH_DEBT.md` para uma sprint futura de manutenção do seed.
+**Achado adicional, não corrigido nesta sprint**: o "falso positivo" de log em `database/seed/index.js` (passo 1, backfill de `stores`) é um bug de tooling — o `UPDATE` deveria confirmar linhas afetadas (ex. `.select("id")` no retorno e checar se veio vazio) antes de logar `[OK]`. Não corrigido porque não era necessário para concluir a carga de dados desta sprint (a causa raiz era a chave, não o script) e a missão pediu para não implementar funcionalidades novas. Registrado em `docs/engineering/TECH_DEBT.md` para uma sprint futura de manutenção do seed.
 
 **Consequência**: `SUPABASE_SERVICE_ROLE_KEY` é, a partir de agora, uma variável de ambiente esperada em qualquer ambiente onde `database/seed/` precise escrever (nunca em produção/Vercel da aplicação, só local/CI de quem administra dados) — deve ser tratada com o mesmo cuidado de um segredo de banco, nunca commitada nem exposta como `NEXT_PUBLIC_*`.
 
@@ -281,7 +281,7 @@ Esta pontuação é a candidata natural a consumir a `store_ranking_summary` pro
 
 **Alternativas descartadas**: instalar `pg` e usar uma `DATABASE_URL` para aplicar a migration via script — rejeitada por exigir uma credencial nova (senha do Postgres) que não foi fornecida nesta sessão, e por introduzir uma segunda forma de conexão ao banco (paralela ao `@supabase/supabase-js`) sem decisão arquitetural prévia sobre quando usar uma ou outra.
 
-**Consequência**: a Sprint 3.9 entrega o Price Engine **code-complete e testado em todos os caminhos que não dependem da tabela existir** (graceful degradation confirmada ao vivo). Para se tornar operacional de fato (gravar histórico real), alguém com acesso ao painel do Supabase precisa colar o conteúdo de `0006_proposed_price_history.sql` no SQL Editor — uma ação humana de poucos minutos, não uma tarefa de código pendente. Ver `docs/TECH_DEBT.md`.
+**Consequência**: a Sprint 3.9 entrega o Price Engine **code-complete e testado em todos os caminhos que não dependem da tabela existir** (graceful degradation confirmada ao vivo). Para se tornar operacional de fato (gravar histórico real), alguém com acesso ao painel do Supabase precisa colar o conteúdo de `0006_proposed_price_history.sql` no SQL Editor — uma ação humana de poucos minutos, não uma tarefa de código pendente. Ver `docs/engineering/TECH_DEBT.md`.
 
 ---
 
@@ -339,7 +339,7 @@ Esta pontuação é a candidata natural a consumir a `store_ranking_summary` pro
 
 **Alternativas descartadas**: não há alternativa de código — isso não é algo que `services/*.service.ts` possa contornar (a única forma de uma `SELECT` ver uma linha bloqueada por RLS é a policy mudar; cache, retry ou outra chave pública não resolvem sem reintroduzir o mesmo risco de expor uma chave privada no client).
 
-**Consequência**: este é o item de maior prioridade do projeto agora — maior que qualquer trabalho do Price Engine ou do Compare Engine, porque o catálogo inteiro pode estar invisível para usuários reais. Recomendo aplicar `0007` antes de qualquer outra coisa, incluindo antes de abrir a Sprint 4.0. Ver `docs/PROJECT_STATUS.md`/`docs/TECH_DEBT.md`/`docs/NEXT_STEPS.md` para a correção da reivindicação da Sprint 3.8.
+**Consequência**: este é o item de maior prioridade do projeto agora — maior que qualquer trabalho do Price Engine ou do Compare Engine, porque o catálogo inteiro pode estar invisível para usuários reais. Recomendo aplicar `0007` antes de qualquer outra coisa, incluindo antes de abrir a Sprint 4.0. Ver `docs/operations/PROJECT_STATUS.md`/`docs/engineering/TECH_DEBT.md`/`docs/operations/NEXT_STEPS.md` para a correção da reivindicação da Sprint 3.8.
 
 ---
 
@@ -563,7 +563,7 @@ Utilitário `utils/storage.ts` exporta `catalogStorage.*` (builders de URL tipad
 
 ---
 
-## ADR-024 — Role `merchant` adicionado ao `profiles` compartilhado
+## ADR-031 — Role `merchant` adicionado ao `profiles` compartilhado
 
 **Data**: 2026-06-26 (Release 1.2)
 **Status**: Aceita
@@ -580,7 +580,7 @@ Utilitário `utils/storage.ts` exporta `catalogStorage.*` (builders de URL tipad
 
 ---
 
-## ADR-025 — Tabela junction `merchant_stores` (M:N)
+## ADR-032 — Tabela junction `merchant_stores` (M:N)
 
 **Data**: 2026-06-26 (Release 1.2)
 **Status**: Aceita
@@ -594,7 +594,7 @@ Utilitário `utils/storage.ts` exporta `catalogStorage.*` (builders de URL tipad
 
 ---
 
-## ADR-026 — Portal `/merchant/*` com design system compartilhado
+## ADR-033 — Portal `/merchant/*` com design system compartilhado
 
 **Data**: 2026-06-26 (Release 1.2)
 **Status**: Aceita
@@ -608,7 +608,7 @@ Utilitário `utils/storage.ts` exporta `catalogStorage.*` (builders de URL tipad
 
 ---
 
-## ADR-027 — Merchant Score computado on-demand
+## ADR-034 — Merchant Score computado on-demand
 
 **Data**: 2026-06-26 (Release 1.2)
 **Status**: Aceita
@@ -623,7 +623,7 @@ Utilitário `utils/storage.ts` exporta `catalogStorage.*` (builders de URL tipad
 
 ---
 
-## ADR-028 — Plans Engine como tabela seed (sem gateway de pagamento)
+## ADR-035 — Plans Engine como tabela seed (sem gateway de pagamento)
 
 **Data**: 2026-06-26 (Release 1.2)
 **Status**: Aceita
@@ -638,7 +638,7 @@ Utilitário `utils/storage.ts` exporta `catalogStorage.*` (builders de URL tipad
 
 ---
 
-## ADR-029 — Páginas públicas `/lojas` usam service role para enriquecer dados de merchant
+## ADR-036 — Páginas públicas `/lojas` usam service role para enriquecer dados de merchant
 
 **Data**: 2026-06-27 (Release 1.4)
 **Status**: Aceita
@@ -655,7 +655,7 @@ Utilitário `utils/storage.ts` exporta `catalogStorage.*` (builders de URL tipad
 
 ---
 
-## ADR-030 — Merchant Progress Engine: completude computada on-demand, sem coluna nova
+## ADR-037 — Merchant Progress Engine: completude computada on-demand, sem coluna nova
 
 **Data**: 2026-06-27 (Release 1.4)
 **Status**: Aceita
@@ -670,7 +670,7 @@ Utilitário `utils/storage.ts` exporta `catalogStorage.*` (builders de URL tipad
 
 ---
 
-## ADR-031 — Reputation Center: arquitetura sem reviews públicos (Release 1.4)
+## ADR-038 — Reputation Center: arquitetura sem reviews públicos (Release 1.4)
 
 **Data**: 2026-06-27 (Release 1.4)
 **Status**: Aceita
@@ -685,7 +685,7 @@ A tabela `reviews` será criada no Release 1.5 junto com o sistema de moderaçã
 
 ---
 
-## ADR-032 — Analytics Events: tabela `merchant_analytics_events` como write-only nesta fase
+## ADR-039 — Analytics Events: tabela `merchant_analytics_events` como write-only nesta fase
 
 **Data**: 2026-06-27 (Release 1.4)
 **Status**: Aceita
