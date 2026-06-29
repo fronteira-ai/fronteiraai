@@ -40,8 +40,10 @@ CREATE POLICY "trust_signals_public_read" ON trust_signals
 -- Admins can read all
 CREATE POLICY "trust_signals_admin_all" ON trust_signals
   FOR ALL USING (
-    auth.uid() IN (
-      SELECT user_id FROM admin_users WHERE is_active = true
+    EXISTS (
+      SELECT 1 FROM profiles
+      WHERE profiles.id = auth.uid()
+      AND profiles.role IN ('admin', 'operator')
     )
   );
 
@@ -71,15 +73,19 @@ ALTER TABLE signal_provenance ENABLE ROW LEVEL SECURITY;
 -- Admin read only (provenance is sensitive)
 CREATE POLICY "signal_provenance_admin_read" ON signal_provenance
   FOR SELECT USING (
-    auth.uid() IN (
-      SELECT user_id FROM admin_users WHERE is_active = true
+    EXISTS (
+      SELECT 1 FROM profiles
+      WHERE profiles.id = auth.uid()
+      AND profiles.role IN ('admin', 'operator')
     )
   );
 
 CREATE POLICY "signal_provenance_admin_write" ON signal_provenance
   FOR INSERT WITH CHECK (
-    auth.uid() IN (
-      SELECT user_id FROM admin_users WHERE is_active = true
+    EXISTS (
+      SELECT 1 FROM profiles
+      WHERE profiles.id = auth.uid()
+      AND profiles.role IN ('admin', 'operator')
     )
   );
 
@@ -134,8 +140,10 @@ CREATE POLICY "merchant_reviews_reviewer_update" ON merchant_reviews
 -- Admin full access
 CREATE POLICY "merchant_reviews_admin_all" ON merchant_reviews
   FOR ALL USING (
-    auth.uid() IN (
-      SELECT user_id FROM admin_users WHERE is_active = true
+    EXISTS (
+      SELECT 1 FROM profiles
+      WHERE profiles.id = auth.uid()
+      AND profiles.role IN ('admin', 'operator')
     )
   );
 
@@ -176,8 +184,10 @@ CREATE POLICY "review_reports_reporter_read" ON review_reports
 -- Admin full access
 CREATE POLICY "review_reports_admin_all" ON review_reports
   FOR ALL USING (
-    auth.uid() IN (
-      SELECT user_id FROM admin_users WHERE is_active = true
+    EXISTS (
+      SELECT 1 FROM profiles
+      WHERE profiles.id = auth.uid()
+      AND profiles.role IN ('admin', 'operator')
     )
   );
 
@@ -212,16 +222,20 @@ ALTER TABLE review_history ENABLE ROW LEVEL SECURITY;
 -- Admin read
 CREATE POLICY "review_history_admin_read" ON review_history
   FOR SELECT USING (
-    auth.uid() IN (
-      SELECT user_id FROM admin_users WHERE is_active = true
+    EXISTS (
+      SELECT 1 FROM profiles
+      WHERE profiles.id = auth.uid()
+      AND profiles.role IN ('admin', 'operator')
     )
   );
 
 -- Admin write (moderation actions)
 CREATE POLICY "review_history_admin_insert" ON review_history
   FOR INSERT WITH CHECK (
-    auth.uid() IN (
-      SELECT user_id FROM admin_users WHERE is_active = true
+    EXISTS (
+      SELECT 1 FROM profiles
+      WHERE profiles.id = auth.uid()
+      AND profiles.role IN ('admin', 'operator')
     )
   );
 
@@ -270,8 +284,10 @@ CREATE POLICY "merchant_timeline_merchant_read" ON merchant_timeline
 -- Admin full access
 CREATE POLICY "merchant_timeline_admin_all" ON merchant_timeline
   FOR ALL USING (
-    auth.uid() IN (
-      SELECT user_id FROM admin_users WHERE is_active = true
+    EXISTS (
+      SELECT 1 FROM profiles
+      WHERE profiles.id = auth.uid()
+      AND profiles.role IN ('admin', 'operator')
     )
   );
 
