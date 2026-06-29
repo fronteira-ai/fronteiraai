@@ -1,10 +1,11 @@
 # API_CONTRACTS.md
 # Contratos de API do ParaguAI
 
-**Versão**: 2.0  
+**Versão**: 2.1  
 **Criado**: 2026-06-28  
+**Atualizado**: 2026-06-29 — Sprint 1.5.2 (Trust Verification API)
 **Status**: Referência permanente — atualizar a cada Release que introduz, modifica ou remove endpoint  
-**Alinhado com**: Release 1.4 · `docs/architecture/ARCHITECTURE.md` · `docs/architecture/DOMAIN_MODEL.md`
+**Alinhado com**: Release 1.5.2 · `docs/architecture/ARCHITECTURE.md` · `docs/architecture/DOMAIN_MODEL.md`
 
 ---
 
@@ -1113,4 +1114,83 @@ Middleware Next.js com contador por IP/userId. Limites diferenciados por tier de
 
 ---
 
-*Este documento representa os contratos do Release 1.4. Endpoints planejados estão marcados como Planned e não existem no código. Quando este documento divergir de um Route Handler real em `app/api/`, o Route Handler prevalece como fonte de verdade de implementação — e este documento deve ser corrigido. Nunca documente como implementado o que ainda não existe.*
+---
+
+## 17. Trust API — Sprint 1.5.2 (Merchant Verification)
+
+Todos os endpoints `/api/trust/*` são parte do domínio Trust (Sprint 1.5.1+). Rotas de merchant requerem `requireMerchant()`, rotas de admin requerem `requireAdmin()`.
+
+---
+
+**`GET /api/trust/merchant/[merchantId]/verification`** — Sprint 1.5.1
+
+Auth: merchant (próprio) ou admin. Merchant não pode acessar dados de outros merchants.  
+Resposta `200`: `{ "data": MerchantVerificationRecord[] }`
+
+---
+
+**`POST /api/trust/merchant/[merchantId]/verification`** — Sprint 1.5.1
+
+Auth: merchant (próprio).  
+Body: `{ "verification_type": "identity" | "company" | ... | "document" | ... }`  
+Resposta `201`: `{ "data": MerchantVerificationRecord }`  
+Resposta `400`: tipo inválido ou ausente.
+
+---
+
+**`GET /api/trust/merchant/[merchantId]/verification/[verificationId]`** — Sprint 1.5.2
+
+Auth: merchant (próprio) ou admin.  
+Resposta `200`: `{ "data": MerchantVerificationRecord }`  
+Resposta `404`: verificação não encontrada.
+
+---
+
+**`PATCH /api/trust/merchant/[merchantId]/verification/[verificationId]`** — Sprint 1.5.2
+
+Auth: admin apenas.  
+Body: `{ "action": "approve" | "reject" | "revoke", "reason": string (obrigatório para reject/revoke) }`  
+Resposta `200`: `{ "data": MerchantVerificationRecord }`  
+Resposta `400`: action inválida ou reason ausente.  
+Resposta `500`: falha ao atualizar. Inclui caso de revogar verificação não-aprovada (retorna null → 500).
+
+---
+
+**`GET /api/trust/merchant/[merchantId]/verification/[verificationId]/history`** — Sprint 1.5.2
+
+Auth: admin apenas. Trilha de auditoria completa da verificação.  
+Resposta `200`: `{ "data": VerificationAuditRecord[] }` (ordenado por created_at ASC)
+
+---
+
+**`GET /api/trust/merchant/[merchantId]/verification/[verificationId]/evidence`** — Sprint 1.5.2
+
+Auth: merchant (próprio) ou admin.  
+Resposta `200`: `{ "data": VerificationEvidenceRecord[] }` (apenas não deletados)
+
+---
+
+**`POST /api/trust/merchant/[merchantId]/verification/[verificationId]/evidence`** — Sprint 1.5.2
+
+Auth: merchant (próprio) ou admin.  
+Body: `{ "evidence_type": "document" | "image" | "url" | "text" | "json", "label": string, "content"?: string, "file_path"?: string, "mime_type"?: string, "file_size_bytes"?: number }`  
+Resposta `201`: `{ "data": VerificationEvidenceRecord }`  
+Resposta `400`: evidence_type ou label ausentes, ou tipo inválido.
+
+---
+
+**`GET /api/trust/merchant/[merchantId]/verification/history`** — Sprint 1.5.2
+
+Auth: merchant (próprio) ou admin. Log de auditoria de todas as verificações do merchant.  
+Resposta `200`: `{ "data": VerificationAuditRecord[] }` (ordenado por created_at DESC, limit 100)
+
+---
+
+**`GET /api/trust/verification-types`** — Sprint 1.5.2
+
+Auth: público (sem autenticação).  
+Resposta `200`: `{ "data": VerificationTypeCatalogRecord[] }` (apenas ativos, ordenados por sort_order)
+
+---
+
+*Este documento representa os contratos até Release 1.5.2. Endpoints planejados estão marcados como Planned e não existem no código. Quando este documento divergir de um Route Handler real em `app/api/`, o Route Handler prevalece como fonte de verdade de implementação — e este documento deve ser corrigido. Nunca documente como implementado o que ainda não existe.*

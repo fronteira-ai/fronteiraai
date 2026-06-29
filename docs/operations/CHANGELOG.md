@@ -2,6 +2,132 @@
 
 Reconstruído a partir do histórico real de commits (`git log`) e do estado atual do código. Formato: data, commit, o que mudou de fato (verificado no diff/estado resultante, não só na mensagem).
 
+## 2026-06-29 — Release 1.5 — Epic 4 — Cognitive Integration & Hardening — RELEASE CANDIDATE
+
+Consolidação do Release 1.5. Todos os 4 Epics conectados ao ParaguAI Brain via interface unificada.
+
+**Módulo Brain (`src/domains/trust/brain/`):**
+- `CognitiveBrainService` — camada única de ingestão de eventos cognitivos. Aceita `TrustDomainEvent` + `CognitiveBrainContext`, valida, loga, persiste, retorna `CognitiveBrainIngestionResult` com correlation_id e assets_impacted
+- `EventQualityValidator` — 7 regras: merchant_id, event_type, origin, source_service, correlation_id, schema_version, occurred_at válido; warnings para actor_id, entity_id, clock skew, assets vazios
+- `ObservabilityService` — structured logging (info/warn/error) com metadata JSON + `buildHealthCheck()` aggregador de checks
+- `KnowledgeGraphService` — derivação de relações (BuyerViewed, BuyerReviewed, BuyerContactedVia, MerchantHasVerification, MerchantHasSignal, MerchantHasReview...) a partir de eventos Brain armazenados, sem nova tabela
+- `SearchReadinessService` — `buildSearchReadinessProfile(passport)`: 8 boost factors sem algoritmo (has_active_signals, has_business_verification, has_identity_verification, has_operational_verification, has_reviews, has_positive_rating, has_badge, has_timeline), readiness_score 0-100
+
+**Novos enums:**
+- `BrainEntityType` (9: Merchant, Review, Verification, Signal, Badge, Timeline, Passport, Buyer, Product)
+- `GraphRelationType` (10 tipos de relação)
+- `CognitiveBrainActorRole` (Buyer, Merchant, Admin, System)
+
+**API:**
+- `GET /api/trust/brain/health` — verifica 5 tabelas em paralelo (merchant_trust, trust_signals, merchant_reviews, merchant_timeline, merchant_trust_events), retorna healthy/degraded/unhealthy + latencyMs
+
+**Teste de integração:**
+- `TrustFlow.integration.test.ts` — pipeline completo Verification→Signal→Passport→Review→Brain Event→Knowledge Graph. 6 etapas, >20 asserções, tudo in-memory
+
+**Hardening:**
+- Comentário residual removido de `MerchantTrustSection.tsx`
+- 0 warnings de lint após limpeza de imports
+
+**Quality Gate:** lint 0, tsc 0, build OK. RELEASE CANDIDATE aprovado.
+
+---
+
+## 2026-06-29 — Release 1.5 — Epic 3 — Merchant Identity (Sprint 1.5.4)
+
+Identidade Digital Permanente do Merchant. O perfil público deixa de ser uma página e passa a representar um ativo estratégico auditável e extensível.
+
+**Tipos novos:**
+- `MerchantBasicData` — dados do merchants table estruturados para o domínio trust
+- `MerchantChannel` — canal de contato com flag `verified`
+- `MerchantInsights` — fatos objetivos computados (sem score)
+- `PassportSearchMetadata` — metadados para futuro ranking sem alterar algoritmo
+- `MerchantPassport` — estrutura unificada consolidando todos os dados de identidade e trust
+
+**Enums:**
+- `PassportSection` — 5 abas do perfil público
+- `MerchantChannelType` — Website, WhatsApp, Phone, Email
+- `TrustEventType` — 24 → 31 (7 novos eventos de identidade)
+
+**Serviço — MerchantPassportService:**
+- `getPassport(merchantId, basicData)` — Promise.all de 7 repos, computed insights, channel building com verificação de sinais, searchMetadata estruturado
+- `getInsights(merchantId, joinedAt, lastUpdatedAt)` — subset para endpoint dedicado
+
+**Brain Events (7 novos):**
+`MerchantPassportViewed`, `MerchantFactExpanded`, `MerchantTimelineInteraction`, `MerchantReviewInteraction`, `MerchantProfileShared`, `MerchantContactClicked`, `MerchantLocationViewed`
+
+Event registry: 24 → 31 mapeamentos Brain.
+
+**APIs:**
+- `GET /api/trust/merchant/[merchantId]/passport`
+- `GET /api/trust/merchant/[merchantId]/insights`
+
+**Página `/lojistas/[merchantId]` — evoluída:**
+- 5 abas (Visão Geral, Trust, Timeline, Avaliações, Informações)
+- `ProfileTabNav` — Server Component com Link-based routing via `?tab=` query param
+- `searchParams` async (Next.js 16) para determinar aba ativa no servidor
+- `generateMetadata` atualizado para novo título
+
+**Componentes (11 novos):**
+`TrustExplainabilityCard` (por que existe / quem verificou / quando / evidência), `MerchantHeader` (nome + contatos + badge de nível), `MerchantFacts` (tabela de fatos objetivos), `MerchantMetrics` (grid de métricas), `MerchantHighlights` (destaques mais relevantes), `MerchantIdentityCard` (dados de identificação com canais), `MerchantTrustSection` (sinais com explainability integrada), `MerchantHistorySection` (timeline com header), `MerchantOverview` (visão geral composta), `MerchantSidebar` (sidebar agregado), `ProfileTabNav` (navegação por abas SSR)
+
+**Quality Gate:** lint 0, tsc 0, build OK — `/api/trust/merchant/[merchantId]/passport` e `/insights` como novas rotas dinâmicas.
+
+---
+
+## 2026-06-29 — Release 1.5 — Epic 2 — Trust Experience (Sprint 1.5.3)
+
+Sistema completo de Trust Experience. A confiança de um merchant agora é pública, explicável, auditável e baseada em evidências.
+
+**Banco de Dados:**
+- Migration `0016_trust_experience.sql`: 6 novas tabelas com RLS completo
+  - `trust_signals` — sinais públicos de confiança ligados a verificações
+  - `signal_provenance` — rastreabilidade de origem (admin-only)
+  - `merchant_reviews` — avaliações com soft-delete e UNIQUE(merchant,reviewer)
+  - `review_reports` — denúncias com UNIQUE(review,reporter)
+  - `review_history` — audit trail INSERT-ONLY (sem updated_at, sem deleted_at)
+  - `merchant_timeline` — timeline pública de eventos do merchant
+
+**Domínio Trust (DDD):**
+- 11 novos enums (TrustSignalType 15 valores, TrustSignalStatus, TrustSignalCategory, SignalTrustLevel, ReviewStatus, ReviewAction, ReviewReportReason, ReviewReportStatus, TimelineEventType 15 valores, TimelineEventCategory, TimelineVisibility)
+- TrustEventType expandido de 14 → 24 eventos Brain
+- 6 entidades de domínio + 6 repositórios (interfaces + Supabase) + 5 serviços
+
+**Serviços:**
+- `TrustSignalService` — criação automática de sinais ao aprovar verificação (VERIFICATION_TO_SIGNAL mapping)
+- `ReviewService` — submissão, edição, soft delete, resposta merchant, helpful
+- `ReviewModerationService` — fila admin (approve/hide/remove/restore + denúncias)
+- `MerchantTimelineService` — timeline pública e filtrada
+- `MerchantProfileService` — perfil completo em uma chamada
+
+**APIs (13 novos endpoints):**
+- `GET /api/trust/merchant/[id]/profile`
+- `GET/POST /api/trust/merchant/[id]/signals`
+- `GET /api/trust/merchant/[id]/timeline`
+- `GET/POST /api/trust/merchant/[id]/reviews`
+- `GET/PATCH/DELETE /api/trust/merchant/[id]/reviews/[rid]`
+- `POST /api/trust/merchant/[id]/reviews/[rid]/report`
+- `POST /api/trust/merchant/[id]/reviews/[rid]/reply`
+- `GET /api/trust/merchant/[id]/reviews/[rid]/history` (admin)
+- `GET /api/admin/trust/reviews`
+- `PATCH /api/admin/trust/reviews/[rid]`
+- `GET /api/admin/trust/reviews/[rid]/reports`
+
+**Páginas:**
+- `/lojistas/[merchantId]` — perfil público de trust (timeline, reviews, sinais, reputação, contato)
+- `/admin/trust/reviews` — fila de moderação com pendentes e histórico
+- `/admin/trust/reviews/[id]` — detail com ações de moderação e audit trail
+- AdminSidebar: Trust grupo → 3 filhos (Dashboard, Verificações, Reviews)
+
+**Componentes (12 novos):**
+`TrustSignalCard`, `TrustBadgeGrid`, `TrustPanel`, `TrustSummary`, `ReviewCard`, `ReviewList`, `ReviewComposer` (client), `MerchantTimeline` + `TimelineEmptyState` + `TimelineSkeleton`, `ReputationOverview`, `VerificationWidget`, `EvidencePreview`, `TimelineFilters` (client), `ReviewModerationClient` (admin, client)
+
+**Brain Events (24 mapeamentos completos):**
+`ReviewCreated`, `ReviewUpdated`, `ReviewReported`, `ReviewModerated`, `ReviewHelpfulMarked`, `MerchantProfileViewed`, `TrustSignalViewed`, `TrustSignalActivated`, `TrustSignalRevoked`, `BadgeClicked`, `TimelineViewed`, `EvidenceOpened` — todos mapeados para BrainAsset
+
+**Quality Gate:** lint 0, tsc 0, build 100% — `/lojistas/[merchantId]` como nova rota dinâmica pública.
+
+---
+
 ## 2026-06-27 — Foundation 0.9 — FOUNDATION VALIDATION — FOUNDATION EMPRESARIAL CERTIFICADA v1.0
 
 Validação completa e certificação da Foundation Empresarial do ParaguAI.

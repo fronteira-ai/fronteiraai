@@ -10,6 +10,7 @@ import {
   Settings,
   LogOut,
   ChevronRight,
+  BadgeCheck,
   type LucideIcon,
 } from "lucide-react";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
@@ -34,6 +35,16 @@ const nav: NavItem[] = [
   },
   { type: "leaf", label: "Importações", href: "/admin/imports", icon: Upload },
   { type: "leaf", label: "Qualidade", href: "/admin/quality", icon: ShieldCheck },
+  {
+    type: "group",
+    label: "Trust",
+    icon: BadgeCheck,
+    children: [
+      { label: "Dashboard", href: "/admin/trust" },
+      { label: "Verificações", href: "/admin/trust/verifications" },
+      { label: "Reviews", href: "/admin/trust/reviews" },
+    ],
+  },
   { type: "leaf", label: "Logs", href: "/admin/logs", icon: FileText },
   { type: "leaf", label: "Configurações", href: "/admin/settings", icon: Settings },
 ];
