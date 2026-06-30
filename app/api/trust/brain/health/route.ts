@@ -42,29 +42,47 @@ export async function GET() {
     trust_events: false,
   };
 
+  const controller = new AbortController();
+  const abortTimer = setTimeout(() => controller.abort(), 5000);
+
   await Promise.allSettled([
-    client.from("merchant_trust").select("id").limit(1).then(({ error }) => {
+    client.from("merchant_trust").select("id").limit(1).abortSignal(controller.signal).then(({ error }) => {
       checks.merchant_trust = !error;
     }),
-    client.from("trust_signals").select("id").limit(1).then(({ error }) => {
+    client.from("trust_signals").select("id").limit(1).abortSignal(controller.signal).then(({ error }) => {
       checks.trust_signals = !error;
     }),
-    client.from("merchant_reviews").select("id").limit(1).then(({ error }) => {
+    client.from("merchant_reviews").select("id").limit(1).abortSignal(controller.signal).then(({ error }) => {
       checks.merchant_reviews = !error;
     }),
-    client.from("merchant_timeline").select("id").limit(1).then(({ error }) => {
+    client.from("merchant_timeline").select("id").limit(1).abortSignal(controller.signal).then(({ error }) => {
       checks.merchant_timeline = !error;
     }),
-    client.from("merchant_trust_events").select("id").limit(1).then(({ error }) => {
+    client.from("merchant_trust_events").select("id").limit(1).abortSignal(controller.signal).then(({ error }) => {
       checks.trust_events = !error;
     }),
   ]);
 
+  clearTimeout(abortTimer);
+
   const latencyMs = Date.now() - start;
+  const timedOut = latencyMs >= 4900;
   const result = obs.buildHealthCheck(checks, latencyMs);
 
-  obs.log("info", "Health check completed", { latencyMs, status: result.status });
+  obs.log(timedOut ? "error" : "info", "Health check completed", {
+    latencyMs,
+    status: result.status,
+    ...(timedOut && { error: "Supabase unreachable — projeto pausado ou URL incorreta" }),
+  });
 
   const statusCode = result.status === "healthy" ? 200 : result.status === "degraded" ? 207 : 503;
-  return NextResponse.json({ data: result }, { status: statusCode });
+  return NextResponse.json(
+    {
+      data: {
+        ...result,
+        ...(timedOut && { error: "Supabase unreachable — verifique se o projeto está pausado no dashboard" }),
+      },
+    },
+    { status: statusCode }
+  );
 }
