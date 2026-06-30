@@ -81,15 +81,18 @@ export async function GET(request: NextRequest) {
     urlHost = `(INVÁLIDA: ${rawUrl})`;
   }
 
-  const keyPresent = rawKey.length > 0;
-  const keyIsJwt = rawKey.startsWith("eyJ");
-  const keyPrefix = keyPresent ? rawKey.slice(0, 10) + "..." : "(AUSENTE)";
+  const keyHasBom = rawKey.charCodeAt(0) === 0xfeff;
+  const cleanKey = rawKey.replace(/^﻿/, "").trim();
+  const keyPresent = cleanKey.length > 0;
+  const keyIsJwt = cleanKey.startsWith("eyJ");
+  const keyPrefix = keyPresent ? cleanKey.slice(0, 10) + "..." : "(AUSENTE)";
 
   console.log("[health] ── ENV ──────────────────────────────────────────");
   console.log("[health] SUPABASE_URL host:", urlHost);
   console.log("[health] SUPABASE_URL válida:", urlValid);
   console.log("[health] SERVICE_KEY presente:", keyPresent);
   console.log("[health] SERVICE_KEY é JWT:", keyIsJwt, "| prefixo:", keyPrefix);
+  console.log("[health] SERVICE_KEY tem BOM (U+FEFF):", keyHasBom, "← se true: CAUSA RAIZ DO 503");
   console.log("[health] NODE_ENV:", process.env.NODE_ENV);
   console.log("[health] VERCEL_ENV:", process.env.VERCEL_ENV ?? "(não Vercel)");
   console.log("[health] ─────────────────────────────────────────────────");
@@ -126,7 +129,7 @@ export async function GET(request: NextRequest) {
   // ── Ping: testa conectividade bruta ANTES do Supabase client ───────────────
   console.log("[health] Iniciando ping REST...");
   const pingT0 = Date.now();
-  const ping = await pingSupabaseRest(rawUrl, rawKey);
+  const ping = await pingSupabaseRest(rawUrl, cleanKey);
   console.log("[health] Ping resultado:", JSON.stringify(ping));
 
   // ── Queries individuais com diagnóstico ────────────────────────────────────
@@ -196,6 +199,7 @@ export async function GET(request: NextRequest) {
             url_valid: urlValid,
             key_present: keyPresent,
             key_is_jwt: keyIsJwt,
+            key_has_bom: keyHasBom,
             key_prefix: keyPrefix,
             node_env: process.env.NODE_ENV,
             vercel_env: process.env.VERCEL_ENV ?? null,
