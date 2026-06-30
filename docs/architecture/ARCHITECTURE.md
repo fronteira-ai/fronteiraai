@@ -44,6 +44,67 @@ acquisition/            pipeline universal de dados (standalone Node.js — não
   datasets/             dados de teste
   scripts/              import-json, import-csv, validate-pipeline
 
+src/domains/           Domínios DDD com arquitetura hexagonal
+  trust/               Release 1.5 — Sistema completo de Trust (5 epics)
+    types/             enums (TrustEventType 39 valores, BrainEntityType 10, BrainAsset 6, etc.)
+    domain/            5 entidades de domínio
+    repositories/      5 interfaces de repositório
+    infrastructure/    5 implementações Supabase
+    services/          TrustService, VerificationService, BadgeService, ReviewService, etc.
+    events/            trust.events.ts (factory functions) + event-registry.ts (Brain mapeamentos)
+    brain/             CognitiveBrainService, EventQualityValidator, KnowledgeGraphService, ObservabilityService, SearchReadinessService
+    tests/             Suítes de teste por serviço
+  merchant-intelligence/  Release 1.6 — Merchant Command Center (Epic 1)
+    types/             enums (HealthStatus, HealthDimension, CatalogIssueType, InsightSeverity, ActionPriority)
+                       interfaces (ExecutiveSummary, MerchantHealth, CatalogIntelligence, QuickActionsResult, CommandCenterData)
+    services/          ExecutiveSummaryService, MerchantHealthService, CatalogIntelligenceService, QuickActionsService
+    __tests__/         24 testes unitários cobrindo os 4 serviços
+  merchant-analytics/     Release 1.6 — Merchant Analytics Platform (Epic 2)
+    types/             enums (AnalyticsEventType 22v, DeviceType, FunnelStep 6, AnalyticsWindow 4)
+                       interfaces (AnalyticsEventPayload, StoredAnalyticsEvent, SessionPayload, StoredSession,
+                                  EventStream, FunnelResult, MerchantAnalyticsSummary, ProductAnalyticsResult,
+                                  TrafficAnalyticsResult, AnalyticsHealthCheck)
+    repositories/      IAnalyticsEventRepository + ISessionRepository (interfaces de contrato DDD)
+    infrastructure/    SupabaseAnalyticsEventRepository + SupabaseSessionRepository
+    services/          WindowHelper (windowToDate, windowLabel)
+                       EventPlatformService (validação + sanitização + batch ≤50 + session side-effects)
+                       SessionService (CRUD sessões com anonimato)
+                       EventStreamService (reconstrução cronológica da jornada)
+                       MerchantAnalyticsService (getSummary, getProductAnalytics, getTrafficAnalytics)
+                       FunnelService (6 passos: Search→Impression→Click→MerchantView→Contact→Save)
+                       AnalyticsObservabilityService (healthCheck com latência)
+    __tests__/         28 testes unitários (EventPlatform 14, MerchantAnalytics 8, Funnel 6)
+  merchant-decision/      Release 1.6 — Merchant Decision Engine (Epic 3)
+    types/             enums (RecommendationCategory, RecommendationPriority, EstimatedEffort,
+                              RecommendationStatus, OpportunityType, ActionStatus, ImpactLevel)
+                       interfaces (DecisionContext, Recommendation, Opportunity, DecisionAction,
+                                  PriorityScore, DecisionCenterData)
+    rules/             Rule.ts (interface pura — fn: context → RuleResult | null)
+                       RuleRegistry (Map estático, nunca limpo)
+                       bootstrap.ts (registra 11 regras, idempotente)
+                       catalog-rules.ts: CatalogImageCoverageRule, StaleImportRule, LowActiveProductsRule
+                       trust-rules.ts:   TrustNoVerificationRule, LowTrustScoreRule, TrustNoSignalsRule
+                       analytics-rules.ts: HighViewsLowContactRule, LowCTRRule, ZeroOfferSavesRule
+                       profile-rules.ts: ProfileNoContactRule, ProfileSingleChannelRule
+    repositories/      IActionRepository (interface de contrato DDD)
+    infrastructure/    SupabaseActionRepository
+    services/          RecommendationEngine (roda todas as regras, fault-isolated por regra)
+                       PrioritizationEngine (fórmula transparente: impact+effort+urgency+category, max 100)
+                       OpportunityDetector (4 detectores baseados em dados observáveis)
+                       ActionService (lifecycle de DecisionAction no DB)
+                       DecisionContextBuilder (agrega context de 3 domínios em Promise.all)
+    __tests__/         33 testes unitários (RuleRegistry 7, RecommendationEngine 7, OpportunityDetector 7, PrioritizationEngine 12)
+  catalog-intelligence/   Release 1.6 — Catalog Intelligence (Epic 4)
+    types/             enums (ProductHealthStatus, ProductDiagnosisType, CatalogTrend)
+                       interfaces (ProductDiagnosis, ProductHealthRecord, CatalogHealthBreakdown,
+                                  CatalogHealthSnapshot, CatalogHealthHistory, CatalogHealthResponse,
+                                  CatalogProductsResponse)
+    repositories/      ICatalogSnapshotRepository (getHistory, saveSnapshot)
+    infrastructure/    SupabaseCatalogSnapshotRepository (upsert por merchant_id+snapshot_date)
+    services/          ProductHealthService (scoreOffer: pura, getProductHealthList, getHealthBreakdown)
+                       CatalogHistoryService (classe, injeta ICatalogSnapshotRepository)
+    __tests__/         23 testes unitários (ProductHealthService 15, CatalogHistoryService 8)
+
 components/
   home/                 10+ componentes — Server exceto SearchBar e HeroCTAs ("use client")
   layout/               Navbar ("use client", scroll listener), Footer (Server)
@@ -53,6 +114,8 @@ components/
   search/               SearchResults (Server), SearchResultsSkeleton
   merchant/
     dashboard/          ScoreCard, RecommendationsPanel, StatsGrid, NextStepCard, GoalsPanel, MerchantProgressCard
+    command-center/
+      widgets/          ExecutiveSummaryWidget, MerchantHealthWidget, CatalogIssuesWidget, QuickActionsWidget, TrustWidget, RecentActivityWidget
     ui/                 ToastContext, ToastContainer, componentes compartilhados admin+merchant
   admin/                AdminSidebar, AdminStats, ImportQueue, QualityCenter, ui/*
   analytics/            Analytics.tsx (GA4 + Microsoft Clarity)

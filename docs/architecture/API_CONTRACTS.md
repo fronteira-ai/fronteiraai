@@ -1,11 +1,11 @@
 # API_CONTRACTS.md
 # Contratos de API do ParaguAI
 
-**Versão**: 2.1  
+**Versão**: 2.3  
 **Criado**: 2026-06-28  
-**Atualizado**: 2026-06-29 — Sprint 1.5.2 (Trust Verification API)
+**Atualizado**: 2026-06-30 — Sprint 1.6.2 (Analytics Platform API)
 **Status**: Referência permanente — atualizar a cada Release que introduz, modifica ou remove endpoint  
-**Alinhado com**: Release 1.5.2 · `docs/architecture/ARCHITECTURE.md` · `docs/architecture/DOMAIN_MODEL.md`
+**Alinhado com**: Release 1.6.2 · `docs/architecture/ARCHITECTURE.md` · `docs/architecture/DOMAIN_MODEL.md`
 
 ---
 
@@ -530,6 +530,99 @@ Resposta `200`:
   }
 }
 ```
+
+Status: **Stable**.
+
+---
+
+**`GET /api/merchant/command-center`**
+
+Endpoint unificado do Merchant Command Center (Release 1.6 — Epic 1). Retorna summary + health + catalog + quickActions em um único request com queries em paralelo.
+
+Resposta `200`:
+```json
+{
+  "ok": true,
+  "data": {
+    "summary": {
+      "merchantId": "uuid",
+      "companyName": "Cellshop CDE",
+      "plan": "pro",
+      "totalProducts": 120,
+      "activeProducts": 98,
+      "incompleteProducts": 15,
+      "trustScore": 65,
+      "verificationCount": 2,
+      "activeSignalCount": 3,
+      "totalReviews": 8,
+      "averageRating": 4.2,
+      "contactsAvailable": 3,
+      "contactsTotal": 4,
+      "lastImportAt": "2026-06-28T10:00:00Z",
+      "lastImportSuccess": true,
+      "daysSinceLastImport": 2,
+      "onboardingDone": true,
+      "verifiedLevel": "verified",
+      "merchantScore": 70
+    },
+    "health": {
+      "merchantId": "uuid",
+      "dimensions": [
+        {
+          "dimension": "catalogo",
+          "label": "Catálogo",
+          "status": "bom",
+          "statusLabel": "Bom",
+          "reason": "Catálogo em bom estado.",
+          "howToImprove": "Complete imagens e categorias dos produtos.",
+          "icon": "📦"
+        }
+      ],
+      "overallAttentionCount": 1
+    },
+    "catalog": {
+      "merchantId": "uuid",
+      "totalProducts": 120,
+      "healthScore": 78,
+      "issues": [
+        {
+          "type": "no_image",
+          "severity": "warning",
+          "label": "Produtos sem imagem",
+          "count": 15,
+          "total": 120,
+          "percentage": 12,
+          "description": "15 produto(s) sem imagem publicada.",
+          "impact": "Produtos sem foto recebem 3× menos cliques.",
+          "actionHref": "/merchant/imports/new",
+          "actionLabel": "Reimportar com mídia"
+        }
+      ],
+      "insights": [],
+      "lastImportAt": "2026-06-28T10:00:00Z",
+      "daysSinceLastImport": 2
+    },
+    "quickActions": {
+      "merchantId": "uuid",
+      "actions": [
+        {
+          "id": "add_images",
+          "priority": "high",
+          "title": "Adicionar imagens: 15 produto(s) sem foto",
+          "description": "Reimporte com a opção de mídia ativada.",
+          "reason": "Produtos sem foto recebem 3× menos cliques.",
+          "impact": "15 produtos ganham foto e aumentam visibilidade.",
+          "href": "/merchant/imports/new",
+          "icon": "Image",
+          "estimatedMinutes": 5
+        }
+      ]
+    }
+  }
+}
+```
+
+Endpoints individuais: `GET /api/merchant/command-center/summary`, `/health`, `/catalog`, `/quick-actions` — mesma autenticação, retornam `{ ok: true, data: <subtipo> }`.
 
 Status: **Stable**.
 
@@ -1193,4 +1286,238 @@ Resposta `200`: `{ "data": VerificationTypeCatalogRecord[] }` (apenas ativos, or
 
 ---
 
-*Este documento representa os contratos até Release 1.5.2. Endpoints planejados estão marcados como Planned e não existem no código. Quando este documento divergir de um Route Handler real em `app/api/`, o Route Handler prevalece como fonte de verdade de implementação — e este documento deve ser corrigido. Nunca documente como implementado o que ainda não existe.*
+---
+
+## Grupo 7: Analytics Platform API (Release 1.6 — Epic 2)
+
+Infraestrutura de captura e consulta de dados comportamentais de compradores.  
+**Regra fundamental**: `buyer_events` é append-only. Nunca deletar ou atualizar eventos.
+
+**`POST /api/analytics/events`** — Sprint 1.6.2
+
+Auth: público (rate-limited: 60 req/min/IP).  
+Aceita evento único ou array (batch, máximo 50).
+
+Body (evento único):
+```json
+{
+  "event_type": "ProductClicked",
+  "anonymous_id": "uuid-v4",
+  "session_id": "uuid-v4",
+  "buyer_id": "uuid (opcional)",
+  "merchant_id": "uuid (opcional)",
+  "store_id": "uuid (opcional)",
+  "product_id": "uuid (opcional)",
+  "search_query": "string (opcional)",
+  "page_url": "string obrigatório",
+  "referrer": "string (opcional)",
+  "metadata": { "chave": "valor primitivo" },
+  "occurred_at": "ISO8601 (opcional, default: now)"
+}
+```
+Body (batch): array de objetos acima.
+
+Resposta `201`: `{ "success": true, "event_id": "uuid" }` (single)  
+Resposta `200`: `{ "success": true, "inserted": N, "errors": 0 }` (batch)  
+Erros: `400` (invalid_event_type | invalid_anonymous_id | invalid_page_url | invalid_json), `429` (rate_limited)
+
+---
+
+**`POST /api/analytics/session`** — Sprint 1.6.2
+
+Auth: público.  
+Cria nova sessão de navegação.
+
+Body:
+```json
+{
+  "anonymous_id": "uuid-v4 obrigatório",
+  "buyer_id": "uuid (opcional)",
+  "device_type": "desktop|mobile|tablet|unknown",
+  "browser": "string (opcional)",
+  "country": "string (opcional)",
+  "city": "string (opcional)",
+  "language": "string (opcional)",
+  "entry_page": "string (opcional)"
+}
+```
+Resposta `201`: `{ "session_id": "uuid" }`
+
+---
+
+**`GET /api/analytics/session?id={session_id}`** — Sprint 1.6.2
+
+Auth: público.  
+Retorna sessão + event stream (jornada cronológica, máximo 200 eventos).
+
+Resposta `200`: `{ "session": StoredSession, "stream": EventStream }`  
+Erro `404`: sessão não encontrada.
+
+---
+
+**`GET /api/analytics/funnel?window={window}&merchant_id={id}`** — Sprint 1.6.2
+
+Auth: público.  
+Calcula funil de conversão (6 passos: Search→Impression→Click→MerchantView→Contact→Save).  
+`window`: `today|last_7_days|last_30_days|last_90_days`. `merchant_id` opcional para funil filtrado.
+
+Resposta `200`: `FunnelResult` com steps[], drop_rate por passo, overall_conversion.
+
+---
+
+**`GET /api/analytics/health`** — Sprint 1.6.2
+
+Auth: público.  
+Health check do subsistema de analytics (latência, contagem de eventos/sessões recentes).
+
+Resposta `200`: `{ "status": "healthy|degraded", "event_count_last_hour": N, "latency_ms": N, ... }`  
+Resposta `503`: `{ "status": "unhealthy", ... }`
+
+---
+
+**`GET /api/merchant/analytics?window={window}`** — Sprint 1.6.2
+
+Auth: merchant autenticado (`requireMerchant()`).  
+Summary de analytics do merchant: views, unique_visitors, CTR, contatos, saves.
+
+`window`: `today|last_7_days|last_30_days|last_90_days` (default: `last_7_days`).  
+Resposta `200`: `MerchantAnalyticsSummary`
+
+---
+
+**`GET /api/merchant/analytics/products?window={window}`** — Sprint 1.6.2
+
+Auth: merchant autenticado.  
+Top 20 produtos por impressões com CTR individual.
+
+Resposta `200`: `ProductAnalyticsResult` (products[], total_analyzed)
+
+---
+
+**`GET /api/merchant/analytics/traffic?window={window}`** — Sprint 1.6.2
+
+Auth: merchant autenticado.  
+Origem de tráfego classificada (Google/Facebook/WhatsApp/Interno/Direto/Outros) + distribuição horária (24h).
+
+Resposta `200`: `TrafficAnalyticsResult` (sources[], hourly_distribution[], total_visits)
+
+---
+
+**`GET /api/merchant/analytics/events?window={window}&limit={N}`** — Sprint 1.6.2
+
+Auth: merchant autenticado.  
+Eventos brutos recentes do merchant. `limit` entre 1-200 (default: 50).
+
+Resposta `200`: `{ "events": StoredAnalyticsEvent[], "total": N }`
+
+---
+
+### Sprint 1.6.3 — Decision Center APIs
+
+**`GET /api/merchant/decision-center`** — Sprint 1.6.3
+
+Auth: merchant autenticado.  
+Endpoint unificado do Decision Center. Computa recomendações on-demand (não persistidas), detecta oportunidades, busca ações pendentes e timeline de ações concluídas.
+
+Resposta `200`:
+```json
+{
+  "ok": true,
+  "data": {
+    "merchant_id": "uuid",
+    "todays_priorities": "Recommendation[] — top 5 por score",
+    "all_recommendations": "Recommendation[] — todas as regras disparadas, ordenadas por score",
+    "opportunities": "Opportunity[] — detectadas em tempo real",
+    "pending_actions": "DecisionAction[] — status pending/postponed",
+    "completed_actions": "DecisionAction[] — últimas 10 concluídas",
+    "total_recommendations": "number",
+    "total_opportunities": "number",
+    "generated_at": "ISO timestamp"
+  }
+}
+```
+
+---
+
+**`GET /api/merchant/recommendations`** — Sprint 1.6.3
+
+Auth: merchant autenticado.  
+Lista de recomendações computadas on-demand pelo Decision Engine. Substituiu a rota legada que lia da tabela `merchant_recommendations`.
+
+Resposta `200`: `{ "recommendations": Recommendation[], "total": N }`
+
+---
+
+**`GET /api/merchant/opportunities`** — Sprint 1.6.3
+
+Auth: merchant autenticado.  
+Lista de oportunidades detectadas em tempo real pelo OpportunityDetector. Não persistidas.
+
+Resposta `200`: `{ "opportunities": Opportunity[], "total": N }`
+
+---
+
+**`GET /api/merchant/actions?status={status}`** — Sprint 1.6.3
+
+Auth: merchant autenticado.  
+Lista de actions do merchant filtradas por status (pending | completed | ignored | postponed). `status` opcional — sem filtro retorna todas.
+
+Resposta `200`: `{ "actions": DecisionAction[], "total": N }`
+
+---
+
+**`PATCH /api/merchant/actions/{id}`** — Sprint 1.6.3
+
+Auth: merchant autenticado.  
+Atualiza o status de uma DecisionAction. O merchant só pode atualizar suas próprias actions.
+
+Body:
+```json
+{
+  "status": "completed | ignored | postponed",
+  "notes": "string (optional)",
+  "scheduled_for": "ISO timestamp (optional, usado quando status=postponed)"
+}
+```
+
+---
+
+### Sprint 1.6.4 — Catalog Intelligence APIs
+
+**`GET /api/merchant/catalog/health`** — Sprint 1.6.4
+
+Auth: merchant autenticado.  
+Retorna breakdown de saúde do catálogo (ideal/attention/critical) e os top 20 produtos com problemas.  
+Também registra snapshot diário em `merchant_catalog_snapshots` (fire-and-forget).
+
+Response: `{ merchant_id, breakdown: CatalogHealthBreakdown, products_needing_attention: ProductHealthRecord[], generated_at }`
+
+---
+
+**`GET /api/merchant/catalog/history?days={N}`** — Sprint 1.6.4
+
+Auth: merchant autenticado.  
+Retorna histórico de health_score diário (até 90 dias, padrão 30).
+
+Response: `{ merchant_id, snapshots: CatalogHealthSnapshot[], trend: "improving"|"stable"|"declining", generated_at }`
+
+---
+
+**`GET /api/merchant/catalog/products?status={status}&page={N}&limit={N}`** — Sprint 1.6.4
+
+Auth: merchant autenticado.  
+Retorna lista paginada de produtos com seus scores individuais de saúde.  
+`status` (opcional): `ideal | attention | critical`. Sem filtro retorna todos.  
+Paginação: `page` (default 1), `limit` (default 20, max 100).
+
+Response: `{ merchant_id, products: ProductHealthRecord[], total, page, limit, generated_at }`
+
+`acted_at` é preenchido automaticamente pelo servidor para `completed` e `ignored`.
+
+Resposta `200`: `{ "action": DecisionAction }`  
+Resposta `404`: `{ "error": "not_found" }` se a action não pertence ao merchant.  
+Resposta `400`: `{ "error": "invalid_status", "valid": [...] }` se status não é válido.
+
+---
+
+*Este documento representa os contratos até Release 1.6.3 (Epic 3). Endpoints planejados estão marcados como Planned e não existem no código. Quando este documento divergir de um Route Handler real em `app/api/`, o Route Handler prevalece como fonte de verdade de implementação — e este documento deve ser corrigido. Nunca documente como implementado o que ainda não existe.*

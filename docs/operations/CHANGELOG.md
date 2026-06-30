@@ -2,6 +2,284 @@
 
 Reconstruído a partir do histórico real de commits (`git log`) e do estado atual do código. Formato: data, commit, o que mudou de fato (verificado no diff/estado resultante, não só na mensagem).
 
+## 2026-06-30 — Release 1.6 — Epic 5 — Growth Engine (Sprint 1.6.5)
+
+Quinto e último Epic do Release 1.6. Motor de crescimento baseado em regras que responde "O que devo fazer hoje para vender mais?" — cada recomendação é explicável, rastreável e baseada em dados reais.
+
+**Database:**
+- `0021_growth_engine.sql` — tabela `merchant_growth_history` (append-only, event_type CHECK), 3 índices, RLS habilitado.
+
+**Domínio `src/domains/growth-engine/`:**
+- `types/enums.ts`: 8 enums (GrowthCategory×10, GrowthStrategyType×10, GrowthPriority×4, GrowthEffort×3, GrowthStatus×5, GrowthEventType×4, OpportunityCategory×8, PlanTier×3)
+- `types/growth.types.ts`: DraftRecommendation, GrowthRecommendation (+ priority_score + priority_breakdown), TodaysPlan, OpportunityCenter, GrowthHistoryEntry, GrowthTimeline, GrowthDashboard
+- `domain/GrowthContext.ts`: merchant + summary + catalog + analytics + products + timestamp (sem merchant-decision)
+- `strategies/`: GrowthStrategy interface, 10 estratégias puras, StrategyRegistry (Map estático), bootstrapStrategies (idempotente), helpers (makeId, draft, evidence)
+- `services/GrowthContextBuilder.ts`: Promise.all de buildExecutiveSummary + buildCatalogIntelligence + analyticsSvc.getSummary + analyticsSvc.getProductAnalytics
+- `services/RecommendationEngine.ts`: fault-isolated por estratégia, deduplicação por id
+- `services/PriorityEngine.ts`: impact(0-40) + urgency(0-30) + ease(0-20) + context(0-10) = max 100; `reason` em português
+- `services/TodaysPlanService.ts`: max N itens free-tier, total_available inclui todos, estimated_total_minutes
+- `services/OpportunityCenterService.ts`: filtra opportunity_category !== null
+- `services/GrowthHistoryService.ts`: getTimeline + recordEvent
+- `repositories/IGrowthHistoryRepository.ts`: interface de repositório
+- `infrastructure/SupabaseGrowthHistoryRepository.ts`: implementação Supabase
+
+**Factory:**
+- `lib/growth-engine-factory.ts`: `createGrowthEngineServices(client)` — bootstrapStrategies + todos os 6 serviços
+
+**APIs (6 novas rotas):**
+- `GET /api/merchant/growth` — GrowthDashboard completo (plano + oportunidades + todas as recomendações + histórico)
+- `GET /api/merchant/growth/today` — TodaysPlan apenas
+- `GET /api/merchant/growth/opportunities` — OpportunityCenter apenas
+- `GET /api/merchant/growth/recommendations?priority=` — todas as recomendações com filtro opcional
+- `PATCH /api/merchant/growth/recommendations/[id]` — registra event_type (viewed/accepted/ignored/completed)
+- `GET /api/merchant/growth/history?limit=` — GrowthTimeline (max 200, padrão 50)
+
+**Widgets (6 novos componentes em `components/merchant/growth-center/widgets/`):**
+- `TodaysPlanWidget` — plano do dia com priority_breakdown.reason, premium badge, minutos estimados
+- `TopOpportunitiesWidget` — top 5 oportunidades com categoria e impacto
+- `HighImpactActionsWidget` — "use client", lista expansível, aceitar/ignorar com `recordEvent`, evidências e breakdown
+- `CompletedGrowthWidget` — melhorias concluídas do histórico
+- `GrowthTimelineWidget` — timeline com ícones por tipo de evento (viewed/accepted/ignored/completed)
+- `RecommendationHistoryWidget` — métricas de engajamento (vistas/aceitas/concluídas/ignoradas)
+
+**Dashboard:**
+- Growth Center como **1ª aba** (padrão ao carregar), ícone `TrendingUp`, badge emerald quando há plano
+- `GrowthData = GrowthDashboard | null` — fetch lazy na primeira ativação
+
+**Brain:**
+- 12 novos `TrustEventType` (total: 85): GrowthCenterViewed, GrowthPlanGenerated, GrowthRecommendationViewed, GrowthRecommendationAccepted, GrowthRecommendationIgnored, GrowthRecommendationCompleted, GrowthOpportunityIdentified, GrowthOpportunityCenterViewed, GrowthStrategyEvaluated, GrowthContextBuilt, GrowthTimelineViewed, GrowthScoreComputed
+
+**Testes (33 novos, total 141/141):**
+- `CatalogGrowthStrategy.test.ts` — 5 asserções (id, first_import, completeness, quality, expansion)
+- `TrustGrowthStrategy.test.ts` — 5 asserções (id, first_verification, sem-dup, trust_score, add_signals)
+- `RecommendationEngine.test.ts` — 7 asserções (dedup, fault-isolation, vazio, multi-strategy, ids únicos, campos obrigatórios, smoke)
+- `PriorityEngine.test.ts` — 10 asserções (cap 100, ranking, breakdown, context, sort, todaysPlan, ease, reason, soma, vazio)
+- `TodaysPlanService.test.ts` — 6 asserções (maxItems, excluir premium, premium_count, minutos, total_available, data)
+
+**Quality Gate:** lint 0 erros · typecheck 0 erros · 141/141 testes · build verde
+
+---
+
+## 2026-06-30 — Release 1.6 — Epic 4 — Catalog Intelligence (Sprint 1.6.4)
+
+Quarto Epic do Release 1.6. Inteligência de catálogo por produto: cada produto recebe um score individual de saúde (0–100), diagnóstico específico de quais dados estão faltando, e o catálogo agora tem histórico de evolução diária (série temporal).
+
+**Database:**
+- `0020_catalog_intelligence.sql` — tabela `merchant_catalog_snapshots` (snapshot diário de saúde: health_score, products_ideal/attention/critical, total_products), UNIQUE(merchant_id, snapshot_date), índice por merchant+date DESC, RLS habilitado.
+
+**Domínio `src/domains/catalog-intelligence/`:**
+- `types/enums.ts`: `ProductHealthStatus` (Ideal/Attention/Critical), `ProductDiagnosisType` (NoImage/NoCategory/NoBrand/NoDescription/NoPrice/OutOfStock), `CatalogTrend` ("improving"|"stable"|"declining")
+- `types/catalog-intelligence.types.ts`: `ProductDiagnosis`, `ProductHealthRecord`, `CatalogHealthBreakdown`, `CatalogHealthSnapshot`, `CatalogHealthHistory`, `CatalogHealthResponse`, `CatalogProductsResponse`
+- `repositories/ICatalogSnapshotRepository`: interface `getHistory` + `saveSnapshot`
+- `infrastructure/SupabaseCatalogSnapshotRepository`: upsert por merchant_id+snapshot_date
+- `services/ProductHealthService`: `scoreOffer` (pura, pesos: image 30, category 25, brand 15, desc 15, price 15), `getProductHealthList`, `getHealthBreakdown`
+- `services/CatalogHistoryService`: classe, injeta ICatalogSnapshotRepository, tendência calculada por delta do período (>=5 melhorando, <=-5 caindo)
+
+**Factory:**
+- `lib/catalog-intelligence-factory.ts`: `createCatalogIntelligenceServices(client)`
+
+**APIs (3 novas rotas):**
+- `GET /api/merchant/catalog/health` — breakdown + top 20 produtos com problemas; registra snapshot diário (fire-and-forget)
+- `GET /api/merchant/catalog/history?days={N}` — últimos N dias de health_score (max 90, padrão 30)
+- `GET /api/merchant/catalog/products?status=&page=&limit=` — lista paginada de produtos com scores individuais
+
+**Widgets (4 novos componentes em `components/merchant/catalog/widgets/`):**
+- `CatalogHealthScoreWidget` — score + 3 barras (ideal/atenção/crítico) — Server Component
+- `ProductHealthListWidget` — lista filtrável com cards expansíveis que revelam diagnósticos — "use client"
+- `CatalogEvolutionWidget` — sparkline + badge de tendência — Server Component
+- `CatalogInsightsWidget` — insight principal + breakdown de issues — Server Component
+
+**Dashboard:**
+- 5ª aba "Catálogo" (ícone `Package`) adicionada ao `ActiveTab` — fetch lazy na primeira ativação
+- Badge laranja na aba quando há produtos com problemas (critical + attention > 0)
+
+**Brain:**
+- 6 novos `TrustEventType`: CatalogIntelligenceViewed, CatalogProductHealthViewed, CatalogSnapshotRecorded, CatalogIssueIdentified, CatalogHealthImproved, CatalogProductFixed (total: 73)
+
+**Testes:**
+- 23 novos testes (ProductHealthService 15, CatalogHistoryService 8) — total: 108/108
+- Quality Gate: lint 0, typecheck 0, 108/108 testes, build compilado.
+
+---
+
+## 2026-06-30 — Release 1.6 — Epic 3 — Merchant Decision Engine (Sprint 1.6.3)
+
+Terceira entrega do Release 1.6. Motor de decisão transparente, declarativo e completamente explicável: toda recomendação tem evidência rastreável. Nenhum algoritmo opaco — cada resultado é derivado de dados observáveis.
+
+**Database:**
+- `0019_merchant_decision.sql` — tabela `merchant_decision_actions` (status CHECK: pending/completed/ignored/postponed), 3 índices, RLS habilitado.
+
+**Novo domínio `src/domains/merchant-decision/` (DDD completo):**
+- `types/enums.ts` — RecommendationCategory (6), RecommendationPriority (4), EstimatedEffort (3), RecommendationStatus (5), OpportunityType (7), ActionStatus (4), ImpactLevel (3)
+- `types/decision.types.ts` — DecisionContext, Evidence, Recommendation, Opportunity, DecisionAction, PriorityScore, DecisionCenterData
+- `rules/Rule.ts` — interface pura: `evaluate(ctx): RuleResult | null`, sem side-effects, determinístico
+- `rules/RuleRegistry.ts` — Map estático; métodos: register, getAll, getById, getByCategory, count, ids
+- `rules/bootstrap.ts` — idempotente (`bootstrapped` guard); registra 11 regras de uma vez
+- 11 regras declarativas em 4 arquivos: catalog (3), trust (3), analytics (3), profile (2)
+  - Catalog: `catalog.image_coverage`, `catalog.stale_import`, `catalog.low_active_products`
+  - Trust: `trust.no_verification`, `trust.low_score`, `trust.no_signals`
+  - Analytics: `analytics.high_views_low_contact`, `analytics.low_ctr`, `analytics.zero_saves`
+  - Profile: `profile.no_contact`, `profile.single_channel`
+- `repositories/IActionRepository.ts` — interface: create, findByMerchant, findById, findByRuleId, update, getTimeline
+- `infrastructure/SupabaseActionRepository.ts` — implementação Supabase com service client
+- `services/RecommendationEngine.ts` — run all rules, fault-isolated (try/catch por regra), enrich com id/status/created_at
+- `services/PrioritizationEngine.ts` — fórmula transparente: impact(40/30/20/10) + effort(30/20/10) + urgency(0/10/15) + category_weight(15/15/10/5/5/5), máx 100 pts
+- `services/OpportunityDetector.ts` — 4 detectores baseados exclusivamente em dados observáveis
+- `services/ActionService.ts` — lifecycle de DecisionAction: create (sem duplicatas), update, getActions, getTimeline
+- `services/DecisionContextBuilder.ts` — agrega ExecutiveSummary + CatalogIntelligence + MerchantHealth + MerchantAnalyticsSummary + ProductAnalyticsResult em Promise.all
+
+**5 API Routes:**
+- `GET /api/merchant/decision-center` — endpoint unificado (hoje_priorities + all_recs + opportunities + actions)
+- `GET /api/merchant/recommendations` — recomendações on-demand (substitui rota legada)
+- `GET /api/merchant/opportunities` — oportunidades detectadas em tempo real
+- `GET /api/merchant/actions?status=` — lista actions com filtro de status opcional
+- `PATCH /api/merchant/actions/[id]` — atualiza status (completed/ignored/postponed) com acted_at auto
+
+**6 Widgets (`components/merchant/decision-center/widgets/`):**
+- `TodaysPrioritiesWidget` — top 5 prioridades do dia com badge de prioridade e urgência
+- `RecommendationsWidget` — lista completa com expand/collapse por rec, aceitar e ignorar (client)
+- `OpportunitiesWidget` — oportunidades detectadas com evidências e how-to-act
+- `CompletedImprovementsWidget` — histórico de melhorias concluídas
+- `PendingImprovementsWidget` — ações pendentes com botão de conclusão rápida (client)
+- `GrowthTimelineWidget` — timeline cronológica de todas as ações com status visual
+
+**Dashboard atualizado (`app/merchant/dashboard/page.tsx`):**
+- 4 tabs: Command Center, Analytics, Decision Center (novo), Score & Metas
+- Tab Decision Center: fetch lazy ao ativar, handlers para aceitar/ignorar recomendações e concluir ações
+- Badge amber no tab quando há prioridades pendentes
+
+**Brain — 10 novos TrustEventType (total: 67):**
+- DecisionCenterViewed, RecommendationGenerated, RecommendationViewed, RecommendationAccepted, RecommendationDismissed
+- ActionCompleted, ActionPostponed, OpportunityDetected, OpportunityResolved, PriorityChanged
+
+**Testes — 33 novos (total: 85/85):**
+- `RuleRegistry.test.ts` (7 testes) — register, getById, getByCategory, ids, overwrite warning
+- `RecommendationEngine.test.ts` (7 testes) — generate com contextos variados, regras disparadas corretamente
+- `OpportunityDetector.test.ts` (7 testes) — 4 detectores, evidências obrigatórias, contexto saudável
+- `PrioritizationEngine.test.ts` (12 testes) — score(), urgency bonus, sort(), todaysPriorities()
+
+**Quality Gate:** lint 0, typecheck 0, 85/85 testes, build compilado.
+
+---
+
+## 2026-06-30 — Release 1.6 — Epic 2 — Merchant Analytics Platform (Sprint 1.6.2)
+
+Segunda entrega do Release 1.6. Infraestrutura completa de analytics comportamental: desde captura client-side de eventos até funil de conversão e widgets para merchant.
+
+**Database:**
+- `0018_analytics_platform.sql` — 3 tabelas: `buyer_sessions` (mutable), `buyer_events` (append-only, nunca deletar), `merchant_analytics_daily` (agregações pré-computadas). 9 índices de performance, RLS configurado, comentário de estratégia de particionamento futuro.
+
+**Novo domínio `src/domains/merchant-analytics/` (DDD completo):**
+- `types/enums.ts` — AnalyticsEventType (22 valores), DeviceType, FunnelStep (6), AnalyticsWindow (4)
+- `types/analytics.types.ts` — AnalyticsEventPayload, StoredAnalyticsEvent, SessionPayload, StoredSession, EventStream, FunnelResult, MerchantAnalyticsSummary, ProductAnalyticsResult, TrafficAnalyticsResult, AnalyticsHealthCheck
+- `repositories/IAnalyticsEventRepository.ts` + `ISessionRepository.ts` — interfaces de contrato
+- `infrastructure/SupabaseAnalyticsEventRepository.ts` + `SupabaseSessionRepository.ts` — implementações Supabase
+- `services/WindowHelper.ts` — `windowToDate()` + `windowLabel()`
+- `services/EventPlatformService.ts` — validação, sanitização, batch insert (≤50), session side-effects automáticos
+- `services/SessionService.ts` — CRUD de sessões com validação de anonymous_id
+- `services/EventStreamService.ts` — reconstrução cronológica da jornada de comprador
+- `services/MerchantAnalyticsService.ts` — getSummary (views, unique_visitors, CTR, contatos, saves), getProductAnalytics (impressões/cliques/CTR por produto), getTrafficAnalytics (origem de tráfego, distribuição horária)
+- `services/FunnelService.ts` — 6 passos (Search→Impression→Click→MerchantView→Contact→Save), drop_rate e conversion_rate por passo, overall_conversion
+- `services/AnalyticsObservabilityService.ts` — healthCheck com contagem de eventos/sessões recentes e latência
+
+**8 API Routes:**
+- `POST /api/analytics/events` — single ou batch (até 50), validação + sanitização + rate limit (60 req/min/IP), fire-and-forget
+- `POST /api/analytics/session` — cria sessão
+- `GET /api/analytics/session?id=` — retorna sessão + event stream
+- `GET /api/analytics/funnel?window=` — funil global ou por merchant
+- `GET /api/analytics/health` — health check do subsistema de analytics
+- `GET /api/merchant/analytics?window=` — summary autenticado por merchant
+- `GET /api/merchant/analytics/products?window=` — top produtos autenticado
+- `GET /api/merchant/analytics/traffic?window=` — origem de tráfego autenticado
+- `GET /api/merchant/analytics/events?window=&limit=` — eventos recentes autenticados
+
+**Hook `hooks/useAnalytics.ts` (client-side):**
+- anonymous_id (localStorage persistente UUID) + session_id (sessionStorage UUID)
+- Batch automático com flush a cada 2s; flush imediato em eventos de alto valor (WhatsApp, Phone, OfferSaved)
+- Session start automático na primeira visita (integrado com `/api/analytics/session`)
+- Flush final no `beforeunload` via `keepalive: true`
+- Detecção de device_type (desktop/mobile/tablet)
+
+**6 Widgets (`components/merchant/analytics/widgets/`):**
+- `ViewsWidget` — visualizações totais + visitantes únicos
+- `TrafficWidget` — CTR, impressões, cliques, WhatsApp/Phone cliques
+- `TopProductsWidget` — rank por impressões com CTR por produto (top 5)
+- `MerchantTrafficWidget` — barras de origem de tráfego (Google/Facebook/Direto/etc.)
+- `FunnelWidget` — funil visual com drop_rate entre passos + conversão geral
+- `SessionWidget` — contatos, saves, breakdown WhatsApp/Telefone/Site
+
+**Dashboard atualizado (`app/merchant/dashboard/page.tsx`):**
+- 3 tabs: Command Center, Analytics (novo), Score & Metas
+- Tab Analytics: seletor de janela (Hoje/7 dias/30 dias/90 dias), fetch lazy ao ativar tab, grid responsivo com 6 widgets
+
+**Brain — 18 novos TrustEventType (total: 57):**
+- AnalyticsSearchPerformed, AnalyticsProductImpression, AnalyticsProductClicked, AnalyticsProductCompared
+- AnalyticsMerchantViewed, AnalyticsMerchantPassportViewed, AnalyticsMerchantContactClicked
+- AnalyticsMerchantWhatsAppClicked, AnalyticsMerchantPhoneClicked, AnalyticsMerchantWebsiteClicked
+- AnalyticsMerchantLocationViewed, AnalyticsOfferViewed, AnalyticsOfferClicked, AnalyticsOfferSaved
+- AnalyticsCategoryViewed, AnalyticsBrandViewed, AnalyticsSessionStarted, AnalyticsSessionEnded
+- 14 factory functions em `trust.events.ts`; 14 mapeamentos em `event-registry.ts` (todos 6 Brain assets cobertos)
+- `lib/analytics-factory.ts` — factory unificada de serviços para rotas de API
+
+**Testes (28 novos, total: 52):**
+- `EventPlatformService.test.ts` — 14 asserções (validação, sanitização, batch, session side-effects, storage_error)
+- `MerchantAnalyticsService.test.ts` — 8 asserções (views, unique_visitors, CTR, contact aggregation, product rank, traffic sources)
+- `FunnelService.test.ts` — 6 asserções (steps count, drop_rate, null first step, overall_conversion, zero case, merchantId)
+
+**Quality Gate:** lint 0, typecheck 0, 52/52 testes passando, build compilado.
+
+---
+
+## 2026-06-30 — Release 1.6 — Epic 1 — Merchant Command Center (Sprint 1.6.1)
+
+Primeira entrega do Release 1.6 — Merchant Growth Platform. O `/merchant/dashboard` evolui para o Merchant Command Center: inteligência operacional, não apenas métricas.
+
+**Novo domínio `src/domains/merchant-intelligence/`:**
+- `types/enums.ts` — HealthStatus (Excelente/Bom/Regular/Atenção), HealthDimension (5: Catálogo/Trust/Atualização/Perfil/Visibilidade), CatalogIssueType (7 tipos), InsightSeverity, ActionPriority
+- `types/merchant-intelligence.types.ts` — ExecutiveSummary, HealthDimensionResult, MerchantHealth, CatalogIssue, CatalogInsight, CatalogIntelligence, QuickAction, QuickActionsResult, CommandCenterData
+
+**Serviços (4 funções puras, sem side effects):**
+- `ExecutiveSummaryService.buildExecutiveSummary()` — agrega produtos, trust, avaliações, contatos, última sync em uma estrutura unificada via Promise.all
+- `MerchantHealthService.buildMerchantHealth()` — 5 dimensões de saúde independentes (Catálogo/Trust/Atualização/Perfil/Visibilidade) com status, razão e como melhorar
+- `CatalogIntelligenceService.buildCatalogIntelligence()` — detecta 7 tipos de problema (sem imagem, categoria, marca, descrição, preço, stale, sem produtos); ordena por severidade; calcula healthScore 0-100 ponderado
+- `QuickActionsService.buildQuickActions()` — 8 regras de negócio para ações prioritizadas (critical→high→medium), limitadas a 5
+
+**5 API Routes:**
+- `GET /api/merchant/command-center` — unified endpoint (summary + health + catalog + quick-actions em paralelo)
+- `GET /api/merchant/command-center/summary`
+- `GET /api/merchant/command-center/health`
+- `GET /api/merchant/command-center/catalog`
+- `GET /api/merchant/command-center/quick-actions`
+
+**6 Widgets reutilizáveis (`components/merchant/command-center/widgets/`):**
+- `ExecutiveSummaryWidget` — 5 cards: catálogo, trust, avaliações, contato, última sync
+- `MerchantHealthWidget` — 5 dimensões com cor semântica (verde/azul/âmbar/vermelho), explicação e como melhorar
+- `CatalogIssuesWidget` (client) — barra de saúde, insights, acordeão expansível por issue com impacto e link de resolução
+- `QuickActionsWidget` — prioridade crítica/alta/média com tempo estimado e link de ação
+- `TrustWidget` — Trust Score bar + 4 sinais (verificações, sinais, avaliações, nível)
+- `RecentActivityWidget` — histórico de atividade recente (última sync, produtos publicados, avaliações)
+
+**Dashboard refatorado (`app/merchant/dashboard/page.tsx`):**
+- Tab "Command Center" (ativo por padrão): novos 6 widgets organizados em grid responsivo
+- Tab "Score & Metas": componentes legados preservados (StatsGrid, ScoreCard, GoalsPanel, MerchantProgressCard, RecommendationsPanel)
+- Fetch paralelo de `/api/merchant/command-center` + `/api/merchant/dashboard/stats`
+- Badge de atenção no tab se overallAttentionCount > 0
+
+**Brain — 8 novos TrustEventType:**
+- `CommandCenterViewed`, `CommandCenterWidgetOpened`, `CommandCenterQuickActionClicked`, `CommandCenterCatalogIssueViewed`, `CommandCenterCatalogIssueResolved`, `CommandCenterHealthViewed`, `CommandCenterFilterChanged`, `CommandCenterSummaryExported`
+- Factory functions em `trust.events.ts`; 8 novos mapeamentos em `event-registry.ts`
+- Novo `BrainEntityType.CommandCenter = "command_center"`
+
+**Testes:**
+- `MerchantHealthService.test.ts` — 9 asserções (status por dimensão, overallAttentionCount, merchantId)
+- `QuickActionsService.test.ts` — 6 asserções (max 5 actions, critical first, sort order, healthy merchant = 0 actions)
+- `CatalogIntelligenceService.test.ts` — 9 asserções (no_image, no_price, no_category, no_brand, healthScore 100, sort, stale)
+- Jest configurado em `jest.config.ts`; `npm test` adicionado ao package.json
+
+**Quality Gate:** lint 0, typecheck 0, 24/24 testes passando, build compilado.
+
+---
+
 ## 2026-06-29 — Release 1.5 — Epic 4 — Cognitive Integration & Hardening — RELEASE CANDIDATE
 
 Consolidação do Release 1.5. Todos os 4 Epics conectados ao ParaguAI Brain via interface unificada.

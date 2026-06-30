@@ -41,7 +41,19 @@ components/
     layout/               Layout e navegação do painel admin (1 componente)
     ui/                   Primitivos UI exclusivos do admin (5 componentes)
   merchant/
-    dashboard/            Widgets do dashboard do lojista (6 componentes)
+    command-center/
+      widgets/            6 widgets do Command Center (ExecutiveSummary, MerchantHealth, CatalogIssues, QuickActions, Trust, RecentActivity)
+    analytics/
+      widgets/            6 widgets de Analytics (Views, Traffic, TopProducts, MerchantTraffic, Funnel, Session)
+    decision-center/
+      widgets/            6 widgets do Decision Center (TodaysPriorities, Recommendations, Opportunities, CompletedImprovements, PendingImprovements, GrowthTimeline)
+                          RecommendationsWidget e PendingImprovementsWidget: "use client" (interação de aceitar/ignorar/concluir)
+                          Demais: Server Components
+    catalog/
+      widgets/            4 widgets do Catalog Intelligence (CatalogHealthScore, ProductHealthList, CatalogEvolution, CatalogInsights)
+                          ProductHealthListWidget: "use client" (filtro por status: All/Critical/Attention/Ideal, cards expansíveis)
+                          Demais: Server Components
+    dashboard/            Widgets do dashboard do lojista — legado (6 componentes)
     layout/               Layout e navegação do portal merchant (1 componente)
     onboarding/           Wizard de onboarding (1 componente)
 
@@ -645,7 +657,135 @@ Status: **Stable**.
 
 ---
 
-### 4.10 Merchant OS — Layout e Onboarding
+---
+
+### 4.10 Merchant OS — Command Center Widgets (Release 1.6 — Epic 1)
+
+**`ExecutiveSummaryWidget`**  
+`components/merchant/command-center/widgets/ExecutiveSummaryWidget.tsx` | Server Component
+
+Responsabilidade: 5 cards de resumo executivo — Catálogo (total/ativos/incompletos), Trust (score/verificações/sinais), Avaliações (total/média), Contato (canais disponíveis), Última Sync (data/sucesso/dias).
+
+Quem usa: `app/merchant/dashboard/page.tsx` (tab Command Center).
+
+Props: `{ data: ExecutiveSummary }`. Status: **Stable**.
+
+---
+
+**`MerchantHealthWidget`**  
+`components/merchant/command-center/widgets/MerchantHealthWidget.tsx` | Server Component
+
+Responsabilidade: 5 dimensões de saúde independentes (Catálogo, Trust, Atualização, Perfil, Visibilidade) — cada uma com status semântico (Excelente/Bom/Regular/Atenção), razão e como melhorar. Badge de alerta se `overallAttentionCount > 0`.
+
+Quem usa: `app/merchant/dashboard/page.tsx` (tab Command Center).
+
+Props: `{ data: MerchantHealth }`. Status: **Stable**.
+
+---
+
+**`CatalogIssuesWidget`** (Client Component)  
+`components/merchant/command-center/widgets/CatalogIssuesWidget.tsx`
+
+Responsabilidade: barra de completude do catálogo (healthScore 0-100), insights contextuais, lista expandível de issues (sem imagem, categoria, marca, descrição, preço, stale, sem produtos) com impacto e link de resolução. Expansão controlada por estado local.
+
+Quem usa: `app/merchant/dashboard/page.tsx` (tab Command Center).
+
+Props: `{ data: CatalogIntelligence }`. Status: **Stable**.
+
+---
+
+**`QuickActionsWidget`**  
+`components/merchant/command-center/widgets/QuickActionsWidget.tsx` | Server Component
+
+Responsabilidade: lista de até 5 ações rápidas priorizadas (critical→high→medium) com título, descrição, impacto, tempo estimado e link de resolução.
+
+Quem usa: `app/merchant/dashboard/page.tsx` (tab Command Center).
+
+Props: `{ data: QuickActionsResult }`. Status: **Stable**.
+
+---
+
+**`TrustWidget`**  
+`components/merchant/command-center/widgets/TrustWidget.tsx` | Server Component
+
+Responsabilidade: Trust Score bar + 4 sinais (verificações aprovadas, sinais ativos, avaliações, nível de verificação) + link para Central de Trust.
+
+Quem usa: `app/merchant/dashboard/page.tsx` (tab Command Center).
+
+Props: `{ data: ExecutiveSummary }`. Status: **Stable**.
+
+---
+
+**`RecentActivityWidget`**  
+`components/merchant/command-center/widgets/RecentActivityWidget.tsx` | Server Component
+
+Responsabilidade: lista de atividades recentes derivadas da ExecutiveSummary (última sync, contagem de produtos, avaliações).
+
+Quem usa: `app/merchant/dashboard/page.tsx` (tab Command Center).
+
+Props: `{ data: ExecutiveSummary }`. Status: **Stable**.
+
+---
+
+### 4.11 Merchant OS — Analytics Widgets (Release 1.6 — Epic 2)
+
+**`ViewsWidget`**  
+`components/merchant/analytics/widgets/ViewsWidget.tsx` | Server Component
+
+Responsabilidade: visualizações totais de perfil + visitantes únicos do período selecionado.
+
+Quem usa: `app/merchant/dashboard/page.tsx` (tab Analytics).
+
+Props: `{ data: MerchantAnalyticsSummary | null }`. Status: **Stable**.
+
+---
+
+**`TrafficWidget`**  
+`components/merchant/analytics/widgets/TrafficWidget.tsx` | Server Component
+
+Responsabilidade: CTR de produtos com cor semântica (verde/âmbar/vermelho), impressões e cliques, breakdown WhatsApp/Telefone.
+
+Props: `{ data: MerchantAnalyticsSummary | null }`. Status: **Stable**.
+
+---
+
+**`TopProductsWidget`**  
+`components/merchant/analytics/widgets/TopProductsWidget.tsx` | Server Component
+
+Responsabilidade: rank dos top 5 produtos por impressões com CTR individual.
+
+Props: `{ data: ProductAnalyticsResult | null }`. Status: **Stable**.
+
+---
+
+**`MerchantTrafficWidget`**  
+`components/merchant/analytics/widgets/MerchantTrafficWidget.tsx` | Server Component
+
+Responsabilidade: barras de origem de tráfego (Google/Facebook/WhatsApp/Direto/Interno/Outros) com percentuais.
+
+Props: `{ data: TrafficAnalyticsResult | null }`. Status: **Stable**.
+
+---
+
+**`FunnelWidget`**  
+`components/merchant/analytics/widgets/FunnelWidget.tsx` | Server Component
+
+Responsabilidade: funil visual de conversão com 6 passos (Busca → Impressão → Clique → Lojista → Contato → Salvo), drop_rate entre passos e conversão geral.
+
+Props: `{ data: FunnelResult | null }`. Status: **Stable**.
+
+---
+
+**`SessionWidget`**  
+`components/merchant/analytics/widgets/SessionWidget.tsx` | Server Component
+
+Responsabilidade: contatos iniciados e ofertas salvas com breakdown por canal (WhatsApp/Telefone/Site).
+
+Props: `{ data: MerchantAnalyticsSummary | null }`. Status: **Stable**.
+
+---
+
+### 4.12 Merchant OS — Layout e Onboarding
 
 **`MerchantSidebar`**  
 `components/merchant/layout/MerchantSidebar.tsx` | **Client Component**
@@ -671,7 +811,7 @@ Status: **Stable**.
 
 ---
 
-### 4.11 Admin — UI Primitivos
+### 4.13 Admin — UI Primitivos
 
 Cinco primitivos de interface exclusivos do painel admin. Todos são **Client Components** por manipularem estado de formulários, toasts e confirmações.
 
@@ -736,7 +876,7 @@ Status: **Stable**.
 
 ---
 
-### 4.12 Admin — Formulários de Catálogo
+### 4.14 Admin — Formulários de Catálogo
 
 Cinco formulários CRUD para gerenciamento do catálogo pela equipe interna. Todos são **Client Components** com estado de formulário, validação e chamadas a API routes.
 
@@ -754,7 +894,7 @@ Status: **Stable**.
 
 ---
 
-### 4.13 Admin — Layout
+### 4.15 Admin — Layout
 
 **`AdminSidebar`**  
 `components/admin/layout/AdminSidebar.tsx` | **Client Component**

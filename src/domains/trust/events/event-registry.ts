@@ -224,6 +224,242 @@ export const TRUST_EVENT_BRAIN_IMPACT: TrustEventBrainImpact[] = [
       { asset: BrainAsset.KnowledgeGraph, description: "Enriquece grafo geográfico Comprador→Região" },
     ],
   },
+  // Release 1.6 — Command Center
+  {
+    eventType: TrustEventType.CommandCenterViewed,
+    assets: [
+      { asset: BrainAsset.HistoricalData, description: "Registra frequência de uso do Command Center pelo merchant" },
+      { asset: BrainAsset.RecommendationKnowledge, description: "Calibra recomendações com base no padrão de acesso" },
+    ],
+  },
+  {
+    eventType: TrustEventType.CommandCenterWidgetOpened,
+    assets: [
+      { asset: BrainAsset.HistoricalData, description: "Registra quais widgets são mais consultados por tipo de merchant" },
+      { asset: BrainAsset.RecommendationKnowledge, description: "Melhora priorização de widgets no Daily Brief futuro" },
+    ],
+  },
+  {
+    eventType: TrustEventType.CommandCenterQuickActionClicked,
+    assets: [
+      { asset: BrainAsset.RecommendationKnowledge, description: "Registra quais ações rápidas geram mais engajamento — calibra priorização futura" },
+      { asset: BrainAsset.HistoricalData, description: "Registra padrão de resposta a recomendações por tipo de merchant" },
+    ],
+  },
+  {
+    eventType: TrustEventType.CommandCenterCatalogIssueViewed,
+    assets: [
+      { asset: BrainAsset.HistoricalData, description: "Registra quais problemas de catálogo são mais consultados" },
+      { asset: BrainAsset.KnowledgeGraph, description: "Enriquece grafo de conhecimento sobre padrões de catálogo por categoria" },
+    ],
+  },
+  {
+    eventType: TrustEventType.CommandCenterCatalogIssueResolved,
+    assets: [
+      { asset: BrainAsset.HistoricalData, description: "Registra resoluções de problemas — base para medir impacto de melhorias" },
+      { asset: BrainAsset.RecommendationKnowledge, description: "Aprende quais tipos de problema os merchants resolvem mais rapidamente" },
+      { asset: BrainAsset.KnowledgeGraph, description: "Atualiza estado de qualidade de catálogo do merchant no grafo" },
+    ],
+  },
+  {
+    eventType: TrustEventType.CommandCenterHealthViewed,
+    assets: [
+      { asset: BrainAsset.HistoricalData, description: "Registra interesse do merchant em dimensões específicas de saúde" },
+      { asset: BrainAsset.RecommendationKnowledge, description: "Calibra quais dimensões gerar recomendações mais detalhadas" },
+    ],
+  },
+  {
+    eventType: TrustEventType.CommandCenterFilterChanged,
+    assets: [
+      { asset: BrainAsset.HistoricalData, description: "Registra padrões de filtro usados no Command Center" },
+    ],
+  },
+  {
+    eventType: TrustEventType.CommandCenterSummaryExported,
+    assets: [
+      { asset: BrainAsset.HistoricalData, description: "Registra merchants que exportam dados — sinal de uso avançado e engagement" },
+    ],
+  },
+  // Release 1.6 — Analytics Platform
+  {
+    eventType: TrustEventType.AnalyticsSearchPerformed,
+    assets: [
+      { asset: BrainAsset.SearchIntelligence, description: "Alimenta corpus de intenções de busca — base para ranking e sugestões" },
+      { asset: BrainAsset.BuyerBehavioralKnowledge, description: "Registra padrões de linguagem e termos usados por compradores" },
+    ],
+  },
+  {
+    eventType: TrustEventType.AnalyticsProductImpression,
+    assets: [
+      { asset: BrainAsset.BuyerBehavioralKnowledge, description: "Registra o que o comprador viu — base para análise de posição e visibilidade" },
+      { asset: BrainAsset.RecommendationKnowledge, description: "Calibra modelo de recomendação com padrões de exposição" },
+      { asset: BrainAsset.SearchIntelligence, description: "Mede CTR por posição — alimenta otimização de ranking" },
+    ],
+  },
+  {
+    eventType: TrustEventType.AnalyticsProductClicked,
+    assets: [
+      { asset: BrainAsset.BuyerBehavioralKnowledge, description: "Clique é sinal de interesse explícito — alto peso no modelo de comportamento" },
+      { asset: BrainAsset.RecommendationKnowledge, description: "Fortalece relação Comprador→Produto no modelo de recomendação" },
+      { asset: BrainAsset.SearchIntelligence, description: "CTR real alimenta modelo de relevância e ranking" },
+    ],
+  },
+  {
+    eventType: TrustEventType.AnalyticsProductCompared,
+    assets: [
+      { asset: BrainAsset.BuyerBehavioralKnowledge, description: "Comparação revela intenção avançada de compra — sinal de alta intenção" },
+      { asset: BrainAsset.RecommendationKnowledge, description: "Pares de produtos comparados enriquecem modelo de similaridade" },
+    ],
+  },
+  {
+    eventType: TrustEventType.AnalyticsMerchantViewed,
+    assets: [
+      { asset: BrainAsset.BuyerBehavioralKnowledge, description: "Visita ao merchant registra interesse de contexto local/preço/confiança" },
+      { asset: BrainAsset.KnowledgeGraph, description: "Adiciona aresta Comprador→Merchant com peso por frequência de visita" },
+      { asset: BrainAsset.RecommendationKnowledge, description: "Merchant visitado por perfil similar → candidato de recomendação" },
+    ],
+  },
+  {
+    eventType: TrustEventType.AnalyticsMerchantPassportViewed,
+    assets: [
+      { asset: BrainAsset.BuyerBehavioralKnowledge, description: "Visualização do passport indica processo de due diligence do comprador" },
+      { asset: BrainAsset.MerchantTrust, description: "Sinal que trust visível influencia decisão de compra" },
+      { asset: BrainAsset.KnowledgeGraph, description: "Enriquece relação Comprador→Trust no grafo" },
+    ],
+  },
+  {
+    eventType: TrustEventType.AnalyticsMerchantContactClicked,
+    assets: [
+      { asset: BrainAsset.BuyerBehavioralKnowledge, description: "Clique em contato = conversão de intenção para ação — evento de alto valor" },
+      { asset: BrainAsset.RecommendationKnowledge, description: "Canal que gerou contato enriquece modelo de conversão por perfil" },
+    ],
+  },
+  {
+    eventType: TrustEventType.AnalyticsMerchantWhatsAppClicked,
+    assets: [
+      { asset: BrainAsset.BuyerBehavioralKnowledge, description: "WhatsApp é canal preferencial de conversão — mede preferência por canal" },
+      { asset: BrainAsset.RecommendationKnowledge, description: "Fortalece modelo de atribuição de canal para merchants similares" },
+    ],
+  },
+  {
+    eventType: TrustEventType.AnalyticsMerchantPhoneClicked,
+    assets: [
+      { asset: BrainAsset.BuyerBehavioralKnowledge, description: "Ligação telefônica indica compradores mais tradicionais — segmentação comportamental" },
+      { asset: BrainAsset.RecommendationKnowledge, description: "Calibra recomendação de canal por perfil de comprador" },
+    ],
+  },
+  {
+    eventType: TrustEventType.AnalyticsMerchantWebsiteClicked,
+    assets: [
+      { asset: BrainAsset.BuyerBehavioralKnowledge, description: "Visita ao site indica interesse em informações complementares" },
+      { asset: BrainAsset.KnowledgeGraph, description: "Expande grafo de relacionamento comprador→merchant via web" },
+    ],
+  },
+  {
+    eventType: TrustEventType.AnalyticsOfferSaved,
+    assets: [
+      { asset: BrainAsset.BuyerBehavioralKnowledge, description: "Salvar oferta é sinal forte de intenção futura de compra" },
+      { asset: BrainAsset.RecommendationKnowledge, description: "Lista de salvos revela padrão de wishlist — alimenta recomendação proativa" },
+    ],
+  },
+  {
+    eventType: TrustEventType.AnalyticsCategoryViewed,
+    assets: [
+      { asset: BrainAsset.BuyerBehavioralKnowledge, description: "Interesse por categoria revela contexto de compra e poder aquisitivo" },
+      { asset: BrainAsset.SearchIntelligence, description: "Navegação por categoria alimenta taxonomia de intenção de busca" },
+    ],
+  },
+  {
+    eventType: TrustEventType.AnalyticsSessionStarted,
+    assets: [
+      { asset: BrainAsset.BuyerBehavioralKnowledge, description: "Início de sessão registra contexto completo (device, origem, hora)" },
+      { asset: BrainAsset.HistoricalData, description: "Série histórica de sessões alimenta análise de frequência e padrão de visita" },
+    ],
+  },
+  {
+    eventType: TrustEventType.AnalyticsSessionEnded,
+    assets: [
+      { asset: BrainAsset.BuyerBehavioralKnowledge, description: "Duração de sessão e exit page revelam profundidade do engajamento" },
+      { asset: BrainAsset.HistoricalData, description: "Sessão completa compõe jornada histórica do comprador" },
+    ],
+  },
+  // Release 1.6 — Decision Engine
+  {
+    eventType: TrustEventType.DecisionCenterViewed,
+    assets: [
+      { asset: BrainAsset.HistoricalData, description: "Registra frequência de uso do Decision Center — engajamento com inteligência operacional" },
+      { asset: BrainAsset.RecommendationKnowledge, description: "Merchants que acessam o Decision Center são mais receptivos a recomendações" },
+    ],
+  },
+  {
+    eventType: TrustEventType.RecommendationGenerated,
+    assets: [
+      { asset: BrainAsset.RecommendationKnowledge, description: "Registra qual regra disparou e o contexto — calibra relevância futura por tipo de merchant" },
+      { asset: BrainAsset.HistoricalData, description: "Histórico de recomendações geradas por merchant compõe base para melhoria do engine" },
+      { asset: BrainAsset.MerchantTrust, description: "Recomendações frequentes de trust indicam fragilidade no ativo C-2" },
+    ],
+  },
+  {
+    eventType: TrustEventType.RecommendationViewed,
+    assets: [
+      { asset: BrainAsset.HistoricalData, description: "Registra quais recomendações o merchant visualizou — atenção ≠ ação" },
+      { asset: BrainAsset.RecommendationKnowledge, description: "Taxa de view-to-accept calibra relevância das recomendações por regra" },
+    ],
+  },
+  {
+    eventType: TrustEventType.RecommendationAccepted,
+    assets: [
+      { asset: BrainAsset.RecommendationKnowledge, description: "Aceitação valida relevância da regra — aumenta peso da regra no ranking futuro" },
+      { asset: BrainAsset.HistoricalData, description: "Registro permanente de decisões de melhoria tomadas pelo merchant" },
+      { asset: BrainAsset.MerchantTrust, description: "Merchant que aceita recomendações de trust melhora ativo C-2 proativamente" },
+    ],
+  },
+  {
+    eventType: TrustEventType.RecommendationDismissed,
+    assets: [
+      { asset: BrainAsset.RecommendationKnowledge, description: "Dismissal recalibra relevância da regra — regra pode precisar de ajuste nas condições" },
+      { asset: BrainAsset.HistoricalData, description: "Padrão de dismissal por categoria revela resistência a tipos específicos de ação" },
+    ],
+  },
+  {
+    eventType: TrustEventType.ActionCompleted,
+    assets: [
+      { asset: BrainAsset.RecommendationKnowledge, description: "Ação concluída confirma que a recomendação era relevante — fortalece a regra" },
+      { asset: BrainAsset.HistoricalData, description: "Histórico de melhorias concluídas é ativo permanente do merchant" },
+      { asset: BrainAsset.MerchantTrust, description: "Ações de melhoria executadas fortalecem o ativo C-2 diretamente" },
+      { asset: BrainAsset.KnowledgeGraph, description: "Melhoria concluída atualiza nó do merchant no Knowledge Graph com novo estado" },
+    ],
+  },
+  {
+    eventType: TrustEventType.ActionPostponed,
+    assets: [
+      { asset: BrainAsset.RecommendationKnowledge, description: "Adiamento indica que a regra disparou no momento errado — calibra timing futuro" },
+      { asset: BrainAsset.HistoricalData, description: "Padrão de adiamento por categoria de ação informa sobre capacidade operacional do merchant" },
+    ],
+  },
+  {
+    eventType: TrustEventType.OpportunityDetected,
+    assets: [
+      { asset: BrainAsset.RecommendationKnowledge, description: "Oportunidade detectada = dados observáveis indicam gap de crescimento — alimenta modelo preditivo" },
+      { asset: BrainAsset.BuyerBehavioralKnowledge, description: "Oportunidades derivadas de comportamento de comprador enriquecem modelo de demanda" },
+      { asset: BrainAsset.SearchIntelligence, description: "Gaps de exposição detectados fortalecem inteligência de ranking e posicionamento" },
+    ],
+  },
+  {
+    eventType: TrustEventType.OpportunityResolved,
+    assets: [
+      { asset: BrainAsset.RecommendationKnowledge, description: "Oportunidade resolvida valida detector — aumenta confiança no tipo de oportunidade" },
+      { asset: BrainAsset.HistoricalData, description: "Resolução de oportunidade é evento de crescimento registrado permanentemente" },
+      { asset: BrainAsset.MerchantTrust, description: "Merchant que resolve oportunidades demonstra maturidade operacional" },
+    ],
+  },
+  {
+    eventType: TrustEventType.PriorityChanged,
+    assets: [
+      { asset: BrainAsset.RecommendationKnowledge, description: "Mudança de prioridade calibra o modelo de scoring e explica ordem de apresentação" },
+      { asset: BrainAsset.HistoricalData, description: "Registro de mudanças de prioridade alimenta análise de evolução do context do merchant" },
+    ],
+  },
 ];
 
 export function getBrainImpact(eventType: TrustEventType): BrainAsset[] {

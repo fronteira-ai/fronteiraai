@@ -1,0 +1,13 @@
+export type { GrowthStrategy } from "./GrowthStrategy";
+export { StrategyRegistry } from "./StrategyRegistry";
+export { bootstrapStrategies } from "./bootstrap";
+export { CatalogGrowthStrategy } from "./CatalogGrowthStrategy";
+export { TrustGrowthStrategy } from "./TrustGrowthStrategy";
+export { VisibilityGrowthStrategy } from "./VisibilityGrowthStrategy";
+export { PricingOpportunityStrategy } from "./PricingOpportunityStrategy";
+export { DemandOpportunityStrategy } from "./DemandOpportunityStrategy";
+export { FreshnessStrategy } from "./FreshnessStrategy";
+export { MerchantProfileStrategy } from "./MerchantProfileStrategy";
+export { TrafficOpportunityStrategy } from "./TrafficOpportunityStrategy";
+export { ConversationStrategy } from "./ConversationStrategy";
+export { ReviewGrowthStrategy } from "./ReviewGrowthStrategy";

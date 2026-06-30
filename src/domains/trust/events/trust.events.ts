@@ -448,3 +448,492 @@ export function evidenceRemovedEvent(
     brainAssets: [BrainAsset.MerchantTrust, BrainAsset.HistoricalData],
   };
 }
+
+// ── Release 1.6 — Command Center Events ──────────────────────────────────────
+
+export function commandCenterViewedEvent(
+  merchantId: string,
+  sessionContext: Record<string, unknown> = {}
+): TrustDomainEvent {
+  return {
+    eventType: TrustEventType.CommandCenterViewed,
+    merchantId,
+    source: TrustSource.Merchant,
+    occurredAt: new Date(),
+    metadata: sessionContext,
+    brainAssets: [BrainAsset.HistoricalData, BrainAsset.RecommendationKnowledge],
+  };
+}
+
+export function commandCenterWidgetOpenedEvent(
+  merchantId: string,
+  widgetId: string
+): TrustDomainEvent {
+  return {
+    eventType: TrustEventType.CommandCenterWidgetOpened,
+    merchantId,
+    source: TrustSource.Merchant,
+    occurredAt: new Date(),
+    metadata: { widget_id: widgetId },
+    brainAssets: [BrainAsset.HistoricalData, BrainAsset.RecommendationKnowledge],
+  };
+}
+
+export function commandCenterQuickActionClickedEvent(
+  merchantId: string,
+  actionId: string,
+  priority: string
+): TrustDomainEvent {
+  return {
+    eventType: TrustEventType.CommandCenterQuickActionClicked,
+    merchantId,
+    source: TrustSource.Merchant,
+    occurredAt: new Date(),
+    metadata: { action_id: actionId, priority },
+    brainAssets: [BrainAsset.RecommendationKnowledge, BrainAsset.HistoricalData],
+  };
+}
+
+export function commandCenterCatalogIssueViewedEvent(
+  merchantId: string,
+  issueType: string,
+  affectedCount: number
+): TrustDomainEvent {
+  return {
+    eventType: TrustEventType.CommandCenterCatalogIssueViewed,
+    merchantId,
+    source: TrustSource.Merchant,
+    occurredAt: new Date(),
+    metadata: { issue_type: issueType, affected_count: affectedCount },
+    brainAssets: [BrainAsset.HistoricalData, BrainAsset.KnowledgeGraph],
+  };
+}
+
+export function commandCenterCatalogIssueResolvedEvent(
+  merchantId: string,
+  issueType: string,
+  resolvedCount: number
+): TrustDomainEvent {
+  return {
+    eventType: TrustEventType.CommandCenterCatalogIssueResolved,
+    merchantId,
+    source: TrustSource.Merchant,
+    occurredAt: new Date(),
+    metadata: { issue_type: issueType, resolved_count: resolvedCount },
+    brainAssets: [BrainAsset.HistoricalData, BrainAsset.RecommendationKnowledge, BrainAsset.KnowledgeGraph],
+  };
+}
+
+export function commandCenterHealthViewedEvent(
+  merchantId: string,
+  dimension: string
+): TrustDomainEvent {
+  return {
+    eventType: TrustEventType.CommandCenterHealthViewed,
+    merchantId,
+    source: TrustSource.Merchant,
+    occurredAt: new Date(),
+    metadata: { dimension },
+    brainAssets: [BrainAsset.HistoricalData, BrainAsset.RecommendationKnowledge],
+  };
+}
+
+export function commandCenterFilterChangedEvent(
+  merchantId: string,
+  filterContext: Record<string, unknown>
+): TrustDomainEvent {
+  return {
+    eventType: TrustEventType.CommandCenterFilterChanged,
+    merchantId,
+    source: TrustSource.Merchant,
+    occurredAt: new Date(),
+    metadata: filterContext,
+    brainAssets: [BrainAsset.HistoricalData],
+  };
+}
+
+export function commandCenterSummaryExportedEvent(
+  merchantId: string,
+  exportFormat: string
+): TrustDomainEvent {
+  return {
+    eventType: TrustEventType.CommandCenterSummaryExported,
+    merchantId,
+    source: TrustSource.Merchant,
+    occurredAt: new Date(),
+    metadata: { export_format: exportFormat },
+    brainAssets: [BrainAsset.HistoricalData],
+  };
+}
+
+// ── Release 1.6 — Analytics Platform Events ──────────────────────────────────
+
+export function analyticsSearchPerformedEvent(
+  merchantId: string,
+  searchQuery: string,
+  resultCount: number
+): TrustDomainEvent {
+  return {
+    eventType: TrustEventType.AnalyticsSearchPerformed,
+    merchantId,
+    source: TrustSource.Buyer,
+    occurredAt: new Date(),
+    metadata: { search_query: searchQuery, result_count: resultCount },
+    brainAssets: [BrainAsset.SearchIntelligence, BrainAsset.BuyerBehavioralKnowledge],
+  };
+}
+
+export function analyticsProductImpressionEvent(
+  merchantId: string,
+  productId: string,
+  position: number
+): TrustDomainEvent {
+  return {
+    eventType: TrustEventType.AnalyticsProductImpression,
+    merchantId,
+    source: TrustSource.Buyer,
+    occurredAt: new Date(),
+    metadata: { product_id: productId, position },
+    brainAssets: [BrainAsset.BuyerBehavioralKnowledge, BrainAsset.RecommendationKnowledge, BrainAsset.SearchIntelligence],
+  };
+}
+
+export function analyticsProductClickedEvent(
+  merchantId: string,
+  productId: string,
+  position: number
+): TrustDomainEvent {
+  return {
+    eventType: TrustEventType.AnalyticsProductClicked,
+    merchantId,
+    source: TrustSource.Buyer,
+    occurredAt: new Date(),
+    metadata: { product_id: productId, position },
+    brainAssets: [BrainAsset.BuyerBehavioralKnowledge, BrainAsset.RecommendationKnowledge, BrainAsset.SearchIntelligence],
+  };
+}
+
+export function analyticsProductComparedEvent(
+  merchantId: string,
+  productIds: string[]
+): TrustDomainEvent {
+  return {
+    eventType: TrustEventType.AnalyticsProductCompared,
+    merchantId,
+    source: TrustSource.Buyer,
+    occurredAt: new Date(),
+    metadata: { product_ids: productIds },
+    brainAssets: [BrainAsset.BuyerBehavioralKnowledge, BrainAsset.RecommendationKnowledge],
+  };
+}
+
+export function analyticsMerchantViewedEvent(
+  merchantId: string,
+  anonymousId: string
+): TrustDomainEvent {
+  return {
+    eventType: TrustEventType.AnalyticsMerchantViewed,
+    merchantId,
+    source: TrustSource.Buyer,
+    occurredAt: new Date(),
+    metadata: { anonymous_id: anonymousId },
+    brainAssets: [BrainAsset.BuyerBehavioralKnowledge, BrainAsset.KnowledgeGraph, BrainAsset.RecommendationKnowledge],
+  };
+}
+
+export function analyticsMerchantPassportViewedEvent(
+  merchantId: string,
+  anonymousId: string
+): TrustDomainEvent {
+  return {
+    eventType: TrustEventType.AnalyticsMerchantPassportViewed,
+    merchantId,
+    source: TrustSource.Buyer,
+    occurredAt: new Date(),
+    metadata: { anonymous_id: anonymousId },
+    brainAssets: [BrainAsset.BuyerBehavioralKnowledge, BrainAsset.MerchantTrust, BrainAsset.KnowledgeGraph],
+  };
+}
+
+export function analyticsMerchantContactClickedEvent(
+  merchantId: string,
+  channel: string
+): TrustDomainEvent {
+  return {
+    eventType: TrustEventType.AnalyticsMerchantContactClicked,
+    merchantId,
+    source: TrustSource.Buyer,
+    occurredAt: new Date(),
+    metadata: { channel },
+    brainAssets: [BrainAsset.BuyerBehavioralKnowledge, BrainAsset.RecommendationKnowledge],
+  };
+}
+
+export function analyticsMerchantWhatsAppClickedEvent(
+  merchantId: string
+): TrustDomainEvent {
+  return {
+    eventType: TrustEventType.AnalyticsMerchantWhatsAppClicked,
+    merchantId,
+    source: TrustSource.Buyer,
+    occurredAt: new Date(),
+    metadata: { channel: "whatsapp" },
+    brainAssets: [BrainAsset.BuyerBehavioralKnowledge, BrainAsset.RecommendationKnowledge],
+  };
+}
+
+export function analyticsMerchantPhoneClickedEvent(
+  merchantId: string
+): TrustDomainEvent {
+  return {
+    eventType: TrustEventType.AnalyticsMerchantPhoneClicked,
+    merchantId,
+    source: TrustSource.Buyer,
+    occurredAt: new Date(),
+    metadata: { channel: "phone" },
+    brainAssets: [BrainAsset.BuyerBehavioralKnowledge, BrainAsset.RecommendationKnowledge],
+  };
+}
+
+export function analyticsMerchantWebsiteClickedEvent(
+  merchantId: string
+): TrustDomainEvent {
+  return {
+    eventType: TrustEventType.AnalyticsMerchantWebsiteClicked,
+    merchantId,
+    source: TrustSource.Buyer,
+    occurredAt: new Date(),
+    metadata: { channel: "website" },
+    brainAssets: [BrainAsset.BuyerBehavioralKnowledge, BrainAsset.KnowledgeGraph],
+  };
+}
+
+export function analyticsOfferSavedEvent(
+  merchantId: string,
+  productId: string
+): TrustDomainEvent {
+  return {
+    eventType: TrustEventType.AnalyticsOfferSaved,
+    merchantId,
+    source: TrustSource.Buyer,
+    occurredAt: new Date(),
+    metadata: { product_id: productId },
+    brainAssets: [BrainAsset.BuyerBehavioralKnowledge, BrainAsset.RecommendationKnowledge],
+  };
+}
+
+export function analyticsCategoryViewedEvent(
+  merchantId: string,
+  categoryId: string
+): TrustDomainEvent {
+  return {
+    eventType: TrustEventType.AnalyticsCategoryViewed,
+    merchantId,
+    source: TrustSource.Buyer,
+    occurredAt: new Date(),
+    metadata: { category_id: categoryId },
+    brainAssets: [BrainAsset.BuyerBehavioralKnowledge, BrainAsset.SearchIntelligence],
+  };
+}
+
+export function analyticsSessionStartedEvent(
+  merchantId: string,
+  sessionId: string,
+  deviceType: string
+): TrustDomainEvent {
+  return {
+    eventType: TrustEventType.AnalyticsSessionStarted,
+    merchantId,
+    source: TrustSource.Buyer,
+    occurredAt: new Date(),
+    metadata: { session_id: sessionId, device_type: deviceType },
+    brainAssets: [BrainAsset.BuyerBehavioralKnowledge, BrainAsset.HistoricalData],
+  };
+}
+
+export function analyticsSessionEndedEvent(
+  merchantId: string,
+  sessionId: string,
+  durationSeconds: number
+): TrustDomainEvent {
+  return {
+    eventType: TrustEventType.AnalyticsSessionEnded,
+    merchantId,
+    source: TrustSource.Buyer,
+    occurredAt: new Date(),
+    metadata: { session_id: sessionId, duration_seconds: durationSeconds },
+    brainAssets: [BrainAsset.BuyerBehavioralKnowledge, BrainAsset.HistoricalData],
+  };
+}
+
+// ── Release 1.6 — Decision Engine Events ─────────────────────────────────────
+
+export function decisionCenterViewedEvent(merchantId: string): TrustDomainEvent {
+  return {
+    eventType: TrustEventType.DecisionCenterViewed,
+    merchantId,
+    source: TrustSource.Merchant,
+    occurredAt: new Date(),
+    metadata: {},
+    brainAssets: [BrainAsset.HistoricalData, BrainAsset.RecommendationKnowledge],
+  };
+}
+
+export function recommendationGeneratedEvent(
+  merchantId: string,
+  ruleId: string,
+  category: string,
+  priority: string
+): TrustDomainEvent {
+  return {
+    eventType: TrustEventType.RecommendationGenerated,
+    merchantId,
+    source: TrustSource.System,
+    occurredAt: new Date(),
+    metadata: { rule_id: ruleId, category, priority },
+    brainAssets: [
+      BrainAsset.RecommendationKnowledge,
+      BrainAsset.HistoricalData,
+      BrainAsset.MerchantTrust,
+    ],
+  };
+}
+
+export function recommendationViewedEvent(
+  merchantId: string,
+  recommendationId: string,
+  ruleId: string
+): TrustDomainEvent {
+  return {
+    eventType: TrustEventType.RecommendationViewed,
+    merchantId,
+    source: TrustSource.Merchant,
+    occurredAt: new Date(),
+    metadata: { recommendation_id: recommendationId, rule_id: ruleId },
+    brainAssets: [BrainAsset.HistoricalData, BrainAsset.RecommendationKnowledge],
+  };
+}
+
+export function recommendationAcceptedEvent(
+  merchantId: string,
+  recommendationId: string,
+  ruleId: string,
+  category: string
+): TrustDomainEvent {
+  return {
+    eventType: TrustEventType.RecommendationAccepted,
+    merchantId,
+    source: TrustSource.Merchant,
+    occurredAt: new Date(),
+    metadata: { recommendation_id: recommendationId, rule_id: ruleId, category },
+    brainAssets: [
+      BrainAsset.RecommendationKnowledge,
+      BrainAsset.HistoricalData,
+      BrainAsset.MerchantTrust,
+    ],
+  };
+}
+
+export function recommendationDismissedEvent(
+  merchantId: string,
+  recommendationId: string,
+  ruleId: string
+): TrustDomainEvent {
+  return {
+    eventType: TrustEventType.RecommendationDismissed,
+    merchantId,
+    source: TrustSource.Merchant,
+    occurredAt: new Date(),
+    metadata: { recommendation_id: recommendationId, rule_id: ruleId },
+    brainAssets: [BrainAsset.RecommendationKnowledge, BrainAsset.HistoricalData],
+  };
+}
+
+export function actionCompletedEvent(
+  merchantId: string,
+  actionId: string,
+  ruleId: string,
+  category: string
+): TrustDomainEvent {
+  return {
+    eventType: TrustEventType.ActionCompleted,
+    merchantId,
+    source: TrustSource.Merchant,
+    occurredAt: new Date(),
+    metadata: { action_id: actionId, rule_id: ruleId, category },
+    brainAssets: [
+      BrainAsset.RecommendationKnowledge,
+      BrainAsset.HistoricalData,
+      BrainAsset.MerchantTrust,
+      BrainAsset.KnowledgeGraph,
+    ],
+  };
+}
+
+export function actionPostponedEvent(
+  merchantId: string,
+  actionId: string,
+  ruleId: string
+): TrustDomainEvent {
+  return {
+    eventType: TrustEventType.ActionPostponed,
+    merchantId,
+    source: TrustSource.Merchant,
+    occurredAt: new Date(),
+    metadata: { action_id: actionId, rule_id: ruleId },
+    brainAssets: [BrainAsset.RecommendationKnowledge, BrainAsset.HistoricalData],
+  };
+}
+
+export function opportunityDetectedEvent(
+  merchantId: string,
+  opportunityType: string,
+  impact: string
+): TrustDomainEvent {
+  return {
+    eventType: TrustEventType.OpportunityDetected,
+    merchantId,
+    source: TrustSource.System,
+    occurredAt: new Date(),
+    metadata: { opportunity_type: opportunityType, impact },
+    brainAssets: [
+      BrainAsset.RecommendationKnowledge,
+      BrainAsset.BuyerBehavioralKnowledge,
+      BrainAsset.SearchIntelligence,
+    ],
+  };
+}
+
+export function opportunityResolvedEvent(
+  merchantId: string,
+  opportunityType: string
+): TrustDomainEvent {
+  return {
+    eventType: TrustEventType.OpportunityResolved,
+    merchantId,
+    source: TrustSource.Merchant,
+    occurredAt: new Date(),
+    metadata: { opportunity_type: opportunityType },
+    brainAssets: [
+      BrainAsset.RecommendationKnowledge,
+      BrainAsset.HistoricalData,
+      BrainAsset.MerchantTrust,
+    ],
+  };
+}
+
+export function priorityChangedEvent(
+  merchantId: string,
+  recommendationId: string,
+  oldPriority: string,
+  newPriority: string
+): TrustDomainEvent {
+  return {
+    eventType: TrustEventType.PriorityChanged,
+    merchantId,
+    source: TrustSource.System,
+    occurredAt: new Date(),
+    metadata: { recommendation_id: recommendationId, old_priority: oldPriority, new_priority: newPriority },
+    brainAssets: [BrainAsset.RecommendationKnowledge, BrainAsset.HistoricalData],
+  };
+}
