@@ -23,14 +23,13 @@
     "storage:init": "node database/storage/init.js",
     "db:images": "node database/seed/update_images.js",
     "db:images:dry": "node database/seed/update_images.js --dry-run",
-    "acquisition:validate": "tsx acquisition/scripts/validate-pipeline.ts",
-    "acquisition:import-json": "tsx acquisition/scripts/import-json.ts",
-    "acquisition:import-json:execute": "tsx acquisition/scripts/import-json.ts --execute",
-    "acquisition:import-csv": "tsx acquisition/scripts/import-csv.ts",
-    "acquisition:import-csv:execute": "tsx acquisition/scripts/import-csv.ts --execute",
-    "sync:shoppingchina": "tsx acquisition/scripts/sync-shoppingchina.ts",
-    "sync:shoppingchina:execute": "tsx acquisition/scripts/sync-shoppingchina.ts --execute",
-    "sync:shoppingchina:execute:skip-media": "tsx acquisition/scripts/sync-shoppingchina.ts --execute --skip-media"
+    "connectors:import-json": "tsx scripts/import-json.ts",
+    "connectors:import-json:execute": "tsx scripts/import-json.ts --execute",
+    "connectors:import-csv": "tsx scripts/import-csv.ts",
+    "connectors:import-csv:execute": "tsx scripts/import-csv.ts --execute",
+    "sync:shoppingchina": "tsx scripts/sync-shoppingchina.ts",
+    "sync:shoppingchina:execute": "tsx scripts/sync-shoppingchina.ts --execute",
+    "sync:shoppingchina:execute:skip-media": "tsx scripts/sync-shoppingchina.ts --execute --skip-media"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.0",

@@ -296,6 +296,17 @@ export enum TrustEventType {
   GrowthContextBuilt             = "growth_context_built",
   GrowthTimelineViewed           = "growth_timeline_viewed",
   GrowthScoreComputed            = "growth_score_computed",
+
+  // Release 1.7 — Epic 1 — Connector Platform Events
+  ConnectorRegistered            = "connector_registered",
+  ConnectorSyncStarted           = "connector_sync_started",
+  ConnectorSyncCompleted         = "connector_sync_completed",
+  ConnectorSyncFailed            = "connector_sync_failed",
+
+  // Release 1.7 — Wave 2 — Merchant Connectors + Scheduler + Discovery Events
+  ConnectorSyncScheduled          = "connector_sync_scheduled",
+  ConnectorSyncSkippedEntitlement = "connector_sync_skipped_entitlement",
+  StoreDiscovered                 = "store_discovered",
 }
 
 export enum TrustSource {

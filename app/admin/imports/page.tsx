@@ -4,7 +4,7 @@ import { AdminButton } from "@/components/admin/ui/AdminButton";
 import { AdminFormField, AdminSelect } from "@/components/admin/ui/AdminFormField";
 import { useToast } from "@/contexts/admin/ToastContext";
 import { Play, AlertCircle, CheckCircle2, Globe, FileJson, FileText } from "lucide-react";
-import type { PipelineResult } from "@/acquisition/types/pipeline";
+import type { PipelineResult } from "@/src/domains/connectors/types/pipeline.types";
 
 interface ConnectorInfo {
   id: string;

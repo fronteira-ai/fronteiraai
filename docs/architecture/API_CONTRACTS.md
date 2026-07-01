@@ -379,7 +379,7 @@ Status: **Stable**.
 
 **`GET /api/admin/logs`**
 
-Objetivo: histórico de execuções do pipeline de importação.
+Objetivo: histórico de execuções do pipeline de importação. **Release 1.7 — Wave 2**: repontada de `import_logs` (superada) para `connector_sync_runs`, mapeada de volta para o formato `ImportLog` abaixo via `lib/sync-run-mapper.ts::toImportLogShape()` — contrato de resposta inalterado. Histórico só existe a partir do go-live do Epic 1 (descontinuidade esperada).
 
 Query params: `page`, `perPage`.
 
@@ -400,7 +400,7 @@ Status: **Stable**.
 
 **`GET /api/admin/import/connectors`**
 
-Objetivo: listar connectors disponíveis no `ConnectorRegistry`.
+Objetivo: listar connectors disponíveis no `ConnectorRegistry`. **Release 1.7 — Epic 1**: implementação movida de `acquisition/core/registry.ts` para `src/domains/connectors/services/ConnectorRegistry.ts`, resolvida via `createConnectorsServices()` (`lib/connectors-factory.ts`). Contrato de request/response inalterado.
 
 Resposta `200`:
 ```json
@@ -417,7 +417,7 @@ Status: **Stable**.
 
 **`POST /api/admin/import/run`**
 
-Objetivo: executar o pipeline de importação via connector. Operação síncrona — bloqueia até o pipeline completar. Adequada para volumes pequenos/médios; para volumes grandes será necessário processamento assíncrono (Planned).
+Objetivo: executar a sincronização de catálogo via connector. Operação síncrona — bloqueia até a sincronização completar. Adequada para volumes pequenos/médios; para volumes grandes será necessário processamento assíncrono (Planned). **Release 1.7 — Epic 1**: usa `SyncOrchestrator` (substitui `AcquisitionPipeline`); persiste um registro em `connectors` e `connector_sync_runs` a cada execução. Sem `merchantId`, nenhum evento do Brain é emitido nesta rota (ver decisão #5 em `RELEASE_1_7_EXECUTION_PLAN.md`). **Release 1.7 — Wave 2**: a escrita dupla em `import_logs` foi removida (superada, ver DOMAIN_MODEL.md §3.12).
 
 Body:
 ```json
@@ -428,12 +428,57 @@ Body:
 }
 ```
 
-`dryRun: true` (default) — executa o pipeline mas não persiste dados nem cria import_log.  
-`dryRun: false` — persiste dados e cria import_log.
+`dryRun: true` (default) — executa a sincronização mas não persiste dados no catálogo.
+`dryRun: false` — persiste dados.
 
-Resposta `200`: `{ "data": { "batchId", "success", "metrics": {...}, "persisted": [...], "errors": [...] } }`  
+Resposta `200`: `{ "data": { "batchId", "success", "metrics": {...}, "persisted": [...], "errors": [...], "syncRunId" } }`  
 Resposta `400`: connectorId ausente.  
 Resposta `404`: connector não encontrado.
+
+Status: **Stable**.
+
+---
+
+**`GET /api/admin/monitor/summary`** *(novo — Release 1.7 — Wave 2)*
+
+Objetivo: saúde por conector (Ecosystem Monitor) — computado sob demanda a partir de `connector_sync_runs` (últimas 20 execuções por conector), sem tabela de agregação nova.
+
+Resposta `200`: `{ "data": [ { "connectorKey", "name", "status", "storeSlug", "lastSyncAt", "lastStatus", "errorRate" } ] }`
+
+Status: **Stable**.
+
+---
+
+**`GET /api/admin/monitor/runs`** *(novo — Release 1.7 — Wave 2)*
+
+Objetivo: histórico paginado de `connector_sync_runs` de todos os conectores. Query params: `page`, `perPage`, `connectorKey` (opcional), `status` (opcional).
+
+Resposta `200`: `{ "data": [ <linha bruta de connector_sync_runs> ], "total", "page", "perPage", "totalPages" }`
+
+Status: **Stable**.
+
+---
+
+**`POST /api/admin/discovery/run`** *(novo — Release 1.7 — Wave 2)*
+
+Objetivo: descobrir e criar uma loja "não reivindicada" a partir do domínio de um site público, via sitemap/robots.txt. Disparo manual, um domínio por vez — sem lista de domínios-semente nem sweep automático nesta Wave.
+
+Body: `{ "domain": "exemplo.com.py" }`
+
+Resposta `200`: `{ "data": { "storeId", "created", "domain", "storeName" }, "message" }`
+Resposta `400`: domain ausente.
+Resposta `422`: robots.txt bloqueou, sitemap indisponível, ou nome inválido — nenhuma loja foi criada.
+
+Status: **Stable**.
+
+---
+
+**`GET /api/cron/connectors/sync`** *(novo — Release 1.7 — Wave 2)*
+
+Objetivo: gatilho de sincronização agendada — chamado pelo Vercel Cron (`vercel.json`, diário, `0 6 * * *`). **Autenticação por segredo compartilhado, não por sessão** — requer header `Authorization: Bearer $CRON_SECRET` (`lib/cron-auth.ts::requireCronSecret()`); `CRON_SECRET` deve ser configurado manualmente no painel da Vercel (Production + Preview). Percorre os conectores `active`, verifica `config.syncFrequencyHours` (opt-in — conectores sem essa chave nunca são varridos) contra a última execução em `connector_sync_runs`, e dispara `ManualSyncTrigger` para os que estiverem devidos. `maxDuration = 60` (primeira rota deste projeto a declarar isso).
+
+Resposta `200`: `{ "data": [ { "connectorKey", "success", "syncRunId", "skipped"? } ] }`
+Resposta `401`: segredo ausente/incorreto.
 
 Status: **Stable**.
 
@@ -727,11 +772,12 @@ Status: **Stable**.
 
 **`POST /api/merchant/imports/run`**
 
-Objetivo: executar importação de catálogo para o merchant. Idêntico ao `POST /api/admin/import/run` mas autenticado como merchant e limitado ao escopo do connector fornecido. Registra evento de auditoria.
+Objetivo: executar sincronização de catálogo para o merchant. Idêntico ao `POST /api/admin/import/run` mas autenticado como merchant e limitado ao escopo do connector fornecido. Registra evento de auditoria. Passa `merchantId` ao `SyncOrchestrator`, o que habilita a emissão de eventos do Brain (`ConnectorSyncStarted/Completed/Failed`). **Release 1.7 — Wave 2**: fecha a lacuna de autorização do Epic 1 — agora verifica `merchantOwnsStoreSlug()` (403 se o merchant não for dono da loja do conector) e `checkImportEntitlement()` (403 se o plano não inclui conectores ou a cota mensal foi atingida; emite `ConnectorSyncSkippedEntitlement` quando bloqueado).
 
 Body: idêntico ao admin run (`connectorId`, `dryRun`, `skipMedia`).
 
-Resposta `200`: `{ "data": { "batchId", "success", "metrics", "persisted", "errors" } }`
+Resposta `200`: `{ "data": { "batchId", "success", "metrics", "persisted", "errors", "syncRunId" } }`
+Resposta `403`: merchant não é dono da loja do conector, OU plano não permite conectores, OU cota mensal atingida (`error` traz a razão específica).
 
 Status: **Stable**.
 
@@ -739,7 +785,7 @@ Status: **Stable**.
 
 **`GET /api/merchant/imports/history`**
 
-Objetivo: histórico de importações do merchant.
+Objetivo: histórico de importações do merchant. **Release 1.7 — Wave 2**: corrigida a lacuna do Epic 1 — agora lê `connector_sync_runs` filtrado por `merchant_id` (antes lia `import_logs` sem nenhum filtro, um bug real de multi-tenancy), mapeado para o formato `ImportLog` via `lib/sync-run-mapper.ts`.
 
 Resposta `200`:
 ```json
@@ -1093,16 +1139,18 @@ Os connectors não enviam dados diretamente para a API HTTP. O fluxo é:
 ```
 [Connector] → ConnectorRegistry.get(id).fetch() → RawOffer[]
                                     │
-                           AcquisitionPipeline.run()
+                           SyncOrchestrator.run(metadata, items, options)
                                     │
-                           Validation → Normalization → Deduplication → MediaPipeline → CatalogWriter
+                           Validation → Normalization → Deduplication → [Media] → CatalogWrite
                                     │
                            INSERT/UPSERT em: brands → categories → products → offers
                                     │
-                           import_logs INSERT (se não dryRun)
+                           connectors UPSERT + connector_sync_runs INSERT/UPDATE (sempre)
+                                    │
+                           import_logs INSERT (se não dryRun — escrita dupla temporária, Epic 1)
 ```
 
-Os Route Handlers de import (`/api/admin/import/run` e `/api/merchant/imports/run`) chamam o pipeline internamente — não é uma chamada HTTP externa do connector para a API.
+Os Route Handlers de import (`/api/admin/import/run` e `/api/merchant/imports/run`) chamam `SyncOrchestrator` internamente via `lib/connectors-factory.ts` — não é uma chamada HTTP externa do connector para a API.
 
 ### 13.2 Idempotência de importação
 

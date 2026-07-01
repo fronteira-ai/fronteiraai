@@ -460,6 +460,52 @@ export const TRUST_EVENT_BRAIN_IMPACT: TrustEventBrainImpact[] = [
       { asset: BrainAsset.HistoricalData, description: "Registro de mudanças de prioridade alimenta análise de evolução do context do merchant" },
     ],
   },
+  // Release 1.7 — Epic 1 — Connector Platform Events
+  {
+    eventType: TrustEventType.ConnectorRegistered,
+    assets: [
+      { asset: BrainAsset.SearchIntelligence, description: "Novo conector registrado amplia a cobertura de catálogo disponível para busca" },
+      { asset: BrainAsset.HistoricalData, description: "Registro do conector persiste permanentemente quando cada fonte de dados passou a existir" },
+    ],
+  },
+  {
+    eventType: TrustEventType.ConnectorSyncStarted,
+    assets: [
+      { asset: BrainAsset.HistoricalData, description: "Marca o início de uma sincronização de catálogo no histórico permanente" },
+    ],
+  },
+  {
+    eventType: TrustEventType.ConnectorSyncCompleted,
+    assets: [
+      { asset: BrainAsset.SearchIntelligence, description: "Catálogo atualizado melhora a cobertura e a atualidade da busca" },
+      { asset: BrainAsset.HistoricalData, description: "Resultado da sincronização (totais, erros) é registrado permanentemente" },
+    ],
+  },
+  {
+    eventType: TrustEventType.ConnectorSyncFailed,
+    assets: [
+      { asset: BrainAsset.HistoricalData, description: "Falha de sincronização é registrada permanentemente para diagnóstico operacional" },
+    ],
+  },
+  // Release 1.7 — Wave 2 — Merchant Connectors + Scheduler + Discovery Events
+  {
+    eventType: TrustEventType.ConnectorSyncScheduled,
+    assets: [
+      { asset: BrainAsset.HistoricalData, description: "Execução automática via cron registrada permanentemente para auditoria operacional" },
+    ],
+  },
+  {
+    eventType: TrustEventType.ConnectorSyncSkippedEntitlement,
+    assets: [
+      { asset: BrainAsset.MerchantTrust, description: "Bloqueio por limite de plano sinaliza oportunidade de upgrade — alimenta modelo de conversão" },
+    ],
+  },
+  {
+    eventType: TrustEventType.StoreDiscovered,
+    assets: [
+      { asset: BrainAsset.SearchIntelligence, description: "Nova loja descoberta amplia cobertura potencial do catálogo antes mesmo da reivindicação" },
+    ],
+  },
 ];
 
 export function getBrainImpact(eventType: TrustEventType): BrainAsset[] {

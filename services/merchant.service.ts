@@ -10,7 +10,110 @@ import type {
   MerchantProfileCompletion,
   ProfileCompletionItem,
   AuditEventType,
+  MerchantPlan,
 } from "@/types/merchant";
+
+// ── Merchant-Store Ownership (Release 1.7 — Wave 2) ───────────────────────────
+// Canonical helper — the same `.from("merchant_stores").select("store_id")...`
+// boilerplate is duplicated in ~8 places across the repo (ExecutiveSummaryService,
+// command-center routes, products/route.ts, stores/route.ts, onboarding/route.ts).
+// This Wave only migrates getMerchantDashboardStats() to use it; refactoring the
+// other call sites is optional follow-up cleanup, not required for Wave 2.
+
+export async function getMerchantStoreIds(
+  merchantId: string,
+  supabase: SupabaseClient
+): Promise<string[]> {
+  const { data } = await supabase
+    .from("merchant_stores")
+    .select("store_id")
+    .eq("merchant_id", merchantId);
+
+  return (data ?? []).map((s: { store_id: string }) => s.store_id);
+}
+
+export async function merchantOwnsStoreSlug(
+  merchantId: string,
+  storeSlug: string,
+  supabase: SupabaseClient
+): Promise<boolean> {
+  const { data: store } = await supabase
+    .from("stores")
+    .select("id")
+    .eq("slug", storeSlug)
+    .maybeSingle();
+
+  if (!store) return false;
+
+  const { data: link } = await supabase
+    .from("merchant_stores")
+    .select("id")
+    .eq("merchant_id", merchantId)
+    .eq("store_id", store.id)
+    .maybeSingle();
+
+  return !!link;
+}
+
+// ── Import Entitlements (Release 1.7 — Wave 2) ────────────────────────────────
+// merchant_plans (migration 0012) is the only source of truth for plan→feature
+// mapping — no static TS config exists. Dry-runs never count against the
+// monthly quota (they're previews, not billable imports).
+
+export interface ImportEntitlementResult {
+  allowed: boolean;
+  reason?: string;
+  used: number;
+  max: number;
+}
+
+export async function checkImportEntitlement(
+  merchantId: string,
+  plan: MerchantPlan,
+  supabase: SupabaseClient
+): Promise<ImportEntitlementResult> {
+  const { data: planRow } = await supabase
+    .from("merchant_plans")
+    .select("has_connectors, max_imports_month")
+    .eq("plan", plan)
+    .maybeSingle();
+
+  const hasConnectors = planRow?.has_connectors ?? false;
+  const max = planRow?.max_imports_month ?? 0;
+
+  if (!hasConnectors) {
+    return {
+      allowed: false,
+      reason: "Seu plano não inclui conectores. Faça upgrade para Business ou Enterprise.",
+      used: 0,
+      max,
+    };
+  }
+
+  const firstOfMonth = new Date();
+  firstOfMonth.setUTCDate(1);
+  firstOfMonth.setUTCHours(0, 0, 0, 0);
+
+  const { count } = await supabase
+    .from("connector_sync_runs")
+    .select("id", { count: "exact", head: true })
+    .eq("merchant_id", merchantId)
+    .eq("dry_run", false)
+    .gte("started_at", firstOfMonth.toISOString());
+
+  const used = count ?? 0;
+
+  if (used >= max) {
+    return {
+      allowed: false,
+      reason: `Limite mensal de importações atingido (${max}).`,
+      used,
+      max,
+    };
+  }
+
+  return { allowed: true, used, max };
+}
 
 // ── Dashboard Stats ────────────────────────────────────────────────────────────
 
@@ -18,13 +121,7 @@ export async function getMerchantDashboardStats(
   merchantId: string,
   supabase: SupabaseClient
 ): Promise<MerchantDashboardStats> {
-  // Fetch all store IDs linked to this merchant
-  const { data: storeLinks } = await supabase
-    .from("merchant_stores")
-    .select("store_id")
-    .eq("merchant_id", merchantId);
-
-  const storeIds = (storeLinks ?? []).map((s: { store_id: string }) => s.store_id);
+  const storeIds = await getMerchantStoreIds(merchantId, supabase);
 
   if (storeIds.length === 0) {
     return {
@@ -40,7 +137,7 @@ export async function getMerchantDashboardStats(
     supabase.from("offers").select("product_id, products!inner(id, image_url, category_id)", { count: "exact" }).in("store_id", storeIds),
     supabase.from("offers").select("id", { count: "exact" }).in("store_id", storeIds).eq("in_stock", true),
     supabase.from("offers").select("id", { count: "exact" }).in("store_id", storeIds).lte("price_usd", 0),
-    supabase.from("import_logs").select("created_at, success, total_persisted").in("connector_id", ["shoppingchina", "json-file", "csv-file"]).order("created_at", { ascending: false }).limit(1),
+    supabase.from("connector_sync_runs").select("status, totals, started_at, completed_at").eq("merchant_id", merchantId).order("started_at", { ascending: false }).limit(1),
     supabase.from("merchants").select("merchant_score, trust_score").eq("id", merchantId).single(),
   ]);
 
@@ -51,7 +148,8 @@ export async function getMerchantDashboardStats(
   const activeProducts = offersActive.count ?? 0;
   const productsNoPrice = offersNoPrice.count ?? 0;
 
-  const lastLog = lastImport.data?.[0];
+  const lastRun = lastImport.data?.[0];
+  const lastRunTotals = (lastRun?.totals as Record<string, number> | null) ?? null;
 
   return {
     totalProducts,
@@ -60,9 +158,9 @@ export async function getMerchantDashboardStats(
     productsNoCategory,
     productsNoPrice,
     totalStores: storeIds.length,
-    lastImportAt: lastLog?.created_at ?? null,
-    lastImportSuccess: lastLog?.success ?? null,
-    lastImportCount: lastLog?.total_persisted ?? 0,
+    lastImportAt: lastRun ? (lastRun.completed_at ?? lastRun.started_at) : null,
+    lastImportSuccess: lastRun ? lastRun.status === "success" : null,
+    lastImportCount: lastRunTotals?.persisted ?? 0,
     merchantScore: merchant.data?.merchant_score ?? 0,
     trustScore: merchant.data?.trust_score ?? 0,
   };

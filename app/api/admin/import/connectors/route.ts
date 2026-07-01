@@ -1,11 +1,12 @@
 import { NextResponse } from "next/server";
 import { requireAdmin, isAuthError } from "@/lib/admin-auth";
-import { connectorRegistry } from "@/acquisition/core/registry";
-import "@/acquisition/connectors/bootstrap";
+import { createConnectorsServices } from "@/lib/connectors-factory";
 
 export async function GET() {
   const auth = await requireAdmin();
   if (isAuthError(auth)) return auth;
+
+  const { connectorRegistry } = createConnectorsServices(auth.serviceClient);
 
   const connectors = connectorRegistry.list().map((c) => ({
     id: c.metadata.id,

@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import { MerchantSidebar } from "@/components/merchant/layout/MerchantSidebar";
 import { Play, AlertCircle, CheckCircle2, Globe } from "lucide-react";
-import type { PipelineResult } from "@/acquisition/types/pipeline";
+import type { PipelineResult } from "@/src/domains/connectors/types/pipeline.types";
 import { useToast } from "@/contexts/admin/ToastContext";
 
 interface ConnectorInfo { id: string; name: string; type: string; description: string | null }

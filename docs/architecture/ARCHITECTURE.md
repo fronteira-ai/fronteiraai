@@ -32,14 +32,24 @@ app/                    rotas (App Router)
   icon.tsx / apple-icon.tsx  favicon dinâmico (ImageResponse)
   manifest.ts           manifesto PWA
 
-acquisition/            pipeline universal de dados (standalone Node.js — não importado pela app Next.js)
+src/domains/connectors/  Connector Platform Framework (Release 1.7 — Epic 1; substitui acquisition/)
   types/                contratos (RawOffer, NormalizedOffer, PipelineContext…)
-  core/                 AcquisitionPipeline (orquestrador), ConnectorRegistry
-  parsers/              JSONParser, CSVParser
-  engines/              Validation, Normalization, Deduplication, Canonical, Media
-  persistence/          CatalogWriter (escrita no Supabase via service role)
-  observability/        métricas, relatório
-  lib/                  cliente Supabase com service role (scripts)
+  domain/               Connector, SyncRun, ProductIdentity (value objects — ProductIdentity
+                        promovido a domínio próprio src/domains/product-identity/ na Wave 3)
+  repositories/         IConnectorRepository, ISyncRunRepository, ICatalogRepository
+  infrastructure/       implementações Supabase dos repositórios acima
+  normalization/        OfferNormalizer, ProductIdentityResolver (seed do Epic 3)
+  mapping/              JsonFieldMapper, CsvFieldMapper
+  crawler/              HttpFetchStrategy, ShoppingChinaConnector, reference/ (JSON/CSV)
+  discovery/            Wave 2 — SitemapParser, RobotsParser, SitemapDiscoverySource,
+                        DiscoveryService (cria lojas "não reivindicadas" via sitemap/robots.txt)
+  services/             ConnectorRegistry, SyncOrchestrator (orquestrador), stages/
+  scheduler/            ISyncScheduler + VercelCronScheduler (Wave 2 — interval-based,
+                        não avalia expressões cron reais), ManualSyncTrigger
+  events/               connector.events.ts (Brain events)
+  __tests__/            Jest
+vercel.json             Wave 2 — primeiro cron deste projeto: /api/cron/connectors/sync (diário)
+scripts/                scripts CLI standalone (import-json, import-csv, sync-shoppingchina)
   connectors/           JsonFileConnector, CsvFileConnector, ShoppingChinaConnector
   datasets/             dados de teste
   scripts/              import-json, import-csv, validate-pipeline
@@ -165,7 +175,7 @@ assets/                 só .gitkeep — nada implementado
 }
 ```
 
-Dev: `tailwindcss ^4`, `@tailwindcss/postcss`, `eslint 9 + eslint-config-next`, `typescript ^5`, `tsx ^4.19.0` (Acquisition Engine), `sharp ^0.33.0` (imagens no Acquisition Engine).
+Dev: `tailwindcss ^4`, `@tailwindcss/postcss`, `eslint 9 + eslint-config-next`, `typescript ^5`, `tsx ^4.19.0` (scripts CLI do Connector Platform), `sharp ^0.33.0` (imagens no Connector Platform — `MediaStage`).
 
 Sem libs de state management, data-fetching (React Query/SWR), validação (zod) ou testes — tipagem direta do retorno do Supabase (`as Product[]`) sem validação em runtime.
 
@@ -304,19 +314,37 @@ Ordenação por preço (`price_asc`/`price_desc`) é corrigida em memória por p
 
 ---
 
-## Acquisition Engine (standalone)
+## Connector Platform Framework (Release 1.7 — Epic 1)
 
-`acquisition/` é um módulo Node.js autônomo — não é importado por nenhuma rota Next.js. Executa via `tsx` (devDependency). Usa `process.env` diretamente (ADR-012).
+`src/domains/connectors/` é o domínio DDD que absorveu o antigo `acquisition/` (Release 0.9, retirado no Epic 1). É importado tanto pelos Route Handlers (`app/api/admin/import/*`, `app/api/merchant/imports/*`, via `lib/connectors-factory.ts`) quanto pelos scripts CLI standalone em `scripts/` (via `tsx`). Usa `process.env` diretamente nos scripts (ADR-012); nas rotas, usa o `serviceClient` já resolvido por `requireAdmin()`/`requireMerchant()`.
 
 ```
 ConnectorRegistry.get("loja:v1").fetch()
     │
- ConnectorBatch → AcquisitionPipeline.run()
+ ConnectorBatch → SyncOrchestrator.run(metadata, items, options)
     │
- Validation → Normalization → Deduplication → MediaPipeline → CatalogWriter → PipelineMetrics
+ Validation → Normalization → Deduplication → [Media] → CatalogWrite → PipelineMetrics
+    │
+ connectorRepo.upsertFromMetadata() + syncRunRepo.create()/update() (persistência de Connector/SyncRun)
 ```
 
-`CatalogWriter` usa `getServiceClient()` (service role) para bypassar RLS. A chave anônima não tem permissão de INSERT em catálogo.
+`CatalogWriteStage` grava através de `ICatalogRepository` (nunca um `SupabaseClient` bruto — corrige o vazamento de infraestrutura que existia em `acquisition/types/pipeline.ts`). A implementação Supabase usa o `serviceClient` para bypassar RLS; a chave anônima não tem permissão de INSERT em catálogo.
+
+Novas tabelas: `connectors` (registro persistente de conectores) e `connector_sync_runs` (execução de sincronização, com `merchant_id` opcional) — migration `0022_connector_platform.sql`. `import_logs` foi superada na Wave 2 (ver seção abaixo) — todos os leitores/escritores foram migrados para `connector_sync_runs`.
+
+---
+
+## Merchant Connectors + Scheduler + Discovery (Release 1.7 — Wave 2)
+
+**Ownership + entitlements**: `app/api/merchant/imports/run/route.ts` agora verifica, antes de disparar qualquer sincronização, que o merchant é dono da loja do conector (`merchantOwnsStoreSlug()`, `services/merchant.service.ts` — resolve `connector.metadata.storeSlug` → `stores.id` → linha em `merchant_stores`) e que o plano do merchant permite conectores e não excedeu a cota mensal (`checkImportEntitlement()`, lê `merchant_plans.has_connectors`/`max_imports_month` e conta execuções não-dry-run em `connector_sync_runs` no mês corrente). Ambas as funções vivem em `services/merchant.service.ts`, não em `src/domains/connectors/`, mantendo o domínio de merchant desacoplado do domínio de conectores — a rota de API é o ponto de integração.
+
+**`import_logs` superada**: `SyncOrchestrator.run()` já grava `connector_sync_runs` incondicionalmente desde o Epic 1 (para runs de merchant e admin/globais). A escrita dupla em `import_logs` foi removida das rotas de import; `app/admin/logs/page.tsx` e `app/merchant/imports/page.tsx` foram repontados para `connector_sync_runs` via um mapeador compartilhado (`lib/sync-run-mapper.ts::toImportLogShape()`), preservando o formato `ImportLog` que essas páginas já consomem — nenhuma mudança de UI foi necessária. Histórico anterior ao Epic 1 não existe em `connector_sync_runs` (descontinuidade esperada, não é bug).
+
+**Scheduler**: primeiro cron deste projeto — `vercel.json` (`{"crons":[{"path":"/api/cron/connectors/sync","schedule":"0 6 * * *"}]}`, diário, seguro para o tier Hobby). Autenticado por segredo compartilhado (`lib/cron-auth.ts::requireCronSecret()`, checa `Authorization: Bearer $CRON_SECRET`) — o primeiro padrão de auth por segredo neste projeto (todo outro guard, `requireAdmin`/`requireMerchant`, é baseado em sessão/cookie, inutilizável por um hit de cron). `CRON_SECRET` precisa ser configurado manualmente no painel da Vercel (Production + Preview). A rota (`app/api/cron/connectors/sync/route.ts`, `maxDuration=60`, primeira rota deste projeto a declarar isso) decide em runtime quais conectores estão "devidos", por intervalo (`connectors.config.syncFrequencyHours`, jsonb já existente, sem migration) — deliberadamente **não** avalia expressões cron reais (ver `VercelCronScheduler.ts`, que preenche o seam `ISyncScheduler` do Epic 1 de forma literal, sem executar nada — a rota de cron consulta os repositórios diretamente).
+
+**Ecosystem Monitor**: `/admin/monitor` — computado sob demanda a partir de `connector_sync_runs`/`connectors` (sem tabela de agregação nova, no espírito do ADR-034). Duas APIs: `GET /api/admin/monitor/summary` (saúde por conector — último sync, status, taxa de erro sobre as últimas 20 execuções) e `GET /api/admin/monitor/runs` (histórico paginado, todos os conectores).
+
+**Discovery**: `src/domains/connectors/discovery/` — descobre lojas via sitemap/robots.txt público, nunca scraping agressivo. `RobotsParser`/`SitemapParser` são hand-rolled (regex/string, sem nova dependência — consistente com a preferência deste projeto por parsing leve). `SitemapDiscoverySource` (implementa `IDiscoverySource`, deliberadamente **não** `IConnector` — produz uma loja candidata, não `RawOffer[]`) busca `/robots.txt` → aborta se o sitemap estiver bloqueado → busca `/sitemap.xml` (1 nível de `<sitemapindex>`, no máximo). `DiscoveryService` é o **único** caminho de código autorizado a criar uma linha em `stores` sem que ela já exista — insere diretamente via `SupabaseClient` bruto, nunca via `ICatalogRepository`, para que a garantia "a loja precisa já existir" do `CatalogWriteStage` nunca seja tocada para conectores normais. Nenhuma coluna de ownership foi adicionada a `stores` — "não reivindicado" continua sendo, estruturalmente, "uma loja sem linha em `merchant_stores`". Apenas colunas de proveniência foram adicionadas (`discovered_at`, `discovery_connector_key`, migration `0023`). Disparo: `POST /api/admin/discovery/run` (admin, um domínio por vez) — sem lista de domínios-semente nem sweep automático nesta Wave.
 
 ---
 

@@ -2,6 +2,83 @@
 
 Reconstruído a partir do histórico real de commits (`git log`) e do estado atual do código. Formato: data, commit, o que mudou de fato (verificado no diff/estado resultante, não só na mensagem).
 
+## 2026-07-01 — Release 1.7 — Wave 3 — Product Identity Engine (Shadow Mode)
+
+Terceira entrega do Release 1.7. Promove Product Identity a domínio próprio (`src/domains/product-identity/`) — Core Asset permanente, aprovado pelo CTO com duas decisões estratégicas: postura conservadora de matching (falso positivo inaceitável, falso negativo aceitável) e rollout em Shadow Mode (o motor avalia e registra, mas não altera o catálogo real). Fecha dois gaps conhecidos desde o Epic 1: comparação apenas por preço no `DeduplicationStage`, e ofertas novas nunca recebendo linha em `price_history`.
+
+**Documentação estratégica:** `docs/product/releases/RELEASE_1_7_WAVE_3_EXECUTION_PLAN.md` (novo).
+
+**Database:** `0024_product_identity.sql` — tabela `product_identity_match_log` (trilha de auditoria do Shadow Mode: candidato, produto sugerido, `algorithm_version`, `confidence_score`, tier, `matched_attributes`/`mismatched_attributes`/`penalties` em jsonb, `final_decision`, `explainability_reason`, tempo de processamento), RLS habilitado, sem policy pública.
+
+**Domínio `src/domains/product-identity/`** (novo, independente de `connectors/` — `connectors/` depende dele, nunca o contrário, conforme regra de convergência do Blueprint Capítulo 8): `ProductIdentityEngine` (motor determinístico, sem ML/embeddings — score por fatores nomeados: marca/categoria como gates, similaridade de nome via Jaccard de tokens, sobreposição de especificações, tokens de modelo/capacidade; mismatch de marca ou categoria limita a confidence a 40, bem abaixo do menor tier mergeable), 4 tiers de confidence (`auto` 95–100, `probable` 85–94, `possible` 70–84, `new_product` <70) com limiares nomeados em `types/enums.ts`, `IProductCandidateRepository`/`SupabaseProductCandidateRepository` (leitura de candidatos por marca, independente de `ICatalogRepository`), `IProductIdentityMatchLogRepository`/`SupabaseProductIdentityMatchLogRepository` (fire-and-forget, mesma convenção de `insertPriceHistory`, sem método de update — append-only por código, não só por convenção), `ProductIdentityService` (orquestração — nunca lança exceção).
+
+**Explainability completa (revisão do CTO, pré-commit da Wave)**: `MatchResult`/`MatchLogEntry` ganharam `algorithmVersion` (constante `PRODUCT_IDENTITY_ALGORITHM_VERSION`, hoje `"1.0.0"` — toda evolução futura do algoritmo incrementa essa versão; avaliações históricas nunca são recalculadas em lugar), `matchedAttributes`/`mismatchedAttributes` (um item por atributo avaliado), `penalties` (todo ponto não concedido rastreado a um atributo e uma razão — incluindo uma entrada dedicada quando o gate de marca/categoria limita a confidence a 40) e `explainabilityReason` (frase legível sintetizando por que aquela confidence/tier foi atingida). Isso é dado Brain-facing, não apenas debugging — um ativo estratégico permanente por decisão do CTO.
+
+**Mudanças em `src/domains/connectors/`**: `ProductIdentityShadowStage` (novo `ISyncStage`, entre `DeduplicationStage` e `MediaStage`/`CatalogWriteStage` — avalia apenas itens classificados `"new"`, nunca altera `ctx.deduplicated`/`ctx.persisted`, dupla camada de proteção contra exceções). `DeduplicationStage` — Change Detection: substitui a comparação apenas de `price_usd` por preço + estoque (`in_stock`/`stock_quantity`) + descrição + imagem. `CatalogWriteStage` — grava `price_history` também no caminho `"new"` (antes só no `"update"`). `ICatalogRepository.findOfferByProductAndStore`/`ExistingOfferLookup` estendidos com os campos necessários à Change Detection. `ProductIdentityResolver`/`domain/ProductIdentity.ts` (stub do Epic 1) removidos — substituídos pelo domínio próprio.
+
+**Brain**: nenhum `TrustEventType` novo nesta Wave — nenhum merge acontece de verdade ainda; a trilha de auditoria explicável (`matchedAttributes`/`mismatchedAttributes`/`penalties`/`explainabilityReason`) é a preparação "pronta para o Brain" da aprovação do CTO. Emissão de eventos reais de merge fica para a Wave 5.
+
+**Testes**: 11 novos, estendidos com asserções de explainability (`ProductIdentityEngine` ×5 — cobrindo exact-slug, true-positive, guarda de falso-positivo por especificação divergente, cap por marca divergente, sem candidatos —, `ProductIdentityService` ×3, `DeduplicationStage` ×3 de change detection) — total 213/213.
+
+Quality Gate: lint 0, typecheck 0, 213/213 testes, build (138 rotas — nenhuma rota nova, sem UI/API desta Wave por decisão confirmada com o CTO).
+
+**Deferido explicitamente para Waves futuras**: UI/API de inspeção do shadow log; emissão de eventos Brain para merges reais; qualquer promoção de sugestões do Shadow Mode para merges automáticos (exige nova aprovação do CTO); embeddings/IA no motor de matching.
+
+## 2026-07-01 — Release 1.7 — Wave 2 — Merchant Connectors + Scheduler + Discovery
+
+Segunda entrega do Release 1.7 (reorganizado em 4 Waves após a certificação do Epic 1 — `docs/product/releases/RELEASE_1_7_BLUEPRINT.md` v1.1). Fecha a lacuna de autorização por merchant, impõe entitlements de plano, adiciona o primeiro cron real deste projeto, um painel de monitoramento operacional, e conectores de descoberta de lojas via sitemap/robots.txt.
+
+**Documentação estratégica:** `docs/product/releases/RELEASE_1_7_WAVE_2_EXECUTION_PLAN.md` (novo).
+
+**Database:** `0023_merchant_entitlements_discovery.sql` — `stores.discovered_at`/`discovery_connector_key` (proveniência de Discovery; nenhuma coluna de ownership adicionada — ownership continua exclusivamente via `merchant_stores`). `import_logs` marcada como superada (não removida).
+
+**Ownership + Entitlements** (`services/merchant.service.ts`): `getMerchantStoreIds()`, `merchantOwnsStoreSlug()`, `checkImportEntitlement()` (lê `merchant_plans.has_connectors`/`max_imports_month`, conta execuções não-dry-run em `connector_sync_runs` no mês corrente). `app/api/merchant/imports/run/route.ts` agora bloqueia (403) merchants que não são donos da loja do conector ou que excederam a cota/não têm o recurso no plano. `getMerchantDashboardStats()` migrada de `import_logs` (bug: não era filtrada por merchant) para `connector_sync_runs.eq("merchant_id", ...)`.
+
+**`import_logs` superada por completo**: escrita dupla removida de `app/api/admin/import/run/route.ts` e `app/api/merchant/imports/run/route.ts`; `app/api/admin/logs/route.ts` e `app/api/merchant/imports/history/route.ts` repontados para `connector_sync_runs` via `lib/sync-run-mapper.ts::toImportLogShape()` — zero mudança nas páginas que consomem esses endpoints.
+
+**Scheduler**: `vercel.json` (novo — primeiro cron deste projeto), `lib/cron-auth.ts::requireCronSecret()` (primeiro auth por segredo compartilhado, `Authorization: Bearer $CRON_SECRET`), `app/api/cron/connectors/sync/route.ts` (`maxDuration=60`, primeira rota a declarar isso; interval-based via `connectors.config.syncFrequencyHours`, opt-in, sem parser de expressões cron), `src/domains/connectors/scheduler/VercelCronScheduler.ts` (implementa `ISyncScheduler`, seam do Epic 1).
+
+**Ecosystem Monitor**: `app/admin/monitor/page.tsx` (novo, nav "Ecossistema"), `GET /api/admin/monitor/summary` + `GET /api/admin/monitor/runs` (novos) — computado sob demanda a partir de `connector_sync_runs`, sem tabela de agregação nova.
+
+**Discovery** (`src/domains/connectors/discovery/`): `SitemapParser`/`RobotsParser` (hand-rolled, sem nova dependência), `IDiscoverySource`/`SitemapDiscoverySource` (deliberadamente não `IConnector`), `DiscoveryService` (único caminho de código autorizado a criar uma `stores` row sem que ela já exista — bypassa `ICatalogRepository` para não tocar a garantia "loja deve existir" do `CatalogWriteStage`). `POST /api/admin/discovery/run` (novo, admin, um domínio por vez — sem seed-list nem sweep automático nesta Wave, por decisão confirmada com o CTO).
+
+**Brain**: 3 novos `TrustEventType` (`ConnectorSyncScheduled`, `ConnectorSyncSkippedEntitlement`, `StoreDiscovered`) + entradas em `TRUST_EVENT_BRAIN_IMPACT`. `StoreDiscovered` existe apenas como taxonomia — não é ingerido nesta Wave (nenhum merchant existe no momento da descoberta). `ConnectorSyncSkippedEntitlement` é emitido de fato no bloqueio de entitlement.
+
+**Testes**: 23 novos (`merchant.service.test.ts` ×8, `SitemapParser` ×3, `RobotsParser` ×5, `DiscoveryService` ×3, `cron-auth` ×4) — total 202/202.
+
+Quality Gate: lint 0, typecheck 0, 202/202 testes, build (138 rotas, incluindo as 5 novas desta Wave: `/admin/monitor`, `/api/admin/monitor/summary`, `/api/admin/monitor/runs`, `/api/admin/discovery/run`, `/api/cron/connectors/sync`).
+
+**Deferido explicitamente para Waves futuras**: migração dos outros 7 call sites de `merchant_stores` para o helper canônico (cleanup opcional); admin UI para editar `connectors.config.syncFrequencyHours` (edição manual no Supabase por ora); seed-list + sweep automático de Discovery (sem fonte decidida para domínios candidatos); Product Identity real (Wave 3).
+
+## 2026-07-01 — Release 1.7 — Epic 1 — Connector Platform Framework
+
+Primeiro Epic do Release 1.7 ("Ecosystem Expansion Platform"). Absorve por completo o `acquisition/` (Release 0.9, retirado) em um domínio DDD, corrigindo um vazamento de infraestrutura e introduzindo persistência real de conectores/sincronizações. Primeiro domínio fora de `src/domains/trust/` a alimentar o ParaguAI Brain.
+
+**Documentação estratégica:**
+- `docs/product/releases/RELEASE_1_7_BLUEPRINT.md` — Blueprint do Release 1.7 (13 capacidades, 7 Epics faseados)
+- `docs/product/releases/RELEASE_1_7_EXECUTION_PLAN.md` — plano técnico do Epic 1
+
+**Database:**
+- `0022_connector_platform.sql` — tabelas `connectors` (registro persistente) e `connector_sync_runs` (execução de sincronização, `merchant_id` opcional), RLS habilitado, `connector_configs` (0010) marcada como superada.
+
+**Domínio `src/domains/connectors/`** (substitui `acquisition/`, deletado nesta Epic): `types/` (enums, raw/connector/pipeline/validation types), `domain/` (Connector, SyncRun, ProductIdentity), `repositories/` + `infrastructure/` (IConnectorRepository, ISyncRunRepository, ICatalogRepository — corrige o `PipelineContext.supabase` bruto do `acquisition/`), `normalization/` (OfferNormalizer, ProductIdentityResolver — seed do Epic 3), `mapping/` (JsonFieldMapper, CsvFieldMapper), `crawler/` (HttpFetchStrategy, ShoppingChinaConnector, reference JSON/CSV connectors — auto-registro normalizado), `services/` (ConnectorRegistry, SyncOrchestrator substitui AcquisitionPipeline, stages/ com Validation/Normalization/Deduplication/Media/CatalogWrite), `scheduler/` (ISyncScheduler — seam para Epic 2, ManualSyncTrigger), `events/connector.events.ts`, `__tests__/` (9 suítes, 38 testes).
+
+**Factory:** `lib/connectors-factory.ts` — `createConnectorsServices(client)`.
+
+**Brain:** 4 novos `TrustEventType` (`ConnectorRegistered`, `ConnectorSyncStarted/Completed/Failed`) + entradas em `TRUST_EVENT_BRAIN_IMPACT` mapeando para `HistoricalData`/`SearchIntelligence`. Emitidos apenas no caminho de sincronização disparado por merchant (`merchantId` presente) — ver limitação documentada em `PROJECT_STATUS.md`.
+
+**APIs rewiring (contrato inalterado):** `GET /api/admin/import/connectors`, `POST /api/admin/import/run`, `POST /api/merchant/imports/run`, `GET /api/merchant/imports/history` — todas agora usam `createConnectorsServices()`; `import_logs` recebe escrita dupla temporária.
+
+**Scripts CLI:** movidos de `acquisition/scripts/` para `scripts/` (`connectors:import-json[:execute]`, `connectors:import-csv[:execute]`, `sync:shoppingchina[:execute]`); `acquisition:validate` removido (substituído por `npm test`).
+
+**Paridade verificada**: dry-run de `scripts/import-json.ts`/`import-csv.ts` produz totais idênticos aos scripts antigos de `acquisition/` contra o mesmo Supabase real (Received/Validated/Normalized/Deduplicated/Persisted/Skipped/Failed).
+
+**Docs atualizados**: ARCHITECTURE, DOMAIN_MODEL (substituição global de "Acquisition Engine"→"Connector Platform", "AcquisitionPipeline"→"SyncOrchestrator"), API_CONTRACTS, CONNECTOR_GUIDE (reescrito), ACQUISITION.md (retirado, redirecionamento).
+
+Quality Gate: lint 0, typecheck 0, 179/179 testes (26 suítes), build 89 rotas.
+
+**Deferido explicitamente para Epic 2**: autorização de conector por `merchant_stores` (hoje qualquer merchant pode disparar qualquer conector), migração de `getMerchantDashboardStats()` para `connector_sync_runs`, scheduler real (Vercel Cron).
+
 ## 2026-06-30 — Release 1.6 — Epic 5 — Growth Engine (Sprint 1.6.5)
 
 Quinto e último Epic do Release 1.6. Motor de crescimento baseado em regras que responde "O que devo fazer hoje para vender mais?" — cada recomendação é explicável, rastreável e baseada em dados reais.

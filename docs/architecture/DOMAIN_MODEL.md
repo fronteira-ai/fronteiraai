@@ -42,7 +42,7 @@ O domínio do ParaguAI é dividido em contextos delimitados. Cada contexto tem r
 
 **Entidades**: `Product`, `Brand`, `Category`
 
-**Quem alimenta**: Acquisition Engine (conectores automáticos e importação manual)
+**Quem alimenta**: Connector Platform (conectores automáticos e importação manual)
 
 **Quem consome**: Marketplace (Offer), Busca, Compare, Merchant OS, SEO
 
@@ -58,7 +58,7 @@ O domínio do ParaguAI é dividido em contextos delimitados. Cada contexto tem r
 
 **Entidades**: `Offer`, `Store`
 
-**Quem alimenta**: Acquisition Engine, Admin Platform
+**Quem alimenta**: Connector Platform, Admin Platform
 
 **Quem consome**: Compare Engine, Busca, Comprador, Price Engine
 
@@ -106,7 +106,7 @@ O domínio do ParaguAI é dividido em contextos delimitados. Cada contexto tem r
 
 **Entidades**: `Merchant`, `MerchantPlan`, `MerchantStore`, `MerchantAuditLog`, `MerchantRecommendation`, `MerchantAnalyticsEvent`
 
-**Quem alimenta**: portal do lojista (`/merchant/*`), Acquisition Engine
+**Quem alimenta**: portal do lojista (`/merchant/*`), Connector Platform
 
 **Quem consome**: lojista, Admin Platform
 
@@ -118,9 +118,9 @@ O domínio do ParaguAI é dividido em contextos delimitados. Cada contexto tem r
 
 **O quê**: o pipeline de entrada de dados.
 
-**Responsabilidade**: buscar dados de fontes externas (arquivos JSON/CSV, conectores de loja, crawlers futuros), validar, normalizar, deduplicar e persistir no Catálogo. O Acquisition Engine é o mecanismo pelo qual o conhecimento externo se torna conhecimento interno.
+**Responsabilidade**: buscar dados de fontes externas (arquivos JSON/CSV, conectores de loja, crawlers futuros), validar, normalizar, deduplicar e persistir no Catálogo. O Connector Platform é o mecanismo pelo qual o conhecimento externo se torna conhecimento interno.
 
-**Entidades**: `ImportLog`, `PipelineMetrics` (in-memory), conectores e parsers (módulo standalone em `acquisition/`)
+**Entidades**: `ImportLog`, `PipelineMetrics` (in-memory), conectores e parsers (módulo standalone em `src/domains/connectors/`)
 
 **Quem alimenta**: conectores externos (ShoppingChina, JSON, CSV)
 
@@ -200,9 +200,9 @@ O domínio do ParaguAI é dividido em contextos delimitados. Cada contexto tem r
 
 **Responsabilidade**: ser a entidade canônica de referência do catálogo. Tudo que é único de um produto — nome, especificações, imagem, marca, categoria — pertence ao `Product`. O que varia por loja — preço, estoque, condições — pertence à `Offer`.
 
-**Quem pode criar**: Acquisition Engine (via `CatalogWriter`), Admin Platform.
+**Quem pode criar**: Connector Platform (via `CatalogWriter`), Admin Platform.
 
-**Quem pode modificar**: Admin Platform, Acquisition Engine (via deduplicação e normalização).
+**Quem pode modificar**: Admin Platform, Connector Platform (via deduplicação e normalização).
 
 **Quem depende**: `Offer` (FK obrigatório), Busca, Compare, SEO (página `/product/[slug]`).
 
@@ -212,7 +212,7 @@ O domínio do ParaguAI é dividido em contextos delimitados. Cada contexto tem r
 - Tem N `Offer`s — uma por loja que o vende
 
 **Ciclo de vida**:
-- *Nasce*: no Acquisition Engine, após validação e normalização
+- *Nasce*: no Connector Platform, após validação e normalização
 - *Evolui*: especificações, imagem e descrição atualizam via importação ou admin
 - *Matura*: quando tem imagem real, especificações completas, marca e categoria confirmadas
 - *Arquivado*: campo `active` (existe no banco, ainda não exposto no tipo) — produto desativado mas não deletado
@@ -230,7 +230,7 @@ O domínio do ParaguAI é dividido em contextos delimitados. Cada contexto tem r
 
 **Responsabilidade**: ser a identidade pública de um lojista no catálogo. A `Store` é o que o comprador vê — nome, localização, contato, horário, reputação. É diferente de `Merchant`, que é quem *opera* a loja na plataforma.
 
-**Quem pode criar**: Admin Platform, processo de onboarding de merchant.
+**Quem pode criar**: Admin Platform, processo de onboarding de merchant, Discovery (`src/domains/connectors/discovery/`, Release 1.7 — Wave 2 — via sitemap/robots.txt público, nunca scraping agressivo).
 
 **Quem pode modificar**: Merchant OS (dados operacionais), Admin Platform (verificação, rating).
 
@@ -242,7 +242,7 @@ O domínio do ParaguAI é dividido em contextos delimitados. Cada contexto tem r
 - Ranqueada publicamente em `/lojas` via `Merchant Score` do merchant associado
 
 **Ciclo de vida**:
-- *Nasce*: cadastrada pelo admin ou durante onboarding do merchant
+- *Nasce*: cadastrada pelo admin, durante onboarding do merchant, ou descoberta automaticamente (Discovery)
 - *Evolui*: `slug` populado, dados de contato completados, `is_verified` atualizado
 - *Matura*: verificação concedida (`is_verified = true`), merchant vinculado, ofertas ativas
 - *Suspensa*: `active = false` — loja oculta do catálogo público, dados preservados
@@ -250,6 +250,7 @@ O domínio do ParaguAI é dividido em contextos delimitados. Cada contexto tem r
 **Invariantes**:
 - `slug` é único (UNIQUE constraint)
 - `rating` é um número direto na tabela (não calculado de reviews — tabela `reviews` não existe ainda; ADR-038)
+- **"Não reivindicada" não é um campo — é a ausência de uma linha em `merchant_stores`.** `stores` nunca ganhou (e não deve ganhar) uma coluna de ownership direta (`owner_user_id` ou equivalente) — isso duplicaria o modelo M:N já estabelecido por `MerchantStore`. Release 1.7 — Wave 2 adicionou apenas colunas de **proveniência** (migration `0023`): `discovered_at timestamptz`, `discovery_connector_key text` (ambas `NULL` para lojas criadas pelo admin/onboarding; preenchidas apenas quando a linha nasce via Discovery). A reivindicação em si (criar a linha em `merchant_stores`) é escopo da Wave 4 (Merchant Claim).
 
 ---
 
@@ -259,7 +260,7 @@ O domínio do ParaguAI é dividido em contextos delimitados. Cada contexto tem r
 
 **Responsabilidade**: ser o único lugar onde preço vive. Uma `Offer` é a resposta para: "quanto a loja X está cobrando pelo produto Y, com quais condições, com que disponibilidade?". É a entidade mais operacional do domínio.
 
-**Quem pode criar**: Acquisition Engine, Admin Platform.
+**Quem pode criar**: Connector Platform, Admin Platform.
 
 **Quem pode modificar**: `updateOfferPrice()` para preço (único caminho — ADR-017); Admin Platform para demais campos.
 
@@ -271,7 +272,7 @@ O domínio do ParaguAI é dividido em contextos delimitados. Cada contexto tem r
 - Tem N `PriceHistoryEntry`s — uma por mudança de preço
 
 **Ciclo de vida**:
-- *Nasce*: criada pelo Acquisition Engine com preço inicial
+- *Nasce*: criada pelo Connector Platform com preço inicial
 - *Evolui*: `updateOfferPrice()` atualiza `price_usd`/`price_brl` e registra automaticamente uma linha em `price_history`
 - *Esgotada*: `in_stock = false` — oferta permanece visível, marcada "Sem estoque", histórico intacto
 - *Arquivada*: `available = false` — oferta desativada, histórico de preço preservado indefinidamente
@@ -289,7 +290,7 @@ O domínio do ParaguAI é dividido em contextos delimitados. Cada contexto tem r
 
 **Responsabilidade**: ser a entidade de referência para agrupamento de produtos por fabricante. Permite que compradores filtrem por marca e que a plataforma agrupe concorrentes. Dados simples e estáveis — raramente muda após criação.
 
-**Quem pode criar**: Acquisition Engine (via normalização de nome de marca), Admin Platform.
+**Quem pode criar**: Connector Platform (via normalização de nome de marca), Admin Platform.
 
 **Quem depende**: `Product` (FK N:1), Busca, filtros de catálogo.
 
@@ -305,7 +306,7 @@ O domínio do ParaguAI é dividido em contextos delimitados. Cada contexto tem r
 
 **Responsabilidade**: organizar o catálogo em hierarquia navegável. A Category alimenta filtros, seções da home, SEO e futuramente análises de demanda por segmento.
 
-**Quem pode criar**: Admin Platform (curadoria manual), Acquisition Engine.
+**Quem pode criar**: Admin Platform (curadoria manual), Connector Platform.
 
 **Quem depende**: `Product` (FK N:1), Busca, filtros de `/products`, seção de categorias da Home.
 
@@ -421,19 +422,20 @@ O domínio do ParaguAI é dividido em contextos delimitados. Cada contexto tem r
 
 ---
 
-### 3.12 ImportLog
+### 3.12 ImportLog — **SUPERADA (Release 1.7 — Wave 2)**
 
-**Propósito**: registrar o resultado de cada execução do Acquisition Engine.
+**Propósito histórico**: registrar o resultado de cada execução do Connector Platform.
 
-**Responsabilidade**: tornar o pipeline de importação observável e auditável. Cada run do `AcquisitionPipeline` grava uma linha com total de itens processados, persistidos, erros e métricas completas em JSONB.
+**Status atual**: nenhum código escreve ou lê mais a tabela `import_logs` diretamente. `SyncOrchestrator` grava toda execução em `connector_sync_runs` (viva desde o Epic 1, migration `0022`); `app/admin/logs/page.tsx` e `app/merchant/imports/page.tsx` foram repontados para `connector_sync_runs` via `lib/sync-run-mapper.ts::toImportLogShape()`, que traduz a nova linha para o formato `ImportLog` que essas páginas já esperavam — zero mudança de UI. A tabela `import_logs` não foi removida (sem ferramenta de DDL neste projeto), apenas marcada como superada (mesmo padrão de `connector_configs`, migration 0010).
 
-**Quem cria**: `CatalogWriter` (Acquisition Engine) ao final de cada pipeline run.
+**Quem consulta hoje**: Admin Dashboard (`/admin/logs`), Merchant Dashboard (`/merchant/imports`), Ecosystem Monitor (`/admin/monitor`) — todos via `connector_sync_runs`.
 
-**Quem consulta**: Admin Dashboard (último import), Merchant Dashboard (status de sync), Quality Center.
+**Invariantes (agora de `connector_sync_runs`)**:
+- `status` é um `CHECK` (`running|success|partial|failed`), não um booleano `success`
+- `totals`/`errors` JSONB contêm o `PipelineMetrics`/lista de erros completos
+- `merchant_id` é opcional — `NULL` para runs administrativos/globais e para runs de cron sem merchant resolvido
 
-**Invariantes**:
-- Schema simplificado: `total_raw`, `total_persisted`, `total_errors`, `success`, `metrics JSONB` (ADR-029)
-- `metrics` JSONB contém o `PipelineMetrics` completo — granularidade adicional vive ali, não em colunas separadas
+**Release 1.7 — Epic 1**: `import_logs` recebe escrita dupla temporária ao lado de duas novas tabelas — `connectors` (registro persistente de conectores, substitui o `ConnectorRegistry` apenas-em-memória) e `connector_sync_runs` (execução de sincronização, com `merchant_id` opcional para runs administrativos, status `running`/`success`/`partial`/`failed`). `connector_sync_runs` é a fonte de verdade a partir do Epic 2, quando a escrita dupla em `import_logs` é removida.
 
 ---
 
@@ -517,7 +519,7 @@ Os relacionamentos do domínio não são apenas FKs — são vínculos de signif
 [Fonte Externa]
       │  dados brutos (JSON, CSV, conector)
       ▼
-[Acquisition Engine]
+[Connector Platform]
   Validation → Normalization → Deduplication
       │
       ▼ (produto novo detectado)
@@ -545,7 +547,7 @@ Os relacionamentos do domínio não são apenas FKs — são vínculos de signif
 ### 5.2 Oferta e Preço
 
 ```
-[Acquisition Engine / Admin]
+[Connector Platform / Admin]
   INSERT em offers com price_usd inicial
       │
       ▼
@@ -582,7 +584,7 @@ Os relacionamentos do domínio não são apenas FKs — são vínculos de signif
       │
       ▼
 [Primeira Importação]
-  AcquisitionPipeline → products/offers entram no catálogo
+  SyncOrchestrator → products/offers entram no catálogo
   merchant_score calculado e persistido
       │
       ▼
@@ -684,7 +686,7 @@ Regras permanentes que, se violadas, corrompem o conhecimento do domínio. Nenhu
 | I-08 | `profiles.role IN ('admin', 'operator', 'merchant')` | Profile | CHECK constraint no banco (ADR-031) |
 | I-09 | `merchant_score` é calculado, nunca editado manualmente | Merchant | Computed by `computeMerchantScore()` — ADR-034 |
 | I-10 | Dados históricos não são deletados | PriceHistory, AuditLog | Sem lógica de deleção nesses registros |
-| I-11 | Dado entra no banco apenas após validação e normalização | Product, Offer | AcquisitionPipeline: Validation → Normalization → CatalogWriter |
+| I-11 | Dado entra no banco apenas após validação e normalização | Product, Offer | SyncOrchestrator: Validation → Normalization → CatalogWriter |
 | I-12 | Types TypeScript espelham o schema real do banco | Todos os types | Corrigido na Sprint 3.5 (ADR-009); divergência tipo↔banco é bug silencioso |
 | I-13 | O banco é a fonte de verdade | Todos | Qualquer divergência tipo↔banco é corrigida a favor do banco |
 | I-14 | Services retornam `[]` ou `null` em erro; nunca lançam exceção | Todos os services | Convenção `try/catch → return []` em todo service |
@@ -700,7 +702,7 @@ Como um dado percorre o domínio do ParaguAI — da fonte bruta à inteligência
   Arquivo JSON/CSV do lojista, conector de loja (ShoppingChina), crawler futuro
               │
               ▼
-[ACQUISITION ENGINE]  (acquisition/ — módulo standalone, não importado pela app Next.js)
+[ACQUISITION ENGINE]  (src/domains/connectors/ — módulo standalone, não importado pela app Next.js)
   Connector.fetch()    → RawOffer[] (offer-first: produto embutido na oferta — ADR-026)
   ValidationEngine     → rejeita dados inválidos (campos obrigatórios, tipos, ranges)
   NormalizationEngine  → padroniza nomes, preços, slugs, categorias
@@ -757,7 +759,7 @@ Como o domínio suporta expansão sem exigir reestruturação de entidades.
 
 ### 9.2 Novos conectores de dados
 
-O Acquisition Engine tem um `ConnectorRegistry` — qualquer novo conector implementa a interface `Connector` e é registrado sem alterar o pipeline. A validação, normalização e persistência são compartilhadas. O custo marginal de um novo conector é apenas a lógica de parsing da fonte específica.
+O Connector Platform tem um `ConnectorRegistry` — qualquer novo conector implementa a interface `Connector` e é registrado sem alterar o pipeline. A validação, normalização e persistência são compartilhadas. O custo marginal de um novo conector é apenas a lógica de parsing da fonte específica.
 
 ### 9.3 Novos canais de venda
 

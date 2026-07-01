@@ -26,4 +26,9 @@ export interface Store {
   pix_br: boolean | null;
   active: boolean | null;
   created_at: string;
+  // Release 1.7 — Wave 2 (migration 0023): provenance for auto-discovered
+  // stores. Both null for admin-created stores. Ownership itself is never
+  // represented here — it lives exclusively in merchant_stores.
+  discovered_at: string | null;
+  discovery_connector_key: string | null;
 }
