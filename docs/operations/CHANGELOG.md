@@ -2,6 +2,20 @@
 
 Reconstruído a partir do histórico real de commits (`git log`) e do estado atual do código. Formato: data, commit, o que mudou de fato (verificado no diff/estado resultante, não só na mensagem).
 
+## 2026-07-02 — Pré-Release 1.8 — Blueprint, Buyer Identity Model, 2 decisões arquiteturais bloqueadoras resolvidas
+
+Preparação estratégica do Release 1.8 ("Marketplace Expansion & Live Commerce") — mandato do CTO: nenhum código, nenhuma migration, arquitetura apenas. Quatro entregas, todas documentação:
+
+**`docs/product/releases/RELEASE_1_8_BLUEPRINT.md`** (commit `24e70aa`): 12 capítulos cobrindo Marketplace Expansion, Live Pricing Engine, Exchange Engine, Freshness Engine, Market Intelligence, Buyer Experience, SEO Expansion, Merchant Growth, Fronteira Agora, mais a reconciliação explícita dos "novos Assets/Moats" pedidos pelo CTO contra o catálogo permanente já existente (`STRATEGIC_ASSETS.md`/`MOAT_STRATEGY.md`) — de 5 Assets e 6 Moats propostos, apenas 1 de cada é genuinamente novo (Asset C-7 Live Commerce Velocity, Moat 9 Live Commerce Velocity Moat), o resto já existia ou duplicaria o catálogo. 8 Waves propostas, sequenciadas por dependência técnica real.
+
+**ADR-043** (commit `7221140`): fornecedor de câmbio — ExchangeRate-API.com, plano Business ($30/mês, atualização a cada 5 min, PYG confirmado), escolhido após pesquisa ao vivo de preços/cobertura (não assumido de memória) — mais de 3x mais barato que a alternativa equivalente (Open Exchange Rates) na mesma frequência. Desbloqueia Wave 1.
+
+**ADR-045** (commit `2c7eacc`): modelo de dados pessoais de comprador — LGPD confirmada como referência vinculante (alcance extraterritorial, sem limiar mínimo), `buyers` como tabela própria, deleção por anonimização. Achado no processo: `handle_new_user()` rotularia todo comprador como `'operator'`; `merchant_reviews.reviewer_id → profiles` nunca foi alimentado por um comprador real.
+
+**ADR-046** (commit `e09b0e6`): Buyer Identity Model completo — `docs/product/releases/RELEASE_1_8_BUYER_IDENTITY_MODEL.md` (15 seções). Auditoria de acoplamento revelou que `profiles` já é compartilhada admin/operator/merchant por decisão deliberada da ADR-031 (não um acaso), que `buyer_events`/`buyer_sessions.buyer_id` (Release 1.6) já referencia `auth.users` diretamente (acoplamento a corrigir na Wave 6), e dois achados de segurança de severidade alta **já em produção**: `buyer_events`/`buyer_sessions` aceitam INSERT anônimo irrestrito apesar de um comentário no código alegar rate limiting inexistente, e a coleta comportamental roda desde o Release 1.6 sem nenhum aviso de privacidade/consentimento. Ciclo de vida de 6 estados definido (Anônimo → Sessão Anônima → Conhecido → Autenticado → Recorrente → Premium futuro) mais Anonimização terminal. Desbloqueia a maior parte da Wave 6.
+
+**Ainda em aberto**: fornecedor de notificação (sub-item da Wave 6), fornecedor de billing (Wave 8) — nenhum bloqueia o início do Release 1.8, ambos nomeados e rastreáveis.
+
 ## 2026-07-02 — Release 1.7 — Wave 6 — Platform Hardening, Certification & Release Lock
 
 Sexta e última entrega faseada do Release 1.7 (mandato do CTO: "Platform Hardening, Certification & Release Lock" — auditoria completa, correção de achados crítico/médio, sem domínio novo, sem regra de negócio nova, sem feature grande). Fecha o Release 1.7. Ver `docs/operations/RELEASE_CERTIFICATION_1.7.md` para o relatório executivo completo.

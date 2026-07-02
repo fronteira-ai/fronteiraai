@@ -41,6 +41,7 @@ docs/
 │   ├── CONVENTIONS.md          Convenções de nomenclatura e estilo
 │   ├── GLOSSARY.md             Terminologia oficial do projeto
 │   ├── TECH_DEBT.md            Dívida técnica identificada e seu status
+│   ├── DATABASE_ENGINEERING.md Database Migration System V2 — padrão, runbook, governança
 │   ├── ACQUISITION.md          Documentação do Acquisition Engine
 │   ├── CONNECTOR_GUIDE.md      Como criar novos Connectors
 │   └── AGENTS.md               Avisos críticos para agentes IA
@@ -48,14 +49,27 @@ docs/
 ├── product/          O que o produto faz e para onde vai
 │   ├── README.md
 │   ├── FEATURES.md             Inventário de funcionalidades por estado real
-│   └── MASTER_ROADMAP.md       Roadmap estratégico de 4 Fases
+│   ├── MASTER_ROADMAP.md       Roadmap estratégico de 4 Fases
+│   ├── STRATEGIC_ASSETS.md     Catálogo oficial de Ativos Estratégicos (Core/Supporting/Future)
+│   ├── MOAT_STRATEGY.md        Os 8 Moats permanentes do ParaguAI
+│   ├── PARAGUAI_BRAIN.md       A camada de inteligência — visão e arquitetura conceitual
+│   ├── RELEASE_PLAYBOOK.md     Como uma Release é planejada e executada
+│   └── releases/                Blueprints e planos de execução por Release/Wave
+│       ├── RELEASE_1_5_BLUEPRINT.md · RELEASE_1_5_EXECUTION_PLAN.md
+│       ├── RELEASE_1_6_BLUEPRINT.md
+│       ├── RELEASE_1_7_BLUEPRINT.md · RELEASE_1_7_EXECUTION_PLAN.md
+│       ├── RELEASE_1_7_WAVE_{2,3,4,5}_EXECUTION_PLAN.md
+│       ├── RELEASE_1_8_BLUEPRINT.md
+│       └── RELEASE_1_8_BUYER_IDENTITY_MODEL.md
 │
 ├── operations/       Evolução do projeto — estado atual, história, decisões
 │   ├── README.md
 │   ├── PROJECT_STATUS.md       Fotografia do presente
 │   ├── CHANGELOG.md            História completa de cada Release
 │   ├── NEXT_STEPS.md           Próximos passos imediatos
-│   └── DECISIONS.md            ADR-001 a ADR-039+ (decisões arquiteturais)
+│   ├── DECISIONS.md            ADR-001 a ADR-046 (decisões arquiteturais; alguns números reservados/ainda não escritos, ex. ADR-041, ADR-044)
+│   ├── RELEASE_CERTIFICATION_1.5.md
+│   └── RELEASE_CERTIFICATION_1.7.md
 │
 ├── database/         Documentação do banco de dados
 │   ├── README.md
@@ -155,4 +169,4 @@ Estas regras são permanentes — valem para toda contribuição futura:
 
 Este Knowledge System é mantido pelo CTO do ParaguAI. Sugestões de melhoria seguem o mesmo processo que qualquer decisão Tipo 1: `foundation/DECISION_FILTER.md`.
 
-Última atualização: **2026-06-28 — Knowledge System v1.0 implementado**
+Última atualização: **2026-07-02 — árvore de `product/` e `operations/` corrigida para refletir o estado real (Sprint Zero, Fase 2 — Foundation Consistency); Knowledge System v1.0 implementado em 2026-06-28**
