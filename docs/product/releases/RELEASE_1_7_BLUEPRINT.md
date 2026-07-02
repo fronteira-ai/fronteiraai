@@ -1,9 +1,9 @@
 # RELEASE_1_7_BLUEPRINT.md
 # Blueprint Estratégico — Ecosystem Expansion Platform
 
-**Versão**: 1.3
-**Criado**: 2026-07-01 · **Revisado**: 2026-07-01 (Wave 5 re-escopada pelo CTO de "Merchant Claim + Onboarding" para "Merchant Acquisition & Ownership Platform" — 8 Epics)
-**Status**: Epic 1, Wave 2, Wave 3, Wave 4 e Wave 5 entregues e certificados. Wave 6 restante, execução faseada continua.
+**Versão**: 1.4
+**Criado**: 2026-07-01 · **Revisado**: 2026-07-02 (Wave 6 — Platform Hardening & Certification — entregue; Release 1.7 CERTIFICADO E CONGELADO)
+**Status**: Epic 1, Wave 2, Wave 3, Wave 4, Wave 5 e Wave 6 entregues e certificados. **Release 1.7 completo.** Ver `docs/operations/RELEASE_CERTIFICATION_1.7.md`. Evolução futura exclusivamente no Release 1.8.
 **Tipo de Release**: Platform + Data + Connector Infrastructure (compounding)
 **Fase**: 4 — Expansão do Ecossistema
 **Número de Release**: 1.7
@@ -145,6 +145,8 @@ Escopo (8 Epics):
 ### WAVE 6 (0027) — SEO, Performance, Hardening e Release Certification — "Pronto para milhões de páginas, pronto para produção"
 
 Escopo (antigo Epic 7): sitemap-index (`generateSitemaps()`) substituindo o sitemap monolítico atual; retry/backoff/idempotência para execuções de conector; rate limiting, ownership e auditoria; conclusão da lista completa de eventos cognitivos da missão ainda pendentes (`ProductImported`, `ProductUpdated`, `PriceChanged`, `ProductRemoved`, `CatalogNormalized`, `SnapshotCreated`, `ImportFailed`, `PremiumTrialStarted`, `PremiumActivated`, e os 10 eventos do Canonical Catalog da Wave 4 — `MerchantDiscovered`/`MerchantClaimRequested/Approved` já entregues na Wave 5 sob os nomes `StoreDiscovered`/`ClaimRequested`/`OwnershipVerified`); suíte de testes final e Quality Gate completo do Release; relatório final de certificação do Release 1.7.
+
+**Entregue em 2026-07-02** (`docs/operations/RELEASE_CERTIFICATION_1.7.md`), com re-escopo honesto do CTO em relação à lista acima: a auditoria completa da plataforma (Fase 1 do mandato) encontrou um achado de segurança crítico não previsto neste escopo original (auto-aprovação de claim explorável com dados públicos) — corrigi-lo tomou precedência sobre dois itens originais que **não foram entregues nesta Wave**: retry/backoff/idempotência para execuções de conector, e rate limiting (ambos registrados como dívida nomeada em `TECH_DEBT.md`/ADR-042, candidatos ao Release 1.8). A lista completa de eventos cognitivos pendentes (`ProductImported` etc.) também não foi fechada nesta Wave — permanece taxonomia parcial, mesma disciplina de "nenhum evento declarado antes da capacidade que o gera existir" das Waves anteriores. O que foi entregue: sitemap-index, migração `middleware`→`proxy` (Next.js 16), consolidação de observabilidade (`/api/admin/platform-health`), correção do achado crítico de segurança + 1 médio + 2 baixos, correção de um bug de dados real (`import_logs`), e o relatório de certificação completo do Release 1.7.
 
 ---
 

@@ -2,6 +2,34 @@
 
 Reconstruído a partir do histórico real de commits (`git log`) e do estado atual do código. Formato: data, commit, o que mudou de fato (verificado no diff/estado resultante, não só na mensagem).
 
+## 2026-07-02 — Release 1.7 — Wave 6 — Platform Hardening, Certification & Release Lock
+
+Sexta e última entrega faseada do Release 1.7 (mandato do CTO: "Platform Hardening, Certification & Release Lock" — auditoria completa, correção de achados crítico/médio, sem domínio novo, sem regra de negócio nova, sem feature grande). Fecha o Release 1.7. Ver `docs/operations/RELEASE_CERTIFICATION_1.7.md` para o relatório executivo completo.
+
+**Segurança — achado crítico corrigido**: `ProgressiveVerificationEngine` (Wave 5) auto-aprovava claims com base em sinais (telefone, WhatsApp, website, Instagram) todos publicamente visíveis em `/lojas/[slug]` — qualquer conta autenticada podia copiar telefone+WhatsApp da própria página pública da loja e auto-aprovar uma claim fraudulenta. `ClaimService.create` desliga completamente o caminho de auto-aprovação (`AUTO_APPROVAL_ENABLED = false`); toda claim roteia para `AwaitingReview`; confidence/breakdown seguem persistidos como evidência para o revisor humano. Ver ADR-042.
+
+**Segurança — achado médio corrigido**: `DelegationService.accept(token, userId)` aceitava qualquer usuário autenticado com um token de convite válido, sem checar se o e-mail da sessão batia com `delegate.invitedEmail` — um token vazado bastava para assumir uma vaga de delegado. Agora exige `acceptingUserEmail` (resolvido só no servidor via `requireAuth()`) e rejeita (case-insensitive mismatch). 2 novos testes.
+
+**Segurança — achados baixos corrigidos**: `lib/cron-auth.ts` trocou comparação de string (`!==`, vulnerável a timing attack) por `crypto.timingSafeEqual()`; 33 `DROP POLICY IF EXISTS` adicionadas em 4 migrations pré-`0017` (`0010`, `0014`, `0015`, `0016`) que criavam policies sem guard de idempotência — sem efeito no banco já aplicado, mas agora seguras para reaplicar contra um ambiente novo/staging.
+
+**Bug de dados corrigido**: `app/admin/page.tsx`, `app/api/admin/dashboard/stats/route.ts`, `CatalogIntelligenceService.ts` e `ExecutiveSummaryService.ts` liam `import_logs`, tabela congelada desde a Wave 2 (quando as escritas migraram para `connector_sync_runs`) — o card "última importação" do admin e os diagnósticos de catálogo/resumo executivo do merchant Command Center ficaram silenciosamente parados para qualquer loja sincronizada via Connector Platform. Repontado para `connector_sync_runs`.
+
+**SEO — sitemap-index**: `app/sitemap.ts` (monolítico, sem paginação) substituído por `generateSitemaps()` com 3 shards estáticos (`static`/`stores`/`lojas`) + `app/product/sitemap.ts` (novo, shards de 20k slugs via `getProductSlugsCount()`/`getProductSlugsPage()`, nunca carrega o catálogo inteiro em memória) — remove o limite implícito de ~25k produtos que o sitemap antigo carregava sem aviso. `app/robots.ts` lista todos os shards.
+
+**Next.js 16 — proxy**: `middleware.ts` → `proxy.ts` (rename de arquivo e função `middleware`→`proxy`, sem dependência de Edge runtime, confirmado seguro pela documentação oficial do framework).
+
+**Performance**: `app/lojas/[slug]/page.tsx` chamava `getStorePublic()` duas vezes por requisição (metadata + corpo da página), sem cache — novo `_cache.ts` com `React.cache()`, mesmo padrão de `product/[slug]`/`store/[slug]` (ADR-021).
+
+**Observabilidade**: `GET /api/admin/platform-health` (novo, admin-only) consolida os sinais de saúde de brain/connectors/analytics/growth/canonical-catalog/ownership/storage num único endpoint, computado sob demanda — sem tabela nova.
+
+**Documentação**: `.env.example` ganhou `CRON_SECRET` (obrigatório desde a Wave 2, nunca documentado); ADR-042 (auto-aprovação desligada + rate limiting adiado); `TECH_DEBT.md` seção Wave 6.
+
+**Auditoria completa, achados sem correção de código nesta Wave (documentados, não silenciosos)**: ausência de rate limiting em endpoints de mutação (`claims`/`delegates`/`upgrade-interest`) — construir a infraestrutura é uma capacidade nova, fora do mandato desta Wave, ver ADR-042 parte 3; `proxy.ts` não cobre `/api/admin/**`/`/api/merchant/**` (seguro hoje porque toda rota já se autoguarda, mas é uma dependência implícita a vigiar); 5 serviços pré-Wave 4/5 embutem `supabase.from(...)` direto em vez de repositório (dívida de padrão, sem bug de comportamento).
+
+**Testes**: 2 novos (`DelegationService` — e-mail correspondente e case-insensitive) — total 281/281.
+
+Quality Gate: lint 0, typecheck 0, 281/281 testes, build 157 rotas, `db:lint` OK.
+
 ## 2026-07-01 — Release 1.7 — Wave 5 — Merchant Acquisition & Ownership Platform
 
 Quinta entrega do Release 1.7 — segundo re-escopo do CTO: "Merchant Claim + Onboarding" (2 bullets) virou "Merchant Acquisition & Ownership Platform" (8 Epics), com uma mudança explícita de prioridade — infraestrutura dá lugar a crescimento de negócio. Toda decisão respondeu a "isso aumenta a conversão de lojistas para clientes do ParaguAI?".
