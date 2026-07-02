@@ -142,7 +142,7 @@ Quando "Possible" ou "Partial", o SQL de reversão real vive em um arquivo compa
 
 ## 9. Runbook — primeira vez linkando o projeto real
 
-Este é o único passo manual que resta, e deve ser executado pelo CTO (a Supabase CLI precisa do access token e da senha do banco, que não devem ser compartilhados nesta sessão):
+**Status (2026-07-02): concluído.** O CTO já linkou o projeto e rodou `db push` — `supabase/migrations/` cresceu de 3 para 5 arquivos ao longo das Waves 3-5 (`0022`-`0026`: `connector_platform`, `merchant_entitlements_discovery`, `product_identity`, `canonical_catalog`, `merchant_ownership`), e todas as 5 estão confirmadas aplicadas (`supabase migration list` retorna `local`==`remote` para as 5; `supabase db push` retorna "Remote database is up to date"). O runbook abaixo fica documentado para a próxima vez que uma migration nova for adicionada a `supabase/migrations/` (basta repetir o passo 3):
 
 ```bash
 # 1. Login (abre o navegador para autenticação)
@@ -151,14 +151,14 @@ npx supabase login
 # 2. Link com o projeto real (ref já confirmado em NEXT_PUBLIC_SUPABASE_URL)
 npx supabase link --project-ref acairzpzsklctaqjsukw
 
-# 3. Push das 3 migrations pendentes (0022-0024, nunca aplicadas)
+# 3. Push de qualquer migration nova em supabase/migrations/
 npm run db:push
 
 # 4. Confirmar
 npm run db:status
 ```
 
-**Por que não precisa de "baseline"/"repair"**: `supabase/migrations/` só contém `0022`-`0024` (as únicas nunca aplicadas). `0001`-`0021` continuam vivendo só em `database/migrations/`, fora do controle da CLI — o schema de produção deles já existe e não muda. O primeiro `supabase db push` vai simplesmente aplicar exatamente as 3 migrations pendentes, sem tocar em nada anterior.
+**Por que não precisou de "baseline"/"repair"**: `supabase/migrations/` só contém as migrations nunca antes aplicadas manualmente. `0001`-`0021` continuam vivendo só em `database/migrations/`, fora do controle da CLI — o schema de produção deles já existia e não muda. Cada `supabase db push` aplica exatamente as migrations pendentes daquele momento, sem tocar em nada anterior.
 
 **Docker**: `supabase start`/`db reset` (banco local) exigem Docker Desktop, não disponível no ambiente onde este sistema foi construído. Necessário apenas se/quando quiser testar migrations localmente antes de aplicar — `db push`/`link`/`diff` contra o projeto remoto não precisam de Docker.
 
