@@ -18,6 +18,40 @@ export async function getProducts(): Promise<Product[]> {
   return data as Product[];
 }
 
+// Sitemap-index support (Release 1.7 — Wave 6): counts/paginates by slug
+// only, so a catalog that grows into the millions can be chunked into
+// multiple sitemap files (Google's ~50k URL-per-file limit) without ever
+// loading the full product catalog into memory the way getProducts() does.
+export async function getProductSlugsCount(): Promise<number> {
+  const { count, error } = await supabase
+    .from("products")
+    .select("id", { count: "exact", head: true })
+    .not("slug", "is", null);
+
+  if (error) {
+    console.error(error);
+    return 0;
+  }
+
+  return count ?? 0;
+}
+
+export async function getProductSlugsPage(offset: number, limit: number): Promise<string[]> {
+  const { data, error } = await supabase
+    .from("products")
+    .select("slug")
+    .not("slug", "is", null)
+    .order("id", { ascending: true })
+    .range(offset, offset + limit - 1);
+
+  if (error) {
+    console.error(error);
+    return [];
+  }
+
+  return (data ?? []).map((row) => row.slug as string);
+}
+
 export async function getProductBySlug(
   slug: string
 ): Promise<ProductWithRelations | null> {

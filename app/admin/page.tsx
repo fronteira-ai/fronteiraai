@@ -2,13 +2,14 @@ import { Package, Store, Tag, Layers, DollarSign, Clock } from "lucide-react";
 import type { DashboardStats } from "@/types/admin";
 import { requireAdmin, isAuthError } from "@/lib/admin-auth";
 import { redirect } from "next/navigation";
+import { toImportLogShape } from "@/lib/sync-run-mapper";
 
 async function getStats(): Promise<DashboardStats | null> {
   const auth = await requireAdmin();
   if (isAuthError(auth)) return null;
   const db = auth.serviceClient;
 
-  const [products, offers, stores, brands, categories, priceHistory, lastImport] =
+  const [products, offers, stores, brands, categories, priceHistory, lastRun] =
     await Promise.all([
       db.from("products").select("id", { count: "exact", head: true }),
       db.from("offers").select("id", { count: "exact", head: true }),
@@ -16,7 +17,7 @@ async function getStats(): Promise<DashboardStats | null> {
       db.from("brands").select("id", { count: "exact", head: true }),
       db.from("categories").select("id", { count: "exact", head: true }),
       db.from("price_history").select("id", { count: "exact", head: true }),
-      db.from("import_logs").select("*").order("created_at", { ascending: false }).limit(1).maybeSingle(),
+      db.from("connector_sync_runs").select("*").order("started_at", { ascending: false }).limit(1).maybeSingle(),
     ]);
 
   return {
@@ -26,7 +27,7 @@ async function getStats(): Promise<DashboardStats | null> {
     brands: brands.count ?? 0,
     categories: categories.count ?? 0,
     priceHistoryEntries: priceHistory.count ?? 0,
-    lastImport: lastImport.data ?? null,
+    lastImport: lastRun.data ? toImportLogShape(lastRun.data) : null,
   };
 }
 

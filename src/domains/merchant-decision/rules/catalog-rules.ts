@@ -105,10 +105,10 @@ export const StaleImportRule: Rule = {
       estimated_minutes: 20,
       reason: `${daysSince} dias sem atualização. Produtos com preços desatualizados afastam compradores.`,
       evidence: [
-        { label: "Dias sem atualização", value: daysSince, data_source: "import_logs" },
-        { label: "Última importação", value: new Date(lastImportAt).toLocaleDateString("pt-BR"), data_source: "import_logs" },
+        { label: "Dias sem atualização", value: daysSince, data_source: "connector_sync_runs" },
+        { label: "Última importação", value: new Date(lastImportAt).toLocaleDateString("pt-BR"), data_source: "connector_sync_runs" },
       ],
-      data_sources: ["catalog", "import_logs"],
+      data_sources: ["catalog", "connector_sync_runs"],
       action_url: "/merchant/imports/new",
       action_label: "Atualizar catálogo",
       expires_at: null,
