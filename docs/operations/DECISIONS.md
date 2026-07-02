@@ -781,3 +781,60 @@ Ambos os fornecedores confirmam cobertura de PYG na documentação pública cons
 - CurrencyLayer — descartada por posicionamento: otimizada para precisão grau-contábil que o ParaguAI não precisa (não processamos transação financeira, só exibimos uma cotação de referência).
 - Fonte oficial do Banco Central do Paraguay (BCP) direta — descartada nesta Wave: bancos centrais tipicamente publicam cotação oficial uma vez ao dia, incompatível com a cadência de 5–15 minutos já aprovada pelo CTO; também não há API pública documentada e estável identificada nesta pesquisa (só publicação em página web, exigiria scraping frágil para uma peça de infraestrutura crítica de precificação — risco desproporcional ao benefício). Pode ser reavaliada no futuro como fonte de auditoria/reconciliação diária, não como fonte primária de atualização contínua.
 - Construir uma fonte própria de câmbio (scraping de múltiplas casas de câmbio de Ciudad del Este) — descartada por escopo: geraria um novo domínio de dados inteiro (crawler, normalização, detecção de anomalia) para resolver um problema que um fornecedor de mercado já resolve de forma confiável e barata — direto Anti-Pattern de `NORTH_STAR.md` §7 ("tecnologias da moda"/complexidade desnecessária), embora possa ser uma fonte de validação cruzada interessante em uma Wave futura, não como substituto do fornecedor principal.
+
+---
+
+## ADR-045 — Buyer Personal-Data Model: LGPD como referência primária, `buyers` como tabela própria, deleção por anonimização
+
+**Data**: 2026-07-02 (Release 1.8 — Wave 6, pré-requisito nomeado em `RELEASE_1_8_BLUEPRINT.md` Capítulo 6/12)
+**Status**: Aceita — schema e princípios; texto legal de política de privacidade e designação de Encarregado permanecem ação do CTO, fora do escopo desta ADR (ver Consequência)
+
+**Contexto legal (pesquisado nesta data, não assumido de memória — leis de proteção de dados mudam)**: o ParaguAI é uma empresa paraguaia, mas `BUSINESS_MODEL.md` §3 é explícito — "compradores de todo o Brasil cruzam fronteiras" é o público central. A LGPD (Lei Geral de Proteção de Dados, Brasil) tem alcance extraterritorial confirmado: aplica-se a qualquer tratamento de dados de pessoa física localizada no Brasil, **independentemente de onde a empresa está sediada ou onde o dado está hospedado**, sem limiar mínimo de escala ou faturamento — um único comprador brasileiro já é suficiente para a lei se aplicar. Isso não é uma possibilidade a considerar — é a condição inicial do Buyer Account System deste Release. Verificado separadamente: a Lei paraguaia 6534/2020 (frequentemente citada como "lei de proteção de dados" do Paraguai) é, na prática, específica para **dados creditícios** (bureaus de crédito, sob autoridade do BCP/SEDECO) — não é uma lei geral de proteção de dados equivalente à LGPD/GDPR, e não se aplica diretamente a uma conta de comprador de marketplace (o ParaguAI não é um birô de crédito). Conclusão: a LGPD é a referência de conformidade vinculante real deste capítulo; o desenho abaixo segue seus princípios com rigor suficiente para também servir de boa prática caso o Paraguai publique uma lei geral no futuro, ou caso o ecossistema se expanda para outros mercados (`VISION_2035.md` Capítulo 11).
+
+**Achado de schema (verificado, não assumido) que esta decisão precisa resolver**: `profiles` (`database/migrations/0009_admin_platform.sql`) já existe, mas seu `CHECK` restringe `role` a `('admin', 'operator')` — é uma tabela de **staff interno**, não de usuário geral. Um trigger (`handle_new_user()`) roda em **todo** `INSERT` em `auth.users` e cria automaticamente uma linha em `profiles` com `role = 'operator'` — sem essa correção, qualquer comprador que se cadastrasse seria automaticamente rotulado como "operador" interno, uma mistura semântica real, não apenas uma inconsistência de nomenclatura. Adicionalmente, `merchant_reviews.reviewer_id` (`0016_trust_experience.sql`) já referencia `profiles(id)` — um vínculo que hoje nunca foi de fato alimentado por um comprador real, porque nenhum fluxo de cadastro de comprador jamais existiu. Este é um gap latente do Release 1.5, descoberto ao pesquisar esta ADR, não introduzido por ela.
+
+**Decisão — identidade**: nasce `buyers`, tabela própria, seguindo exatamente o mesmo precedente arquitetural de `merchants` (não reaproveita `profiles`, que continua exclusiva para staff interno):
+
+```
+buyers
+  id               uuid PRIMARY KEY DEFAULT gen_random_uuid()
+  user_id          uuid UNIQUE REFERENCES auth.users(id) ON DELETE SET NULL  -- não CASCADE, ver Deleção abaixo
+  email            text
+  display_name     text        -- opcional, nunca exige nome real
+  phone            text        -- opcional, só se optar por alertas via WhatsApp
+  marketing_opt_in boolean NOT NULL DEFAULT false
+  anonymized_at    timestamptz -- null enquanto ativo; setado no momento da anonimização
+  created_at       timestamptz NOT NULL DEFAULT now()
+
+buyer_consent_log  -- INSERT-only, mesma disciplina de review_history/signal_provenance
+  id           uuid PRIMARY KEY DEFAULT gen_random_uuid()
+  buyer_id     uuid NOT NULL REFERENCES buyers(id) ON DELETE CASCADE
+  consent_type text NOT NULL   -- 'terms_of_service' | 'marketing' | 'analytics'
+  granted      boolean NOT NULL  -- cada mudança é uma linha nova, nunca um UPDATE
+  recorded_at  timestamptz NOT NULL DEFAULT now()
+```
+
+**Decisão — minimização de dado (princípio LGPD, não apenas boa prática)**: coleta-se apenas e-mail (obrigatório, da própria autenticação) por padrão. Nome de exibição e telefone são opcionais e coletados só quando o comprador ativamente opta por um recurso que os exige (nome para atribuição pública de review; telefone só se o comprador ligar alertas via WhatsApp, `RELEASE_1_8_BLUEPRINT.md` Capítulo 6, item 7). Nenhum documento (CPF/RG/CI), endereço ou dado de pagamento é coletado — o ParaguAI não processa pagamento (`AI_CONSTITUTION.md` I, "não somos um e-commerce"), então não há justificativa de propósito para coletar esse dado.
+
+**Decisão — consentimento**: toda concessão ou revogação de consentimento (termos de uso, marketing, analytics) gera uma linha nova em `buyer_consent_log` — nunca uma atualização in-place — dando exatamente o registro auditável "quando e o quê foi consentido" que a LGPD exige para provar conformidade, e reaproveitando o mesmo padrão INSERT-only já usado em `review_history`/`price_history` (`STRATEGIC_ASSETS.md` Anti-Pattern 5).
+
+**Decisão — deleção, a parte mais delicada desta ADR**: a LGPD garante direito de eliminação/esquecimento; `STRATEGIC_ASSETS.md` Anti-Pattern 5 proíbe destruir dado histórico ("dados de Core Assets são INSERT-only... um dia de dados perdidos não pode ser recuperado"). Essas duas regras **não colidem de fato** — colidiriam apenas se dado pessoal identificável e sinal comportamental agregado fossem tratados como a mesma coisa. `VISION_2035.md` Capítulo 10 já resolveu esse princípio antes desta ADR precisar inventá-lo: "toda inteligência regional produzida é agregada e anonimizada... nenhuma informação que permita identificar comportamento de um comprador específico... é exposta." A LGPD, no Artigo 12, também trata dado efetivamente anonimizado como fora do escopo de dado pessoal. A operacionalização:
+
+1. Ao receber um pedido de eliminação, `buyers.email`/`display_name`/`phone` são sobrescritos (não a linha inteira — `id` permanece estável) e `anonymized_at` é setado.
+2. `buyers.user_id` usa `ON DELETE SET NULL`, não `CASCADE` — a conta em `auth.users` pode ser de fato apagada (o "esquecimento" real, no nível de autenticação) sem cascatear a destruição da linha `buyers` já anonimizada, preservando a integridade referencial de `buyer_favorites`/`buyer_events`/`price_alerts` (Capítulo 6 do Blueprint) — que continuam existindo como sinal comportamental agregado e não-identificável, alimentando `C-6 Buyer Behavioral Knowledge` normalmente.
+3. `buyer_consent_log` nunca é apagado nem anonimizado — é, ele mesmo, o registro de conformidade que prova que a solicitação de consentimento/revogação aconteceu; apagá-lo destruiria a evidência de conformidade, o oposto do que a LGPD pede.
+
+**Prazo operacional**: a LGPD dá até 15 dias para resposta a uma solicitação de titular. Recomenda-se um SLA interno mais agressivo (72h), consistente com o padrão de rigor já aplicado a outras decisões deste projeto (ex.: notificação de vazamento em `AI_CONSTITUTION.md`/Wave 6) — não porque a lei exige, mas porque o próprio projeto já opera com um viés de "honestidade rápida" mais alto que o mínimo legal.
+
+**Consequência — dois fixes companheiros obrigatórios, não opcionais, antes de qualquer cadastro público de comprador**:
+1. `handle_new_user()` (`0009_admin_platform.sql`) precisa parar de criar uma linha em `profiles` incondicionalmente para todo novo `auth.users`. Sem essa correção, o Buyer Account System nasceria já com o exato problema de rotulagem identificado no Contexto. A implementação exata (ex.: sinalizar tipo de conta nos metadados do signup e rotear condicionalmente) é decisão de execução da Wave 6, não desta ADR.
+2. `merchant_reviews.reviewer_id` deve migrar de `profiles(id)` para `buyers(id)` — fecha um gap latente do Release 1.5 que nunca foi de fato exercitado, e alinha o domínio de reviews à identidade correta (comprador, não staff).
+
+**Consequência — fora do escopo técnico desta ADR, ação explícita do CTO**: a LGPD exige a designação de um Encarregado (equivalente a DPO) com contato publicamente divulgado (Art. 41), e uma política de privacidade real, escrita e revisada por aconselhamento jurídico — não gerada por este documento. Uma ADR de engenharia define o modelo de dado e as salvaguardas técnicas; não substitui revisão jurídica formal. Nomeado aqui como bloqueador de conformidade, não como algo já resolvido.
+
+**Consequência — segurança**: o Buyer Account System é a primeira superfície de autenticação pública (self-signup, sem convite) deste projeto — merchant/admin hoje são fluxos controlados. Isso torna a ausência de rate limiting (`TECH_DEBT.md`, ADR-042 parte 3) mais urgente precisamente nesta Wave — recomenda-se resolver rate limiting em endpoints de auth/signup de comprador como parte da própria Wave 6, não adiado novamente.
+
+**Alternativas descartadas**:
+- Reaproveitar `profiles` para comprador, estendendo o `CHECK` para incluir `'buyer'` — descartada: conflaria identidade de staff interno com identidade de consumidor público na mesma tabela, e não resolveria o bug de rotulagem do trigger, só o esconderia atrás de um valor de enum a mais. Viola "um dono por decisão" (`AI_CONSTITUTION.md` V).
+- Deleção real (hard delete) da linha `buyers` e de todo dado vinculado — descartada: destruiria sinal comportamental agregado que `STRATEGIC_ASSETS.md` protege como Core Asset (C-6), sem necessidade legal real — a LGPD não exige apagar dado anonimizado, exige que dado pessoal identificável deixe de existir. Hard delete resolveria conformidade destruindo patrimônio que a anonimização preserva com a mesma conformidade.
+- Aplicar o modelo de conformidade da GDPR europeia diretamente, sem verificar a LGPD brasileira — descartada por precisão: os dois regimes são semelhantes mas não idênticos (prazos, definições, base legal de tratamento diferem); a pesquisa desta ADR verificou LGPD especificamente, porque é o regime que de fato se aplica ao público comprador real do ParaguAI.
