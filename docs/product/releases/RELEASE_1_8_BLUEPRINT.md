@@ -317,7 +317,7 @@ Nenhuma Wave deste Release começa sem responder à cadeia obrigatória `MOAT_ST
 
 ## As Waves propostas
 
-**Wave 1 — Exchange Engine** (Capítulo 3). Impacto imediato (visível em toda oferta existente, sem esperar novo catálogo), complexidade baixa-média (schema pequeno, um fornecedor externo). Matura C-5. Pré-requisito de Fronteira Agora (Wave 7) e melhora a precisão de toda comparação de preço existente hoje. **ADR necessário antes de começar**: fornecedor de câmbio.
+**Wave 1 — Exchange Engine** (Capítulo 3). Impacto imediato (visível em toda oferta existente, sem esperar novo catálogo), complexidade baixa-média (schema pequeno, um fornecedor externo). Matura C-5. Pré-requisito de Fronteira Agora (Wave 7) e melhora a precisão de toda comparação de preço existente hoje. **Fornecedor de câmbio já decidido — ADR-043: ExchangeRate-API.com, plano Business, $30/mês, atualização a cada 5 min, PYG confirmado.** Wave 1 desbloqueada para começar.
 
 **Wave 2 — Live Pricing + Freshness Engine** (Capítulos 2 e 4, entregues juntos — a Freshness Score não existe sem o Live Pricing rodando). O Release mais tecnicamente arriscado deste Blueprint (arquitetura de refresh tiered sem fila nova) e o que cria o Asset C-7 + Moat 9. **ADR necessário antes de começar**: criação formal de C-7/Moat 9; confirmação da arquitetura de cron tiered vs. investimento em fila real.
 
@@ -439,7 +439,7 @@ Por `NORTH_STAR.md` §9 — nenhuma Wave é declarada concluída sem avançar pe
 
 ## 12. Riscos
 
-- **Dependência de fornecedor de câmbio externo** — custo, disponibilidade, SLA. Mitigação: ADR de fornecedor antes da Wave 1, com plano de fallback documentado.
+- **Dependência de fornecedor de câmbio externo** — custo, disponibilidade, SLA. **Resolvido**: ADR-043 (ExchangeRate-API.com, plano Business) já escrito, com exigência explícita de degradação graciosa (última cotação válida) documentada no próprio ADR — não apenas nomeado como risco futuro.
 - **Ausência de infraestrutura de fila real** pode não escalar além de um volume de ofertas "hot" ainda não estimado — nomeado explicitamente no Capítulo 2, não escondido.
 - **Câmeras ao vivo e status da Ponte da Amizade têm viabilidade legal/técnica não confirmada** — tratados como sub-waves condicionais, nunca bloqueantes do restante da Wave 7.
 - **Conteúdo SEO programático sem lastro de dado real arrisca penalização por conteúdo fino** — mitigado estruturalmente pela ordem do roadmap (SEO depois de Market Intelligence).
@@ -460,6 +460,6 @@ Exatamente a ordem do Capítulo 12: Wave 1 → 2 → 3 → 4 → 5 → 6 → 7 (
 
 **Sim, com uma condição estrutural explícita**: a estratégia é clara porque cada capítulo se ancora em infraestrutura que o Release 1.7 já certificou, e porque este documento recusou-se a inflar o catálogo de Assets e Moats com nomes redundantes — o que teria parecido mais impressionante, mas teria violado a própria governança que `STRATEGIC_ASSETS.md`/`MOAT_STRATEGY.md` exigem. Apenas **um Asset novo (C-7)** e **um Moat novo (Moat 9)** são propostos, ambos genuinamente novos e ambos exigindo ADR formal do CTO antes de qualquer código ser escrito — consistente com a regra permanente de que Core Assets não nascem por conveniência retórica.
 
-**Risco estratégico a documentar antes do encerramento, conforme exigido**: este Blueprint depende de três decisões Tipo 1 que **não foram tomadas aqui** e bloqueiam Waves específicas até serem resolvidas — fornecedor de câmbio (Wave 1), modelo de dados pessoais de comprador (Wave 6) e fornecedor de billing (Wave 8). Nenhuma delas é hipotética ou adiável indefinidamente: são decisões que o CTO precisa tomar, com ADR formal, antes que as Waves correspondentes possam começar. Até lá, o Blueprint está completo, mas a execução da Wave 1 não deve iniciar sem essa primeira decisão.
+**Risco estratégico a documentar antes do encerramento, conforme exigido**: este Blueprint originalmente dependia de três decisões Tipo 1 que não haviam sido tomadas e bloqueavam Waves específicas. **A primeira já foi resolvida**: fornecedor de câmbio (Wave 1) — ver ADR-043 (`docs/operations/DECISIONS.md`), que escolhe ExchangeRate-API.com (plano Business) com justificativa de custo, cobertura de PYG e exigência de degradação graciosa. **Duas permanecem em aberto** e continuam bloqueando suas Waves: modelo de dados pessoais de comprador (Wave 6) e fornecedor de billing (Wave 8). Nenhuma das duas é hipotética ou adiável indefinidamente — são decisões que o CTO precisa tomar, com ADR formal, antes que as Waves correspondentes possam começar.
 
-**Aguardando aprovação explícita do CTO para**: (1) o conteúdo geral deste Blueprint como referência oficial das Waves futuras; (2) a criação formal de Asset C-7 e Moat 9; (3) início da Wave 1, condicionado à decisão de fornecedor de câmbio.
+**Aguardando aprovação explícita do CTO para**: (1) o conteúdo geral deste Blueprint como referência oficial das Waves futuras; (2) a criação formal de Asset C-7 e Moat 9; (3) ~~início da Wave 1, condicionado à decisão de fornecedor de câmbio~~ — **Wave 1 pode iniciar**, fornecedor já decidido (ADR-043).

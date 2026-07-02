@@ -740,3 +740,44 @@ Na mesma auditoria, um segundo achado relacionado (severidade média): `Delegati
 - Reduzir `AUTO_APPROVE_THRESHOLD` ou remover peso de telefone/WhatsApp da fórmula — descartada: qualquer ajuste de peso continua vulnerável enquanto os sinais comparados forem os mesmos dados já públicos; o problema é estrutural (a fonte da verdade que o requerente precisa "acertar" é pública), não um ajuste de calibração.
 - Implementar verificação por OTP nesta própria Wave — descartada por escopo: Wave 6 é hardening, não features; construir um novo mecanismo de verificação sem esse sign-off separado do CTO contrariaria o próprio mandato da Wave.
 - Deixar a auto-aprovação ligada e só monitorar por fraude após o fato — descartada: dado o dano potencial (perda de controle de uma loja real), esperar por um incidente para agir não é aceitável quando a correção estrutural (desligar) é imediata e reversível.
+
+---
+
+## ADR-043 — Exchange Engine: ExchangeRate-API.com (plano Business) como fornecedor de câmbio
+
+**Data**: 2026-07-02 (Release 1.8 — Wave 1, pré-requisito nomeado em `RELEASE_1_8_BLUEPRINT.md` Capítulo 3/12)
+**Status**: Aceita
+
+**Contexto**: o Exchange Engine (`RELEASE_1_8_BLUEPRINT.md` Capítulo 3) exige um fornecedor externo de cotação USD/BRL/PYG, com atualização "praticamente em tempo real" — decisão já aprovada pelo CTO antes deste Blueprint, não reaberta aqui. O Blueprint propôs uma cadência de 5–15 minutos como alvo prático. PYG (Guarani paraguaio) não é uma moeda coberta por todo fornecedor de câmbio — é o primeiro critério de exclusão, antes de qualquer comparação de preço ou frequência.
+
+Pesquisa feita nesta data (não apenas conhecimento de treinamento, dado que preços e planos de SaaS mudam) confirmou cobertura de PYG e levantou os planos pagos reais de dois fornecedores estabelecidos:
+
+| Fornecedor | Plano | Preço/mês | Cota | Frequência de atualização |
+|---|---|---|---|---|
+| ExchangeRate-API.com | Free | $0 | 1.500 req/mês | 1x/dia |
+| ExchangeRate-API.com | Pro | $10 | 30.000 req/mês | a cada 60 min |
+| **ExchangeRate-API.com** | **Business** | **$30** | **125.000 req/mês** | **a cada 5 min** |
+| Open Exchange Rates | Free | $0 | 1.000 req/mês | 1x/hora (só base USD) |
+| Open Exchange Rates | Developer | $12 | 10.000 req/mês | 1x/hora |
+| Open Exchange Rates | Enterprise | $47 | 100.000 req/mês | a cada 30 min |
+| Open Exchange Rates | Unlimited | $97 | ilimitado | a cada 5 min |
+
+Ambos os fornecedores confirmam cobertura de PYG na documentação pública consultada. CurrencyLayer foi descartado sem levantamento de preço detalhado — seu posicionamento de mercado é "cálculo grau-contábil/compliance" (precisão para reconciliação financeira), um requisito que o ParaguAI não tem: o Exchange Engine exibe uma cotação de referência informativa para comparação de preço, nunca processa uma transação financeira real — pagar por precisão contábil seria over-engineering direto (`NORTH_STAR.md` §7, "tecnologias/capacidades sem problema identificado").
+
+**Decisão**: adota-se **ExchangeRate-API.com, plano Business ($30/mês, 125.000 requisições/mês, atualização a cada 5 minutos)** como fornecedor do Exchange Engine.
+
+**Por que Business, e não Pro**: a cadência de 5 minutos está dentro do intervalo aprovado pelo CTO (5–15 min); o plano Pro (60 min) ficaria fora desse intervalo. A diferença de custo entre os dois ($20/mês) é pequena frente ao valor estratégico do Live Pricing/Freshness Engine (`RELEASE_1_8_BLUEPRINT.md` Capítulos 2/4) — atualizar câmbio a cada hora enquanto ofertas "hot" atualizam a cada 2–5 minutos criaria uma inconsistência visível (preço convertido desatualizado ao lado de um preço original recém-verificado).
+
+**Por que ExchangeRate-API.com, e não Open Exchange Rates**: a mesma cadência de 5 minutos custa $30/mês em um fornecedor contra $97/mês no outro — mais de 3x de diferença para a mesma característica técnica relevante (frequência de atualização + cobertura de PYG confirmada em ambos). Open Exchange Rates tem reputação de mercado mais estabelecida e um plano "VIP" com atualização por segundo — nenhum dos dois diferenciais justifica o custo adicional para o caso de uso deste Release (não somos um serviço financeiro que precisa de cotação ao segundo).
+
+**Volume real esperado**: uma única chamada por ciclo de atualização, com moeda-base USD, retorna todas as taxas necessárias (`USD/PYG`, `USD/BRL`) em uma resposta — `BRL/PYG` é derivado por triangulação matemática (`taxa_BRL_PYG = taxa_USD_PYG / taxa_USD_BRL`), sem uma terceira chamada. A cada 5 minutos, 24/7, isso é ~8.640 requisições/mês — **7% da cota do plano Business ($30)**, com folga generosa para retentativas, backfill manual e picos operacionais.
+
+**Resiliência obrigatória (não opcional)**: consistente com `AI_CONSTITUTION.md` V ("Degradação graciosa, sempre"), o `ExchangeService` (`RELEASE_1_8_BLUEPRINT.md` Capítulo 3) deve usar a última cotação válida registrada em `exchange_rates` quando uma chamada ao fornecedor falhar — nunca bloquear a exibição de preço convertido por uma falha temporária do fornecedor externo, e nunca mostrar erro ao comprador por causa disso. Uma cotação desatualizada por poucos minutos em uma falha pontual é aceitável; um preço convertido ausente não é.
+
+**Consequência**: `exchange_rates.source` registra literalmente `"exchangerate-api.com"` — trocar de fornecedor no futuro (se justificado por SLA, cobertura ou preço) é uma mudança de configuração/adapter, não uma mudança de schema, desde que o novo fornecedor também cubra PYG/USD/BRL. Nenhum contrato anual foi assumido nesta decisão — recomenda-se cobrança mensal até que o Exchange Engine tenha operado em produção por pelo menos um ciclo completo, permitindo validar confiabilidade real antes de qualquer compromisso de longo prazo.
+
+**Alternativas descartadas**:
+- Open Exchange Rates (qualquer plano) — descartada por custo: mesma cadência de atualização exigida custaria mais de 3x o preço do fornecedor escolhido, sem diferencial técnico relevante para este caso de uso.
+- CurrencyLayer — descartada por posicionamento: otimizada para precisão grau-contábil que o ParaguAI não precisa (não processamos transação financeira, só exibimos uma cotação de referência).
+- Fonte oficial do Banco Central do Paraguay (BCP) direta — descartada nesta Wave: bancos centrais tipicamente publicam cotação oficial uma vez ao dia, incompatível com a cadência de 5–15 minutos já aprovada pelo CTO; também não há API pública documentada e estável identificada nesta pesquisa (só publicação em página web, exigiria scraping frágil para uma peça de infraestrutura crítica de precificação — risco desproporcional ao benefício). Pode ser reavaliada no futuro como fonte de auditoria/reconciliação diária, não como fonte primária de atualização contínua.
+- Construir uma fonte própria de câmbio (scraping de múltiplas casas de câmbio de Ciudad del Este) — descartada por escopo: geraria um novo domínio de dados inteiro (crawler, normalização, detecção de anomalia) para resolver um problema que um fornecedor de mercado já resolve de forma confiável e barata — direto Anti-Pattern de `NORTH_STAR.md` §7 ("tecnologias da moda"/complexidade desnecessária), embora possa ser uma fonte de validação cruzada interessante em uma Wave futura, não como substituto do fornecedor principal.
