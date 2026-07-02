@@ -12,6 +12,7 @@ import {
   ChevronRight,
   BadgeCheck,
   Activity,
+  UserCheck,
   type LucideIcon,
 } from "lucide-react";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
@@ -36,6 +37,7 @@ const nav: NavItem[] = [
   },
   { type: "leaf", label: "Importações", href: "/admin/imports", icon: Upload },
   { type: "leaf", label: "Ecossistema", href: "/admin/monitor", icon: Activity },
+  { type: "leaf", label: "Claims", href: "/admin/claims", icon: UserCheck },
   { type: "leaf", label: "Qualidade", href: "/admin/quality", icon: ShieldCheck },
   {
     type: "group",

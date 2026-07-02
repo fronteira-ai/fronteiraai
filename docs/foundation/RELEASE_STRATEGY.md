@@ -437,7 +437,7 @@ Os Quality Gates são verificações obrigatórias que toda Release deve passar 
 
 **Para Releases Security**: modelo de menor privilégio verificado. Credenciais e dados sensíveis não expostos. Validação em todas as fronteiras tocadas.
 
-**Para Releases Data**: dado tem origem, ciclo de vida e responsável documentados. Contrato de dados (forma e frescor) está explícito para consumidores.
+**Para Releases Data**: dado tem origem, ciclo de vida e responsável documentados. Contrato de dados (forma e frescor) está explícito para consumidores. Toda mudança de schema segue o Database Migration System V2 (`docs/engineering/DATABASE_ENGINEERING.md`): migration em `supabase/migrations/`, aplicada via Supabase CLI (`npm run db:push`) — nunca copiada manualmente para o SQL Editor —, validada por `npm run db:lint`, com par de verificação em `database/verification/` e classe de rollback declarada.
 
 **Para Releases AI**: dados de input têm qualidade verificada. O modelo tem contrato explícito (entrada, saída, comportamento em borda). O comportamento é observável — logs suficientes para diagnosticar resultado inesperado.
 

@@ -1,6 +1,11 @@
 -- ============================================================
 -- 0024 — Product Identity Engine (Shadow Mode) (Release 1.7 — Wave 3)
 -- Status: PRONTO PARA EXECUÇÃO
+-- Rollback: Possible, mas destrutivo do histórico de auditoria — DROP TABLE
+--   product_identity_match_log. Seguro para o catálogo (Shadow Mode nunca
+--   escreveu em products/offers), mas descarta todo o histórico de
+--   avaliações do motor. Preferir desativar a escrita (feature flag / código)
+--   antes de derrubar a tabela, se o objetivo for só pausar, não descartar.
 -- ============================================================
 --
 -- Cria:
@@ -26,7 +31,9 @@
 -- algorithm_version, e as linhas antigas permanecem interpretáveis
 -- exatamente como foram produzidas.
 --
--- APÓS APLICAR, execute as SELECTs de verificação ao final deste arquivo.
+-- Verificação: database/verification/0024_verify.sql (Database Migration
+-- System V2 — verification queries live outside migrations, never embedded
+-- and never auto-run; ver docs/engineering/DATABASE_ENGINEERING.md).
 -- ============================================================
 
 CREATE TABLE IF NOT EXISTS product_identity_match_log (
@@ -68,18 +75,6 @@ CREATE INDEX IF NOT EXISTS idx_product_identity_match_log_created_at
 ALTER TABLE product_identity_match_log ENABLE ROW LEVEL SECURITY;
 -- Leitura/escrita exclusivamente via service_role (sem policy pública) —
 -- mesmo padrão de connectors/connector_sync_runs (migration 0022). Inspeção
--- nesta Wave é feita via Supabase SQL Editor; UI dedicada fica para uma Wave
+-- via Supabase SQL Editor (debug/inspeção apenas, ver
+-- docs/engineering/DATABASE_ENGINEERING.md); UI dedicada fica para uma Wave
 -- futura, uma vez validado o algoritmo com dados reais.
-
--- ──────────────────────────────────────────────────────────
--- VERIFICAÇÃO PÓS-EXECUÇÃO
--- ──────────────────────────────────────────────────────────
-
-SELECT tablename, rowsecurity
-FROM pg_tables
-WHERE tablename = 'product_identity_match_log'
-  AND schemaname = 'public';
-
-SELECT indexname FROM pg_indexes
-WHERE tablename = 'product_identity_match_log'
-ORDER BY indexname;

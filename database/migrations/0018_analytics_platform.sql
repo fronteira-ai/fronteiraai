@@ -22,9 +22,9 @@
 --     FOR VALUES FROM ('2026-06-01') TO ('2026-07-01');
 -- Fazer isso via nova migration sem perder dados históricos.
 --
--- APÓS APLICAR:
--- 1. Verificar criação: SELECT table_name FROM information_schema.tables WHERE table_name LIKE 'buyer%' OR table_name LIKE 'merchant_analytics%';
--- 2. Testar INSERT em buyer_events via API POST /api/analytics/events
+-- Verificação: database/verification/0018_verify.sql (Database Migration
+-- System V2 — verification queries live outside migrations, never embedded
+-- and never auto-run; ver docs/engineering/DATABASE_ENGINEERING.md).
 -- ============================================================
 
 -- ──────────────────────────────────────────────────────────
@@ -160,6 +160,7 @@ ALTER TABLE buyer_events ENABLE ROW LEVEL SECURITY;
 
 -- Escrita: qualquer um pode inserir (evento público, sem auth obrigatória)
 -- NOTA: A API valida rate limit + sanitização. RLS permite insert para supabase anon key.
+DROP POLICY IF EXISTS buyer_events_insert ON buyer_events;
 CREATE POLICY buyer_events_insert ON buyer_events
   FOR INSERT TO anon, authenticated
   WITH CHECK (true);
@@ -174,10 +175,12 @@ CREATE POLICY buyer_events_insert ON buyer_events
 ALTER TABLE buyer_sessions ENABLE ROW LEVEL SECURITY;
 
 -- Escrita: qualquer um pode criar/atualizar (stateless session management)
+DROP POLICY IF EXISTS buyer_sessions_insert ON buyer_sessions;
 CREATE POLICY buyer_sessions_insert ON buyer_sessions
   FOR INSERT TO anon, authenticated
   WITH CHECK (true);
 
+DROP POLICY IF EXISTS buyer_sessions_update ON buyer_sessions;
 CREATE POLICY buyer_sessions_update ON buyer_sessions
   FOR UPDATE TO anon, authenticated
   USING (true)
@@ -191,18 +194,3 @@ ALTER TABLE merchant_analytics_daily ENABLE ROW LEVEL SECURITY;
 
 -- Leitura: merchant lê apenas seus próprios dados (verificado via API + service role)
 -- Escrita: somente service_role (computação server-side)
-
--- ──────────────────────────────────────────────────────────
--- VERIFICAÇÃO PÓS-EXECUÇÃO
--- ──────────────────────────────────────────────────────────
-
-SELECT table_name, row_security
-FROM information_schema.tables
-WHERE table_name IN ('buyer_events', 'buyer_sessions', 'merchant_analytics_daily')
-  AND table_schema = 'public'
-ORDER BY table_name;
-
-SELECT indexname, tablename
-FROM pg_indexes
-WHERE tablename IN ('buyer_events', 'buyer_sessions', 'merchant_analytics_daily')
-ORDER BY tablename, indexname;

@@ -12,8 +12,9 @@
 -- Um snapshot por merchant por dia (UNIQUE constraint).
 -- Upsert: re-processar o mesmo dia atualiza os números.
 --
--- APÓS APLICAR:
--- Verificar: SELECT table_name FROM information_schema.tables WHERE table_name = 'merchant_catalog_snapshots';
+-- Verificação: database/verification/0020_verify.sql (Database Migration
+-- System V2 — verification queries live outside migrations, never embedded
+-- and never auto-run; ver docs/engineering/DATABASE_ENGINEERING.md).
 -- ============================================================
 
 -- ──────────────────────────────────────────────────────────
@@ -49,16 +50,3 @@ ALTER TABLE merchant_catalog_snapshots ENABLE ROW LEVEL SECURITY;
 
 -- Leitura/escrita apenas via service_role (API routes)
 -- Merchants acessam seus dados exclusivamente via API autenticada
-
--- ──────────────────────────────────────────────────────────
--- VERIFICAÇÃO PÓS-EXECUÇÃO
--- ──────────────────────────────────────────────────────────
-
-SELECT table_name, row_security
-FROM information_schema.tables
-WHERE table_name = 'merchant_catalog_snapshots'
-  AND table_schema = 'public';
-
-SELECT indexname FROM pg_indexes
-WHERE tablename = 'merchant_catalog_snapshots'
-ORDER BY indexname;

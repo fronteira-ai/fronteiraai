@@ -1,0 +1,14 @@
+-- Database Migration System V2 (docs/engineering/DATABASE_ENGINEERING.md).
+--
+-- This file is a placeholder, deliberately empty of real seed data. This
+-- project's catalog seeding (stores/brands/categories/products/offers)
+-- already exists as a working, tested Node pipeline:
+-- `database/seed/index.js`, run via `npm run db:seed` / `db:seed:execute`.
+-- Converting that to SQL seed data is out of scope here — it wasn't broken,
+-- and rewriting a working tool isn't this task's job.
+--
+-- `supabase db reset` (local/Docker dev only) will run this file
+-- automatically per `[db.seed]` in config.toml. Until real seed SQL is
+-- added here, a local reset gives you an empty-but-schema-complete
+-- database — run `npm run db:seed:execute` afterward against that local
+-- database's connection string if you need sample data too.

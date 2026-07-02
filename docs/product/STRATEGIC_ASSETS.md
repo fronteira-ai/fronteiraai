@@ -118,6 +118,8 @@ São os ativos que diretamente sustentam os Moats permanentes. São os mais vali
 
 **Como fortalece outros ativos**: alimenta o Cross-Border Context Model (padrões regionais de preço), a Search Intelligence (relação entre busca e flutuação de preço), o Merchant Behavioral Knowledge (consistência de atualização por merchant) e o ParaguAI Brain Knowledge (modelos de predição de preço).
 
+**Release 1.7 — Wave 4 (Canonical Catalog)**: o histórico de preço passa a pertencer ao Canonical Product, não apenas à Offer — um produto vendido por dez lojas diferentes acumula um único patrimônio temporal agregado (menor/maior/média/variação/tendência), em vez de dez históricos fragmentados e não comparáveis entre si. É o mesmo ativo de sempre, agora com a identidade permanente que o torna comparável de fato.
+
 **Moat primário sustentado**: Historical Data Moat.
 
 **Justificativa de classificação Core**: satisfaz os três critérios. É o ativo mais irreplicável do ParaguAI — um concorrente que entrar no mercado hoje leva anos para ter histórico equivalente, a qualquer custo.
@@ -135,6 +137,8 @@ São os ativos que diretamente sustentam os Moats permanentes. São os mais vali
 **Como envelhece**: dados antigos de comportamento mantêm relevância contextual, mas comportamento recente tem peso maior. O ativo não envelhece negativamente — registros históricos de comportamento são evidência permanente, mesmo que o merchant tenha mudado seu comportamento desde então.
 
 **Como fortalece outros ativos**: alimenta o Historical Price Data com metadado de confiabilidade (dados de merchants com score alto têm maior confiabilidade histórica), a Search Intelligence (resultados de merchants confiáveis têm mais peso) e o ParaguAI Brain Knowledge (o Brain aprende a calibrar confiabilidade de dados por merchant).
+
+**Release 1.7 — Wave 5 (Merchant Acquisition & Ownership Platform)**: Progressive Verification (`src/domains/merchant-ownership/`) é o primeiro mecanismo real de verificação automática de propriedade de loja — confidence explicável por fatores nomeados (e-mail, telefone, WhatsApp, website, Instagram comparados com os dados já cadastrados na loja), nunca um score opaco. O `trust_score` em si continua sem algoritmo de cálculo (ADR-041 ainda não escrito), mas esta Wave entrega o primeiro sinal estruturado e auditável que um futuro scorer poderá consumir.
 
 **Moat primário sustentado**: Merchant Trust Network Moat.
 
@@ -154,6 +158,8 @@ São os ativos que diretamente sustentam os Moats permanentes. São os mais vali
 
 **Como fortalece outros ativos**: é a fundação de todos os outros ativos. Sem catálogo normalizado, não há Historical Price Data coerente (o mesmo produto precisa de identidade única para ter histórico comparável), não há Search Intelligence significativa (busca por produto sem identidade única produz ruído) e não há Brain Knowledge estruturado.
 
+**Release 1.7 — Wave 4 (Canonical Catalog)**: a "identidade única" descrita nesta definição deixa de ser um efeito colateral do upsert por slug e se torna uma entidade própria — `CanonicalProduct`, independente do connector de origem (`src/domains/canonical-catalog/`). `Product` passa a representar a origem/importação; `CanonicalProduct` representa a identidade permanente. Merge Candidates (Shadow Mode — nenhuma união automática) começam a mapear correspondências entre produtos de connectors diferentes, com confidence e fatores explicáveis, preparando a normalização completa do catálogo sem nunca arriscar uma união incorreta.
+
 **Moat primário sustentado**: todos os Moats — o Normalized Catalog é a camada de dados fundacional que torna os demais ativos coerentes.
 
 **Justificativa de classificação Core**: é o ativo estrutural que habilita todos os outros. Sem ele, os dados acumulados são ruído, não informação. É o mais difícil de construir porque requer julgamento sobre identidade de produto — o que é o mesmo produto em denominações diferentes de merchants diferentes.
@@ -171,6 +177,8 @@ São os ativos que diretamente sustentam os Moats permanentes. São os mais vali
 **Como envelhece**: dados antigos de busca têm valor histórico (sazonalidade, tendências plurianuais), mas padrões recentes têm mais peso para decisões operacionais. O ativo não envelhece — torna-se mais estratificado ao longo do tempo.
 
 **Como fortalece outros ativos**: orienta a expansão do Normalized Catalog (quais produtos precisam ser adicionados), informa o Merchant Behavioral Knowledge (quais merchants precisam de recomendações de catálogo), alimenta o Cross-Border Context Model (padrões de busca específicos da região) e o ParaguAI Brain Knowledge (o Brain aprende a prever o que será buscado antes de ser buscado).
+
+**Release 1.7 — Wave 4 (Canonical Catalog)**: o Compare Foundation (`CompareFoundationService`) prepara a infraestrutura de ranking interno de ofertas (preço, estoque, recência, confiança verificável — nunca Reputation Score) por Canonical Product — a base de dados que, quando a busca passar a operar sobre identidade canônica em vez de produto-por-connector, tornará os resultados de busca comparáveis entre lojas de fato, não apenas por nome semelhante.
 
 **Moat primário sustentado**: Search Intelligence Moat, Data Flywheel Moat.
 
@@ -190,6 +198,8 @@ São os ativos que diretamente sustentam os Moats permanentes. São os mais vali
 
 **Como fortalece outros ativos**: dá contexto ao Historical Price Data (preços em guaranis e dólar precisam de contexto cambial para serem comparáveis), enriquece a Search Intelligence (padrões de busca têm sazonalidade regional), e é o insumo mais diferenciado para o ParaguAI Brain Knowledge (o que o Brain sabe que nenhum modelo genérico sabe).
 
+**Release 1.7 — Wave 4 (Canonical Catalog)**: comparar preço entre lojas da fronteira só é contextualmente significativo quando o "mesmo produto" é de fato o mesmo produto — a identidade canônica é o pré-requisito estrutural para que padrões cambiais/regionais por produto (não por oferta isolada) comecem a ser observáveis com precisão.
+
 **Moat primário sustentado**: Cross-Border Context Intelligence Moat.
 
 **Justificativa de classificação Core**: é o ativo de maior vantagem competitiva em relação a players globais. Nenhuma plataforma de escala global possui dados específicos sobre este mercado — precisão local é impossível sem presença local ao longo do tempo.
@@ -207,6 +217,8 @@ São os ativos que diretamente sustentam os Moats permanentes. São os mais vali
 **Como envelhece**: padrões comportamentais específicos (como a sequência de busca → compare → decisão) têm relevância duradoura. Padrões de preferência por produto ou categoria são mais voláteis. O ativo cresce em sofisticação — dados mais antigos enriquecem a baseline; dados recentes capturam mudanças.
 
 **Como fortalece outros ativos**: informa a Search Intelligence (o que acontece depois de uma busca), alimenta o Merchant Behavioral Knowledge (como o comportamento do comprador impacta a performance do merchant) e é o insumo central para o sistema de recomendação futuro (Asset F-1).
+
+**Release 1.7 — Wave 5 (Merchant Acquisition & Ownership Platform)**: Delegated Management amplia o conhecimento organizacional de quem realmente opera cada loja — gerente, marketing, agência, administrador, operador — um sinal comportamental que antes não existia (só o proprietário original era visível). Isso enriquece a base sobre a qual o Brain futuramente distinguirá comportamento do dono versus comportamento de um gestor terceirizado.
 
 **Moat primário sustentado**: Data Flywheel Moat, ParaguAI Brain Moat.
 
@@ -229,6 +241,8 @@ São ativos que amplificam, validam ou habilitam os Core Assets. Não sustentam 
 **Por que é Supporting, não Core**: o número de merchants é instrumental — não é valioso por si mesmo. Cem merchants com dados desatualizados são menos valiosos que vinte merchants com dados de alta qualidade. O valor está nos dados que os merchants produzem (Core Assets C-1, C-3) — não na contagem de merchants.
 
 **O que torna este ativo valioso**: a diversidade de categorias e a cobertura de preços comparáveis. Um ativo de Merchant Network saudável é aquele onde qualquer produto importante para o comprador deste mercado tem cobertura de múltiplos merchants, permitindo comparação real.
+
+**Release 1.7 — Wave 5 (Merchant Acquisition & Ownership Platform)**: o funil de crescimento deste ativo deixa de depender inteiramente de cadastro manual — o Smart Claim Flow (`src/domains/merchant-ownership/`) converte lojas descobertas automaticamente (Wave 2) em merchants ativos e verificados, com Progressive Verification tornando o processo rápido para o dono legítimo e caro para um impostor. Delegated Management permite que um merchant escale operação (gerente, marketing, agência) sem multiplicar contas, aprofundando a integração sem multiplicar apenas a contagem.
 
 ---
 

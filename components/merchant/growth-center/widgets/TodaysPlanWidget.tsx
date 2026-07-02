@@ -1,6 +1,10 @@
+"use client";
+
+import { useState } from "react";
 import type { TodaysPlan } from "@/src/domains/growth-engine/types/growth.types";
 import { GrowthPriority, GrowthEffort, PlanTier } from "@/src/domains/growth-engine/types/enums";
 import { Zap, Clock, ChevronRight, Lock, AlertTriangle } from "lucide-react";
+import { useToast } from "@/contexts/admin/ToastContext";
 
 interface Props {
   data: TodaysPlan;
@@ -28,6 +32,30 @@ const EFFORT_ICONS: Record<GrowthEffort, string> = {
 
 export function TodaysPlanWidget({ data }: Props) {
   const hasCritical = data.plan_items.some((r) => r.priority === GrowthPriority.Critical);
+  const { toast } = useToast();
+  const [sendingInterest, setSendingInterest] = useState(false);
+
+  // Epic H — Premium Upgrade Journey. Lead-capture only (ADR-035, no
+  // payment gateway) — this badge was inert before Wave 5; now it's the
+  // natural trigger the mission asks for ("Você possui N oportunidades de
+  // crescimento" → "Desbloqueie Inteligência Comercial").
+  async function handleUpgradeInterest() {
+    setSendingInterest(true);
+    try {
+      const res = await fetch("/api/merchant/upgrade-interest", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ triggerContext: "growth_center_todays_plan" }),
+      });
+      if (res.ok) {
+        toast.success("Recebemos seu interesse — nossa equipe vai entrar em contato.");
+      } else {
+        toast.error("Não foi possível registrar seu interesse agora.");
+      }
+    } finally {
+      setSendingInterest(false);
+    }
+  }
 
   return (
     <section
@@ -41,10 +69,15 @@ export function TodaysPlanWidget({ data }: Props) {
         </div>
         <div className="flex items-center gap-2">
           {data.premium_items_available > 0 && (
-            <span className="flex items-center gap-1 rounded-full bg-amber-500/10 px-2 py-0.5 text-[10px] font-medium text-amber-400">
+            <button
+              onClick={handleUpgradeInterest}
+              disabled={sendingInterest}
+              title="Você tem oportunidades Premium bloqueadas — clique para saber mais"
+              className="flex items-center gap-1 rounded-full bg-amber-500/10 px-2 py-0.5 text-[10px] font-medium text-amber-400 transition-colors hover:bg-amber-500/20 disabled:opacity-50"
+            >
               <Lock className="h-2.5 w-2.5" />
               +{data.premium_items_available} Premium
-            </span>
+            </button>
           )}
           <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-xs font-medium text-emerald-400">
             ~{data.estimated_total_minutes} min

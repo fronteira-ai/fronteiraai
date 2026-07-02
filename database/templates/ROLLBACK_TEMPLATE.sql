@@ -1,0 +1,33 @@
+-- ============================================================
+-- Rollback — <NNNN> (<Short Title>)
+-- Companion to supabase/migrations/<timestamp>_<name>.sql
+--
+-- Every migration must declare ONE of the three rollback classes below in
+-- its own header (see database/templates/MIGRATION_TEMPLATE.sql). This file
+-- is only needed when the class is "Possible" or "Partial" — write the
+-- actual DOWN statements here. When "Impossible", document why in the
+-- migration's header instead and DELETE this file (don't leave a stub).
+-- ============================================================
+
+-- ── CLASS: Possible ──────────────────────────────────────────
+-- The migration only added new tables/columns/indexes that nothing else
+-- depends on yet. Safe to fully reverse.
+--
+-- DROP TABLE IF EXISTS <new_table>;
+-- ALTER TABLE <table> DROP COLUMN IF EXISTS <new_column>;
+-- DROP INDEX IF EXISTS <index_name>;
+
+-- ── CLASS: Partial ───────────────────────────────────────────
+-- The migration can be reversed, but doing so discards data that was
+-- written after it was applied (e.g. an audit/history table). State
+-- explicitly what is lost.
+--
+-- -- Reverses the schema change, but ALL ROWS WRITTEN SINCE THIS MIGRATION
+-- -- APPLIED ARE LOST. Confirm nothing reads from <table> before running.
+-- DROP TABLE IF EXISTS <table>;
+
+-- ── CLASS: Impossible ────────────────────────────────────────
+-- A destructive column/type change, a backfill that can't be un-derived
+-- from source data, or a change other already-applied migrations now
+-- depend on. Document the reason in the migration's own header — this
+-- rollback file should not exist for this class.

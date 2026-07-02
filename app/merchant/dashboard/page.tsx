@@ -212,16 +212,43 @@ function ErrorState({ kind, message, onRetry }: { kind: ErrorKind; message: stri
 
 // ── Welcome banner ────────────────────────────────────────────────────────────
 
-function WelcomeBanner({ companyName }: { companyName: string }) {
+function WelcomeBanner({ companyName, stats }: { companyName: string; stats: LegacyData["stats"] | null }) {
+  // Epic G — Welcome Experience: "O ParaguAI já começou a trabalhar para
+  // mim." Extends the existing banner with real numbers already computed
+  // by getMerchantDashboardStats() — no new backend aggregation needed.
+  const hasProducts = (stats?.totalProducts ?? 0) > 0;
+
   return (
     <div className="mb-5 rounded-xl border border-emerald-500/30 bg-gradient-to-br from-emerald-950/80 to-slate-900 p-6">
       <p className="mb-2 text-2xl">🎉</p>
       <h2 className="mb-1 text-lg font-bold text-white">
         Bem-vindo ao ParaguAI{companyName ? `, ${companyName}` : ""}!
       </h2>
-      <p className="mb-4 text-sm leading-relaxed text-slate-400">
-        Sua loja foi criada com sucesso. Agora vamos publicar seus primeiros produtos e começar a aparecer para compradores.
-      </p>
+      {hasProducts ? (
+        <>
+          <p className="mb-3 text-sm leading-relaxed text-slate-400">
+            O ParaguAI já começou a trabalhar para você — aqui está o que já temos:
+          </p>
+          <div className="mb-5 grid grid-cols-3 gap-3">
+            <div className="rounded-lg border border-slate-800 bg-slate-900/60 p-3">
+              <p className="text-xl font-bold text-white">{stats?.totalProducts ?? 0}</p>
+              <p className="text-xs text-slate-400">produtos sincronizados</p>
+            </div>
+            <div className="rounded-lg border border-slate-800 bg-slate-900/60 p-3">
+              <p className="text-xl font-bold text-white">{stats?.totalStores ?? 0}</p>
+              <p className="text-xs text-slate-400">loja(s) vinculada(s)</p>
+            </div>
+            <div className="rounded-lg border border-slate-800 bg-slate-900/60 p-3">
+              <p className="text-xl font-bold text-white">{stats?.trustScore ?? 0}</p>
+              <p className="text-xs text-slate-400">trust score inicial</p>
+            </div>
+          </div>
+        </>
+      ) : (
+        <p className="mb-4 text-sm leading-relaxed text-slate-400">
+          Sua loja foi criada com sucesso. Agora vamos publicar seus primeiros produtos e começar a aparecer para compradores.
+        </p>
+      )}
       <div className="mb-5 flex items-center gap-1.5 text-xs text-emerald-400">
         <Clock className="h-3.5 w-3.5" />
         Tempo estimado: 2 minutos
@@ -594,7 +621,7 @@ export default function MerchantDashboardPage() {
             <ErrorState kind={errorKind} message={errorMsg} onRetry={() => setRefreshKey((k) => k + 1)} />
           ) : (
             <>
-              {isFirstAccess && <WelcomeBanner companyName={name ?? ""} />}
+              {isFirstAccess && <WelcomeBanner companyName={name ?? ""} stats={legacyData?.stats ?? null} />}
 
               <TabBar active={activeTab} onChange={setActiveTab} attentionCount={attentionCount} decisionCount={decisionCount} catalogIssueCount={catalogIssueCount} growthCount={growthCount} />
 

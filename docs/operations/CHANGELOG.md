@@ -2,6 +2,90 @@
 
 Reconstruído a partir do histórico real de commits (`git log`) e do estado atual do código. Formato: data, commit, o que mudou de fato (verificado no diff/estado resultante, não só na mensagem).
 
+## 2026-07-01 — Release 1.7 — Wave 5 — Merchant Acquisition & Ownership Platform
+
+Quinta entrega do Release 1.7 — segundo re-escopo do CTO: "Merchant Claim + Onboarding" (2 bullets) virou "Merchant Acquisition & Ownership Platform" (8 Epics), com uma mudança explícita de prioridade — infraestrutura dá lugar a crescimento de negócio. Toda decisão respondeu a "isso aumenta a conversão de lojistas para clientes do ParaguAI?".
+
+**Documentação estratégica:** `docs/product/releases/RELEASE_1_7_WAVE_5_EXECUTION_PLAN.md` (novo); `RELEASE_1_7_BLUEPRINT.md` v1.3 (Wave 5 reescrita).
+
+**Database:** `supabase/migrations/20260701120400_merchant_ownership.sql` — `store_claims` (claim + Progressive Verification, `signal_breakdown` jsonb explicável), `merchant_delegates` (convite por token, papéis fixos), `merchant_upgrade_leads` (append-only), extensão do CHECK/catálogo de `merchant_verifications` com o tipo `store_claim`. Verificação em `database/verification/0026_verify.sql`.
+
+**Domínio `src/domains/merchant-ownership/`** (novo — depende de `trust/` deliberadamente, reaproveitando `VerificationService`/`VerificationEvidenceService`/`EventService` em vez de duplicar a máquina de verificação já existente desde o Release 1.5): `ProgressiveVerificationEngine` (puro, explicável — e-mail/telefone/WhatsApp/website/Instagram comparados com os dados já cadastrados na loja; gates de peso mínimo aplicável e cap por sinais divergentes garantem que um impostor com tudo errado nunca seja auto-aprovado), `ClaimService` (create idempotente/auto-aprovação/approve/reject/requestInfo/revoke — revogação nunca apaga o histórico da claim), `DelegationService` (invite/accept/revoke com `actingRole` explícito — só o proprietário convida/revoga, reforçado no serviço, testado), `PremiumUpgradeService` (lead-capture, ADR-035), `OwnershipLevelService` (nível computado sob demanda, sem coluna nova). `IStoreClaimRepository`/`IMerchantDelegateRepository`/`IMerchantStoreLinkRepository`/`IUpgradeLeadRepository` + implementações Supabase.
+
+**Auth:** `requireMerchantContext()` (novo, aditivo) em `lib/merchant-auth.ts` — resolve proprietário ou delegado ativo; `requireMerchant()` existente não muda, usado por todas as ~15 rotas de merchant já existentes sem alteração.
+
+**APIs:** `POST/GET /api/merchant/claims`, `POST /api/merchant/claims/[id]/cancel`, `POST/GET /api/merchant/delegates`, `DELETE /api/merchant/delegates/[id]`, `POST /api/merchant/delegates/accept`, `POST /api/merchant/upgrade-interest`, `GET /api/admin/claims`, `GET/PATCH /api/admin/claims/[id]`.
+
+**UI:** `app/merchant/claim/[storeSlug]/page.tsx` (Smart Claim Flow — nome/cargo/telefone, e-mail da sessão), `components/store/ClaimStoreButton.tsx` (wired em `/store/[slug]` e `/lojas/[slug]`, via novo `StorePublicData.isUnclaimed`/`isStoreUnclaimed()` em `services/stores-public.service.ts`), `app/admin/claims` + `app/admin/claims/[id]` (Claim Review Center — real, confirmado com o CTO, mesmo padrão de `/admin/trust/verifications`), `components/admin/claims/ClaimActionsClient.tsx`, `components/merchant/settings/DelegatesSection.tsx` (convite/lista/revogação mínima). `WelcomeBanner` (dashboard) estendido com números reais (produtos, lojas, trust score). Badge "+N Premium" do `TodaysPlanWidget` e card de plano em `/merchant/settings` agora clicáveis (upgrade-interest).
+
+**Brain:** 10 novos `TrustEventType` — 8 com emissão real (`ClaimRequested`, `ClaimCancelled`, `OwnershipVerified`/`Rejected`/`Revoked`, `ManagerInvited`/`Accepted`, `PremiumUpgradeViewed`; `PremiumTrialStarted`/`PremiumActivated` taxonomia apenas — sem trial/billing real).
+
+**Strategic Assets / Moats**: adições em `STRATEGIC_ASSETS.md` (C-2, C-6, S-1) e `MOAT_STRATEGY.md` (Moat 2, 3, 6, 7) descrevendo o funil de aquisição.
+
+**Testes**: 34 novos (`ProgressiveVerificationEngine` ×6 — incluindo caso explícito anti-fraude —, `OwnershipLevelService` ×7, `ClaimService` ×11, `DelegationService` ×8, `PremiumUpgradeService` ×1, `event-registry` ×1) — total 279/279.
+
+Quality Gate: lint 0, typecheck 0, 279/279 testes, build 152 rotas (+11), `db:lint` OK (5 migrations).
+
+**Migration `0026` requer `npm run db:push` pelo CTO.** **Deferido explicitamente**: retrofitting de `requireMerchantContext()` nas rotas de merchant existentes; onboarding pós-claim guiado além do já existente; fila de processamento real; emissão real de `PremiumTrialStarted`/`PremiumActivated`; verificação via Meta Graph API/WhatsApp Business API; checagem de Facebook em Progressive Verification.
+
+## 2026-07-01 — Release 1.7 — Wave 4 — Canonical Catalog & Compare Foundation
+
+Quarta entrega do Release 1.7 — re-escopo do CTO: a Wave 4 original ("Merchant Claim + Onboarding") foi realocada para a nova Wave 5 para dar lugar ao Canonical Catalog, priorizado como a fundação de identidade permanente de produto de que Compare, Search, Recommendation Engine, Merchant Intelligence e o Brain dependerão. Mission: nenhuma URL quebrada, nenhum Product removido, nenhuma Offer perde histórico.
+
+**Documentação estratégica:** `docs/product/releases/RELEASE_1_7_WAVE_4_EXECUTION_PLAN.md` (novo); `RELEASE_1_7_BLUEPRINT.md` v1.2 (Wave 4 reescrita, Merchant Claim realocado para Wave 5, antiga Wave 5 vira Wave 6).
+
+**Database:** `supabase/migrations/20260701120300_canonical_catalog.sql` — `canonical_products` (identidade permanente: `canonical_slug` único/imutável, nome, marca, categoria, especificações), `offers.canonical_product_id` (nova coluna nullable, `ON DELETE SET NULL` — `offers.product_id` nunca é tocada), `merge_candidates` (sugestões canonical-vs-canonical com explainability completa: `confidence`, `algorithm_version`, `matched_attributes`, `mismatched_attributes`, `penalties`, `reason`, `status`, `reviewed_at`/`reviewed_by`). Verificação em `database/verification/0025_verify.sql`.
+
+**Domínio `src/domains/canonical-catalog/`** (novo, domínio fundação — nunca depende de `connectors/` nem de `product-identity/`; todos os outros domínios podem depender dele): `CanonicalProductService` (`bootstrapFromProduct` idempotente — reaproveita o `slug` já único do produto, `generateCanonicalSlug` com resolução de colisão para produtos canônicos futuros), `OfferRankingService` (preço/estoque/recência/confiança verificável/qualidade de listagem — **nunca Reputation Score**, restrição permanente do Release 1.5, fator "trust" é `stores.is_verified` explícito resolvido pelo chamador), `CanonicalPriceHistoryService` (agregação sob demanda de `price_history` por canonical product — sem tabela nova, lowest/highest/average/variação/tendência), `CompareFoundationService` (compõe os três — a infraestrutura real do "Compare Foundation", backend/API apenas nesta Wave), `ICanonicalCatalogRepository`/`IMergeCandidateRepository`/`ICanonicalPriceHistoryRepository` + implementações Supabase (o repositório de merge candidates deliberadamente não tem método de execução de união — a garantia de "shadow mode" é estrutural, não convencional).
+
+**Extensão em `src/domains/product-identity/`**: `CanonicalMergeSuggestionService` (novo) — o único código que depende de `canonical-catalog/` a partir de `product-identity/` (nunca o contrário), reaproveita o `ProductIdentityEngine` já existente para avaliar pares de canonical products da mesma marca e escrever `MergeCandidate`s no tier `possible` ou acima.
+
+**Scripts:** `scripts/canonical-catalog-bootstrap.ts` (dry-run por padrão, `--execute` — bootstrap 1:1 de `products` para `canonical_products`, vínculo de `offers`, seed de merge suggestions via `CanonicalMergeSuggestionService`). `lib/canonical-catalog-factory.ts` (wiring do domínio, novo).
+
+**APIs (backend/API apenas — sem página nova, confirmado com o CTO):** `GET/PATCH /api/admin/canonical-catalog/merge-candidates[/[id]]` (Match Review — aprovar/rejeitar/ignorar grava apenas a decisão humana, nunca reatribui offers), `GET /api/canonical-catalog/[slug]` (Compare Foundation, service role interno — mesmo padrão de `/lojas`, ADR-036).
+
+**Brain:** 10 novos `TrustEventType` (taxonomia apenas — `CanonicalProductCreated`, `OfferLinked`/`OfferUnlinked`, `MergeSuggested`/`Approved`/`Rejected`, `CanonicalViewed`, `CompareViewed`, `PriceHistoryViewed`, `LowestPriceReached`), nenhum emitido nesta Wave (mesma disciplina do `StoreDiscovered` da Wave 2). **Achado não relacionado**: um teste de completude descobriu 21 `TrustEventType` do Release 1.6 sem mapeamento no Brain — registrado em `docs/engineering/TECH_DEBT.md`, não corrigido (fora do escopo desta Wave).
+
+**Strategic Assets / Moats**: adições em `docs/product/STRATEGIC_ASSETS.md` (C-1, C-3, C-4, C-5) e `docs/product/MOAT_STRATEGY.md` (Moat 1, 4, 5, 6, 7) descrevendo como a identidade canônica fortalece cada um.
+
+**Testes**: 26 novos (`CanonicalProductService` ×5, `OfferRankingService` ×6, `CanonicalPriceHistoryService` ×7, `CompareFoundationService` ×2, `CanonicalMergeSuggestionService` ×5, `event-registry` ×1) — total 245/245.
+
+Quality Gate: lint 0, typecheck 0, 245/245 testes, build OK, `db:lint` OK (4 migrations, nenhum SELECT embutido).
+
+**Migration `0025` requer aplicação manual do CTO** via `npm run db:push`. **Bootstrap não executado**: `--execute` grava no projeto real, fica para o CTO rodar após a migration. **Deferido explicitamente**: execução real de merges aprovados; UI de Match Review; rota pública `/produto/[slug]`; wiring do bootstrap/merge-suggestion no `SyncOrchestrator`; emissão real dos 10 eventos Brain.
+
+## 2026-07-01 — Database Migration System V2 (mandato do CTO)
+
+Reorganização permanente da infraestrutura de migrations, superando parcialmente ADR-017/018 (ver ADR-040 em `docs/operations/DECISIONS.md`). Não é uma Release de produto — é uma mudança de processo de engenharia.
+
+**Auditoria (ETAPA 1)**: migrations `0018`-`0023` auditadas. Bug real encontrado em 4 delas (`0018`-`0021`): a verificação embutida usava `information_schema.tables.row_security`, uma coluna que não existe em PostgreSQL — o check sempre falhava ou retornava vazio. `0022`/`0023`/`0024` já usavam `pg_tables.rowsecurity` (correto) e já eram idempotentes.
+
+**Correção (`database/migrations/0018`-`0021`, editado in-place)**: verificação extraída para `database/verification/00NN_verify.sql`, corrigida para `pg_tables.rowsecurity`. `0018` ganhou `DROP POLICY IF EXISTS` antes de suas 3 `CREATE POLICY` (mesma classe de bug que forçou `0017_hotfix_trust_experience.sql` a existir para uma migration diferente). Nenhuma dessas edições reaplica nada em produção — as 4 já estavam aplicadas; é higiene de arquivo, não uma mudança de schema.
+
+**Migração de local (`0022`-`0024` → `supabase/migrations/`)**: essas 3 nunca foram aplicadas em produção. Movidas (não duplicadas) para `supabase/migrations/2026070112{00,01,02}00_*.sql`, nomeadas no formato exigido pela Supabase CLI, com a mesma extração de verificação. `database/migrations/README.md` (novo) documenta o congelamento de `0001`-`0021` e o corte para `supabase/migrations/` a partir de `0022`.
+
+**Novo — `database/verification/`** (7 arquivos, `0018`-`0024`): apenas `SELECT`s de validação, nunca embutidos em migration, nunca executados automaticamente.
+
+**Novo — `database/health_checks/`** (7 arquivos por tópico: `rls`, `policies`, `indexes`, `foreign_keys`, `triggers`, `extensions`, `storage_buckets`): verificações de sistema, independentes de qualquer migration específica.
+
+**Novo — `database/templates/`**: `MIGRATION_TEMPLATE.sql`, `VERIFICATION_TEMPLATE.sql`, `ROLLBACK_TEMPLATE.sql` — toda migration nova nasce daqui. Template de migration exige declarar classe de rollback (Possible/Partial/Impossible) no cabeçalho.
+
+**Novo — `supabase/`**: `config.toml` (gerado via `supabase init` real, CLI v2.109.0, `project_id = "fronteiraai-web"`), `seed.sql` (placeholder — seeding de catálogo continua em `database/seed/*.js` via `npm run db:seed`, deliberadamente não substituído), `migrations/` com as 3 migrations movidas.
+
+**Novo — `scripts/lib/migration-lint.ts` + `scripts/db-migration-lint.ts`**: valida programaticamente que nenhuma migration em `supabase/migrations/` contém `SELECT` avulso (heurística: remove comentários e corpos de função com dollar-quoting, separa por `;`, sinaliza qualquer statement que comece com `SELECT` — `INSERT INTO ... SELECT` passa, pois o statement começa com `INSERT`). 6 testes novos.
+
+**Novo — `scripts/db-verify.ts`**: lista os arquivos de `database/verification/`/`database/health_checks/` disponíveis (sem tentar conexão direta ao banco — sem credenciais neste ambiente).
+
+**`package.json`**: `db:push`, `db:reset`, `db:diff`, `db:status`, `db:lint`, `db:verify` (todos via Supabase CLI, adicionada como devDependency `^2.109.0`) — namespace novo, sem colidir com `db:seed`/`db:seed:execute` existentes (que continuam JS, intocados).
+
+**Novo — `.github/workflows/database.yml`** (dormant): lint → typecheck → test → `db:lint` → `supabase db push` (gated por secrets ainda não configurados) → health checks. Documentado explicitamente: não existe projeto de staging separado ainda — gap nomeado, não escondido.
+
+**Docs**: `docs/engineering/DATABASE_ENGINEERING.md` (novo, padrão autoritativo completo, runbook do CTO para o primeiro `supabase link`+`db push`), `ENGINEERING_PRINCIPLES.md`/`CONVENTIONS.md`/`RELEASE_STRATEGY.md` (pointers), `docs/operations/DECISIONS.md` (ADR-040, supera parcialmente ADR-017/018).
+
+Quality Gate: lint 0, typecheck 0, testes 100% (suíte completa + 6 novos), build OK.
+
+**O único passo manual restante**: o CTO precisa rodar `supabase login` + `supabase link --project-ref acairzpzsklctaqjsukw` + `npm run db:push` uma vez (runbook em `DATABASE_ENGINEERING.md` §9) — esta sessão não tem e não deveria ter as credenciais de produção necessárias para fazer isso sozinha.
+
 ## 2026-07-01 — Release 1.7 — Wave 3 — Product Identity Engine (Shadow Mode)
 
 Terceira entrega do Release 1.7. Promove Product Identity a domínio próprio (`src/domains/product-identity/`) — Core Asset permanente, aprovado pelo CTO com duas decisões estratégicas: postura conservadora de matching (falso positivo inaceitável, falso negativo aceitável) e rollout em Shadow Mode (o motor avalia e registra, mas não altera o catálogo real). Fecha dois gaps conhecidos desde o Epic 1: comparação apenas por preço no `DeduplicationStage`, e ofertas novas nunca recebendo linha em `price_history`.

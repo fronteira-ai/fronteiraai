@@ -12,8 +12,9 @@
 -- Nunca deletar histórico. Sempre append-only.
 -- Usar recommendation_id (determinístico: strategy_id:subcategory:merchant_id) como chave natural.
 --
--- APÓS APLICAR:
--- Verificar: SELECT table_name FROM information_schema.tables WHERE table_name = 'merchant_growth_history';
+-- Verificação: database/verification/0021_verify.sql (Database Migration
+-- System V2 — verification queries live outside migrations, never embedded
+-- and never auto-run; ver docs/engineering/DATABASE_ENGINEERING.md).
 -- ============================================================
 
 -- ──────────────────────────────────────────────────────────
@@ -56,16 +57,3 @@ CREATE INDEX IF NOT EXISTS idx_merchant_growth_history_event
 ALTER TABLE merchant_growth_history ENABLE ROW LEVEL SECURITY;
 
 -- Leitura/escrita exclusivamente via service_role (API routes autenticadas)
-
--- ──────────────────────────────────────────────────────────
--- VERIFICAÇÃO PÓS-EXECUÇÃO
--- ──────────────────────────────────────────────────────────
-
-SELECT table_name, row_security
-FROM information_schema.tables
-WHERE table_name = 'merchant_growth_history'
-  AND table_schema = 'public';
-
-SELECT indexname FROM pg_indexes
-WHERE tablename = 'merchant_growth_history'
-ORDER BY indexname;

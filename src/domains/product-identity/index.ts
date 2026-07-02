@@ -8,6 +8,7 @@ export * from "./types/product-identity.types";
 
 export { ProductIdentityEngine } from "./domain/ProductIdentityEngine";
 export { ProductIdentityService } from "./services/ProductIdentityService";
+export { CanonicalMergeSuggestionService } from "./services/CanonicalMergeSuggestionService";
 
 export type { IProductCandidateRepository } from "./repositories/IProductCandidateRepository";
 export type { IProductIdentityMatchLogRepository, MatchLogEntry } from "./repositories/IProductIdentityMatchLogRepository";

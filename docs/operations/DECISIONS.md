@@ -696,4 +696,23 @@ A tabela `reviews` será criada no Release 1.5 junto com o sistema de moderaçã
 
 **Alternativas descartadas**:
 - Usar posthog/mixpanel — custo e dependência externa antes de validar o modelo; a tabela própria é suficiente para 10k merchants no curto prazo.
+
+---
+
+## ADR-040 — Database Migration System V2: Supabase CLI supera o bloqueio de DDL do ADR-017
+
+**Data**: 2026-07-01 (mandato do CTO, pós Release 1.7 — Epic 1/Wave 2/Wave 3)
+**Status**: Aceita — supera parcialmente ADR-017/018
+
+**Contexto**: ADR-017 registrou, em 2026-06-24, um bloqueio real de ferramenta: `@supabase/supabase-js` fala PostgREST, que não executa DDL arbitrário; não havia `pg`, `DATABASE_URL` nem Supabase CLI configurada neste projeto. Isso tornou "copiar a migration para o SQL Editor e o CTO aplicar manualmente" o único caminho possível — uma decisão correta para o contexto de 2026-06-24, mas que se tornou um passivo estrutural conforme o número de migrations cresceu (24 até esta data): `information_schema.tables.row_security` (coluna inexistente) embutido em 4 migrations de verificação (`0018`-`0021`), `CREATE POLICY` sem guard de idempotência causando uma falha real de reexecução (`0017_hotfix_trust_experience.sql`), nenhuma automação, nenhum rollback documentado, nenhuma validação automática.
+
+**Decisão**: adota-se a Supabase CLI (`supabase db push`/`migration new`/`db diff`/`migration list`) como caminho oficial de aplicação de schema, documentado por completo em `docs/engineering/DATABASE_ENGINEERING.md` ("Database Migration System V2"). Migrations a partir de `0022` vivem em `supabase/migrations/`, nomeadas por timestamp, nunca mais coladas manualmente no SQL Editor. `npm run db:lint` (`scripts/db-migration-lint.ts`) valida programaticamente que nenhuma migration contém `SELECT` avulso — a regra que corrige a causa raiz do bug de `row_security`, movendo toda consulta de verificação para `database/verification/`/`database/health_checks/`, fora do caminho de aplicação.
+
+**O que NÃO é revertido do ADR-017/018**: `database/migrations/0001`-`0021` permanecem exatamente como foram aplicados (congelados) — não são retroativamente migrados para `supabase/migrations/`, e nenhum "baseline"/"repair" é necessário: como `supabase/migrations/` só contém as migrations nunca antes aplicadas (`0022` em diante), o primeiro `supabase db push` aplica exatamente essas, sem tocar no schema já existente em produção.
+
+**Consequência**: o SQL Editor do Supabase deixa de ser o fluxo padrão de aplicação de schema — passa a ser legítimo apenas para debug, consultas ad-hoc, inspeção e investigação (ETAPA 13 do mandato do CTO). A aplicação real de `0022`-`0024` contra o projeto de produção ainda depende de um passo humano único: o CTO rodar `supabase login` + `supabase link --project-ref acairzpzsklctaqjsukw` + `npm run db:push` (runbook completo em `docs/engineering/DATABASE_ENGINEERING.md` §9) — esta sessão não tem, e não deveria ter, o access token/senha de banco necessários para fazer isso por conta própria.
+
+**Alternativas descartadas**:
+- Reescrever `0001`-`0021` para o novo padrão — descartada: são migrations já aplicadas em produção; editar seu conteúdo não afeta o banco real, mas normalizar 21 arquivos sem poder confirmar contra o schema real ao vivo introduz risco de documentação divergente sem benefício correspondente.
+- Automatizar o link/push desta própria sessão usando um token fornecido pelo usuário no chat — descartada por segurança operacional: credenciais de acesso a produção não devem transitar por uma conversa de chat, mesmo que fornecidas voluntariamente.
 - Implementar dashboard de analytics agora — prematura sem eventos reais.

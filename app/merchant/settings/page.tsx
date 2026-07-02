@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import { MerchantSidebar } from "@/components/merchant/layout/MerchantSidebar";
+import DelegatesSection from "@/components/merchant/settings/DelegatesSection";
 import { useToast } from "@/contexts/admin/ToastContext";
 import { Save, Loader2 } from "lucide-react";
 import type { Merchant, MerchantPlanFeatures } from "@/types/merchant";
@@ -12,6 +13,7 @@ export default function MerchantSettingsPage() {
   const [data, setData] = useState<SettingsData | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [upgradeInterestSent, setUpgradeInterestSent] = useState(false);
   const [form, setForm] = useState({
     company_name: "", company_doc: "", company_website: "",
     contact_phone: "", contact_whatsapp: "", contact_email: "",
@@ -45,6 +47,22 @@ export default function MerchantSettingsPage() {
     setSaving(false);
     if (res.ok) toast.success("Configurações salvas");
     else toast.error("Erro ao salvar");
+  }
+
+  // Epic H — Premium Upgrade Journey. Lead-capture only (ADR-035, no
+  // payment gateway) — replaces the previous static "disponível em breve" line.
+  async function handleUpgradeInterest() {
+    const res = await fetch("/api/merchant/upgrade-interest", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ triggerContext: "settings_plan_card" }),
+    });
+    if (res.ok) {
+      setUpgradeInterestSent(true);
+      toast.success("Recebemos seu interesse — nossa equipe vai entrar em contato.");
+    } else {
+      toast.error("Não foi possível registrar seu interesse agora.");
+    }
   }
 
   const field = (label: string, key: keyof typeof form, type = "text") => (
@@ -105,9 +123,19 @@ export default function MerchantSettingsPage() {
                       {data.plan.price_monthly === 0 ? "Grátis" : `$${data.plan.price_monthly}/mês`}
                     </span>
                   </div>
-                  <p className="text-xs text-slate-600 mt-3">Upgrade de plano disponível em breve.</p>
+                  {data.plan.plan !== "enterprise" && (
+                    <button
+                      onClick={handleUpgradeInterest}
+                      disabled={upgradeInterestSent}
+                      className="mt-3 text-xs font-medium text-emerald-400 hover:text-emerald-300 disabled:text-slate-600 disabled:cursor-default"
+                    >
+                      {upgradeInterestSent ? "Interesse registrado — entraremos em contato." : "Quero fazer upgrade →"}
+                    </button>
+                  )}
                 </div>
               )}
+
+              <DelegatesSection />
 
               <button onClick={handleSave} disabled={saving} className="flex items-center gap-2 px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white text-sm font-medium rounded-lg transition-colors">
                 {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}

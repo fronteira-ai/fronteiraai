@@ -6,8 +6,10 @@ import Footer from "@/components/layout/Footer";
 import StoreDetails from "@/components/store/StoreDetails";
 import StoreOffers from "@/components/store/StoreOffers";
 import StoreGrid from "@/components/store/StoreGrid";
+import ClaimStoreButton from "@/components/store/ClaimStoreButton";
 import EmptyState from "@/components/ui/EmptyState";
 import Breadcrumb from "@/components/ui/Breadcrumb";
+import { isStoreUnclaimed } from "@/services/stores-public.service";
 import { getCachedStore, getCachedStoreOffers, getCachedRelatedStores } from "./_cache";
 
 type Params = Promise<{ slug: string }>;
@@ -21,9 +23,10 @@ export default async function StorePage({ params }: { params: Params }) {
     notFound();
   }
 
-  const [offers, relatedStores] = await Promise.all([
+  const [offers, relatedStores, unclaimed] = await Promise.all([
     getCachedStoreOffers(store.id),
     getCachedRelatedStores(store.id),
+    isStoreUnclaimed(store.id),
   ]);
 
   return (
@@ -55,6 +58,12 @@ export default async function StorePage({ params }: { params: Params }) {
         <div className="mt-10">
           <StoreDetails store={store} />
         </div>
+
+        {unclaimed && (
+          <div className="mt-6">
+            <ClaimStoreButton storeSlug={store.slug} />
+          </div>
+        )}
 
         <div className="mt-12 flex flex-col gap-8">
           <StoreOffers offers={offers} />

@@ -29,7 +29,15 @@
     "connectors:import-csv:execute": "tsx scripts/import-csv.ts --execute",
     "sync:shoppingchina": "tsx scripts/sync-shoppingchina.ts",
     "sync:shoppingchina:execute": "tsx scripts/sync-shoppingchina.ts --execute",
-    "sync:shoppingchina:execute:skip-media": "tsx scripts/sync-shoppingchina.ts --execute --skip-media"
+    "sync:shoppingchina:execute:skip-media": "tsx scripts/sync-shoppingchina.ts --execute --skip-media",
+    "canonical-catalog:bootstrap": "tsx scripts/canonical-catalog-bootstrap.ts",
+    "canonical-catalog:bootstrap:execute": "tsx scripts/canonical-catalog-bootstrap.ts --execute",
+    "db:push": "supabase db push",
+    "db:reset": "supabase db reset",
+    "db:diff": "supabase db diff",
+    "db:status": "supabase migration list",
+    "db:lint": "tsx scripts/db-migration-lint.ts",
+    "db:verify": "tsx scripts/db-verify.ts"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.0",
@@ -51,6 +59,7 @@
     "jest": "^30.4.2",
     "jest-environment-jsdom": "^30.4.1",
     "sharp": "^0.33.0",
+    "supabase": "^2.109.0",
     "tailwindcss": "^4",
     "ts-jest": "^29.4.11",
     "tsx": "^4.19.0",

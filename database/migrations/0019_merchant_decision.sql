@@ -12,8 +12,9 @@
 -- O histórico de ações é append-preferred: nunca apagar, apenas atualizar status.
 -- Usar rule_id (não FK) para rastrear qual regra gerou a recomendação.
 --
--- APÓS APLICAR:
--- Verificar: SELECT table_name FROM information_schema.tables WHERE table_name = 'merchant_decision_actions';
+-- Verificação: database/verification/0019_verify.sql (Database Migration
+-- System V2 — verification queries live outside migrations, never embedded
+-- and never auto-run; ver docs/engineering/DATABASE_ENGINEERING.md).
 -- ============================================================
 
 -- ──────────────────────────────────────────────────────────
@@ -62,16 +63,3 @@ ALTER TABLE merchant_decision_actions ENABLE ROW LEVEL SECURITY;
 
 -- Merchant lê apenas suas próprias ações (verificado via API com service_role)
 -- Escrita apenas via service_role (PATCH /api/merchant/actions/[id])
-
--- ──────────────────────────────────────────────────────────
--- VERIFICAÇÃO PÓS-EXECUÇÃO
--- ──────────────────────────────────────────────────────────
-
-SELECT table_name, row_security
-FROM information_schema.tables
-WHERE table_name = 'merchant_decision_actions'
-  AND table_schema = 'public';
-
-SELECT indexname FROM pg_indexes
-WHERE tablename = 'merchant_decision_actions'
-ORDER BY indexname;

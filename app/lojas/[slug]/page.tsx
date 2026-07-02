@@ -8,6 +8,7 @@ import Footer from "@/components/layout/Footer";
 import Breadcrumb from "@/components/ui/Breadcrumb";
 import StoreOffers from "@/components/store/StoreOffers";
 import StoreGrid from "@/components/store/StoreGrid";
+import ClaimStoreButton from "@/components/store/ClaimStoreButton";
 import { getStorePublic } from "@/services/stores-public.service";
 import { getOffersByStore } from "@/services/offer.service";
 import { getRelatedStores } from "@/services/store.service";
@@ -125,6 +126,11 @@ export default async function LojaPublicaPage({ params }: { params: Params }) {
                 </span>
               )}
             </div>
+            {store.isUnclaimed && (
+              <div className="mt-3">
+                <ClaimStoreButton storeSlug={store.slug} />
+              </div>
+            )}
             {store.city && (
               <p className="text-slate-400 text-sm flex items-center gap-1.5">
                 <MapPin size={13} /> {store.city}, {store.country ?? "Paraguay"}

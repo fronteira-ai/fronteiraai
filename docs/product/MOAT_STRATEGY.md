@@ -85,6 +85,10 @@ Automaticamente. Cada dia de operação adiciona dados. Cada produto importado c
 
 Comprar esse histórico. Criar esse histórico retroativamente. Operar sem ele e oferecer o mesmo valor. O único caminho é esperar — e esperar cinco anos com uma plataforma funcionando não é algo que capital compra.
 
+**Release 1.7 — Wave 4 (Canonical Catalog)**: até esta Wave, o histórico vivia fragmentado por Offer — dez lojas vendendo o mesmo produto geravam dez históricos incomparáveis entre si. O Canonical Catalog agrega esse histórico sob uma identidade permanente por produto, transformando dados que já existiam em um ativo efetivamente mais denso e mais comparável, sem esperar mais nenhum dia de operação para isso.
+
+**Release 1.7 — Wave 5 (Merchant Acquisition & Ownership Platform)**: cada claim aprovado converte uma loja descoberta (sem histórico atribuído a nenhum merchant) em uma loja com proprietário verificado — o histórico de preço que já vinha acumulando desde a descoberta passa a ter um dono real, acelerando o momento em que esse histórico se torna acionável para o merchant.
+
 ---
 
 ## Moat 2 — Merchant Trust Network
@@ -110,6 +114,8 @@ Com cada merchant que opera consistentemente. Com cada avaliação verificada de
 
 Criar uma rede de reputação com 36 meses de histórico verificado. Pode criar uma rede nova — mas ela começa do zero, sem o histórico que o ParaguAI já tem.
 
+**Release 1.7 — Wave 5 (Merchant Acquisition & Ownership Platform)**: o funil que alimenta esta rede deixa de depender de cadastro manual. O Smart Claim Flow com Progressive Verification torna a entrada rápida para o dono legítimo de uma loja já descoberta (Wave 2) e estruturalmente cara para um impostor — falso positivo (impostor aprovado) é inaceitável, falso negativo (revisão manual extra) é aceitável. Cada claim aprovado é uma nova entrada verificada nesta rede, sem depender da velocidade de marketing.
+
 ---
 
 ## Moat 3 — Merchant OS Switching Cost
@@ -132,6 +138,8 @@ Com cada funcionalidade que o merchant passa a depender. Com cada dado que só e
 ### O que o concorrente não pode fazer
 
 Migrar o histórico do merchant. Pode oferecer ferramentas equivalentes — mas não pode oferecer dois anos de histórico verificado de reputação que já existe.
+
+**Release 1.7 — Wave 5 (Merchant Acquisition & Ownership Platform)**: Delegated Management aprofunda este Moat de um jeito novo — quando um merchant delega gestão a um gerente, marketing ou agência, o custo de saída deixa de ser só do proprietário; passa a envolver toda uma operação organizada em torno da plataforma. O Welcome Experience (dashboard já mostrando produtos sincronizados, trust score inicial, growth center no primeiro acesso) acelera o momento em que esse valor percebido começa a se acumular.
 
 ### Atenção — ponto de fragilidade
 
@@ -162,6 +170,8 @@ Com cada busca registrada, cada padrão de sazonalidade capturado, cada comporta
 
 Replicar anos de contexto local com dados genéricos. Pode construir uma plataforma — mas começa sem o mapa que o ParaguAI construiu operando aqui.
 
+**Release 1.7 — Wave 4 (Canonical Catalog)**: contexto regional por produto (não por oferta isolada) só é observável com precisão quando "o mesmo produto" é de fato o mesmo, entre lojas e connectors diferentes — a identidade canônica é o pré-requisito estrutural que a Wave 4 começa a construir.
+
 ---
 
 ## Moat 5 — Search Intelligence
@@ -187,6 +197,8 @@ Com cada busca registrada, com e sem resultado. Com cada padrão de busca que n�
 
 Comprar o histórico de buscas que o ParaguAI já tem. Pode construir o seu — mas começa do zero.
 
+**Release 1.7 — Wave 4 (Canonical Catalog)**: o Compare Foundation prepara o ranking interno de ofertas por Canonical Product (preço, estoque, recência, confiança verificável — nunca Reputation Score, invisível ao usuário ainda). Quando a busca passar a operar sobre identidade canônica, resultados deixam de ser "produto por connector" e passam a ser "o produto real, comparável entre lojas" — o que a Search Intelligence sempre precisou para ser plenamente confiável.
+
 ---
 
 ## Moat 6 — Data Flywheel
@@ -203,6 +215,10 @@ O ciclo de reforço pelo qual mais dados produzem mais inteligência, que produz
 Uma vez que o Flywheel atinge velocidade crítica, ele se torna autossustentável. A vantagem não é linear — é exponencial. A cada volta do ciclo, o gap entre o ParaguAI e um entrante que começa hoje se amplia.
 
 O Flywheel é descrito em detalhes no Capítulo 5.
+
+**Release 1.7 — Wave 4 (Canonical Catalog)**: Merge Candidates (Shadow Mode) são o Flywheel operando sobre identidade de produto — cada nova oferta importada por qualquer connector, de qualquer loja, alimenta candidatos de correspondência que tornam o catálogo canônico mais completo, sem nenhuma ação deliberada além de a plataforma continuar operando.
+
+**Release 1.7 — Wave 5 (Merchant Acquisition & Ownership Platform)**: o Flywheel passa a operar também sobre aquisição — cada loja descoberta automaticamente (Wave 2) que recebe um botão "Esta loja é minha" é uma conversão em potencial sem custo de marketing incremental. Quanto mais o catálogo cresce por descoberta, mais superfície existe para claims futuros.
 
 ---
 
@@ -224,6 +240,10 @@ Esse conhecimento não pode ser licenciado. Não pode ser extraído de datasets 
 ### Como cresce
 
 Com cada novo tipo de dado coletado. Com cada ciclo de feedback entre predição e resultado real. Com cada ano de operação que adiciona histórico ao corpus de treinamento.
+
+**Release 1.7 — Wave 4 (Canonical Catalog)**: 10 novos tipos de evento cognitivo (`CanonicalProductCreated`, `OfferLinked`/`OfferUnlinked`, `MergeSuggested`/`Approved`/`Rejected`, `CanonicalViewed`, `CompareViewed`, `PriceHistoryViewed`, `LowestPriceReached`) registrados na taxonomia do Brain — ainda não emitidos nesta Wave (nenhuma de suas superfícies de disparo existe de fato ainda), mas o Brain já sabe, estruturalmente, o que precisará saber quando o Canonical Catalog se tornar visível ao usuário.
+
+**Release 1.7 — Wave 5 (Merchant Acquisition & Ownership Platform)**: mais 10 eventos cognitivos — e, pela primeira vez neste Release, a maioria (8 de 10: `ClaimRequested`, `ClaimCancelled`, `OwnershipVerified`/`Rejected`/`Revoked`, `ManagerInvited`/`Accepted`, `PremiumUpgradeViewed`) tem emissão real, não apenas taxonomia. O Brain passa a aprender, desde já, o funil completo de aquisição de merchants — não só o resultado final.
 
 O Capítulo 6 detalha a relação entre o Brain e os demais Moats.
 

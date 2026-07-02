@@ -420,12 +420,16 @@ TypeScript: sempre `string` (ISO 8601 UTC). Nunca `Date` object — formatação
 
 Não há soft delete implementado no Release 1.4 — DELETE é físico. Exceção: `stores.active`, `offers.available` são flags de visibilidade, não soft delete formal. Entidades inativas não são deletadas — apenas removidas do catálogo público.
 
-### 8.6 Migrations
+### 8.6 Migrations (Database Migration System V2)
 
-- Arquivo: `database/migrations/NNNN_descricao_snake_case.sql`
-- Sempre idempotentes: usar `CREATE TABLE IF NOT EXISTS`, `ALTER TABLE ... ADD COLUMN IF NOT EXISTS`
-- Nunca executar diretamente em produção sem dry-run anterior (AI_CONSTITUTION.md, Regra #3)
-- Schema de banco não muda sem aprovação explícita do CTO
+Padrão completo em `docs/engineering/DATABASE_ENGINEERING.md` — resumo aqui:
+
+- **`0001`-`0021`**: `database/migrations/NNNN_descricao_snake_case.sql`, congelado (já aplicado em produção). Não criar novas migrations aqui.
+- **`0022`+**: `supabase/migrations/<timestamp>_descricao_snake_case.sql`, criado via `npx supabase migration new <nome>` a partir de `database/templates/MIGRATION_TEMPLATE.sql`, aplicado via `npm run db:push` (Supabase CLI) — nunca mais copiado manualmente para o SQL Editor.
+- Sempre idempotentes: `CREATE TABLE IF NOT EXISTS`, `ALTER TABLE ... ADD COLUMN IF NOT EXISTS`, `DROP POLICY IF EXISTS` antes de todo `CREATE POLICY`, `DROP TRIGGER IF EXISTS` antes de todo `CREATE TRIGGER`.
+- Nunca contém `SELECT` avulso, health check ou consulta de auditoria — isso vive em `database/verification/` (por migration) ou `database/health_checks/` (sistema, por tópico). Validado automaticamente por `npm run db:lint`.
+- Toda migration declara sua classe de rollback (Possible/Partial/Impossible) no cabeçalho — ver `database/templates/ROLLBACK_TEMPLATE.sql`.
+- Schema de banco não muda sem aprovação explícita do CTO.
 
 ### 8.7 Seeds
 
@@ -730,7 +734,7 @@ DOCUMENTAÇÃO
 
 BANCO DE DADOS
 □ Mudança de schema? → Aprovação explícita do CTO
-□ Nova migration? → Testou com dry-run antes de aplicar
+□ Nova migration? → Criada em supabase/migrations/ via template, passou em `npm run db:lint`, tem par em database/verification/
 □ Slug novo? → UNIQUE constraint existe na tabela
 
 SEGURANÇA

@@ -191,6 +191,7 @@ export class VerificationService {
       [VerificationType.Operation]: "Operação",
       [VerificationType.Partner]: "Parceiro Oficial",
       [VerificationType.Documentation]: "Documentação",
+      [VerificationType.StoreClaim]: "Reivindicação de Loja",
     };
     return labels[type] ?? type;
   }

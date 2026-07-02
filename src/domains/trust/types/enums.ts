@@ -80,6 +80,11 @@ export enum VerificationType {
   Operation = "operation",
   Partner = "partner",
   Documentation = "documentation",
+  // Release 1.7 — Wave 5 — Merchant Acquisition & Ownership Platform. One
+  // umbrella type for a store claim's Progressive Verification, not five
+  // granular per-signal types — the signal-by-signal breakdown lives as
+  // evidence/metadata on this single verification (see ClaimService).
+  StoreClaim = "store_claim",
 }
 
 export enum VerificationStatus {
@@ -307,6 +312,43 @@ export enum TrustEventType {
   ConnectorSyncScheduled          = "connector_sync_scheduled",
   ConnectorSyncSkippedEntitlement = "connector_sync_skipped_entitlement",
   StoreDiscovered                 = "store_discovered",
+
+  // Release 1.7 — Wave 4 — Canonical Catalog & Compare Foundation Events.
+  // Taxonomy only this Wave — none have a factory function or real
+  // ingestion yet (same discipline as StoreDiscovered above): the *Viewed
+  // events have no page to emit from yet (no /produto/[slug] this Wave),
+  // and the system/admin-level events (creation, linking, merge review)
+  // have no natural merchantId — TrustDomainEvent.merchantId is a required
+  // string, and canonical products/merges span many merchants, not one.
+  CanonicalProductCreated  = "canonical_product_created",
+  OfferLinked              = "offer_linked",
+  OfferUnlinked            = "offer_unlinked",
+  MergeSuggested           = "merge_suggested",
+  MergeApproved            = "merge_approved",
+  MergeRejected            = "merge_rejected",
+  CanonicalViewed          = "canonical_viewed",
+  CompareViewed            = "compare_viewed",
+  PriceHistoryViewed       = "price_history_viewed",
+  LowestPriceReached       = "lowest_price_reached",
+
+  // Release 1.7 — Wave 5 — Merchant Acquisition & Ownership Platform Events.
+  // Unlike prior Waves, most of these DO have a natural merchantId (a claim,
+  // a delegate invite, an upgrade-interest click all happen inside a
+  // merchant context) and get real factory functions + real emission — see
+  // src/domains/merchant-ownership/events/merchant-ownership.events.ts.
+  // Only PremiumTrialStarted/PremiumActivated stay taxonomy-only: no real
+  // trial or billing mechanism exists this Wave (ADR-035 — no payment
+  // gateway), so there is nothing honest to trigger them from yet.
+  ClaimRequested   = "claim_requested",
+  ClaimCancelled   = "claim_cancelled",
+  OwnershipVerified = "ownership_verified",
+  OwnershipRejected = "ownership_rejected",
+  OwnershipRevoked  = "ownership_revoked",
+  ManagerInvited    = "manager_invited",
+  ManagerAccepted   = "manager_accepted",
+  PremiumTrialStarted = "premium_trial_started",
+  PremiumUpgradeViewed = "premium_upgrade_viewed",
+  PremiumActivated     = "premium_activated",
 }
 
 export enum TrustSource {

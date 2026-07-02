@@ -1,6 +1,10 @@
 -- ============================================================
 -- 0022 — Connector Platform Framework
 -- Status: PRONTO PARA EXECUÇÃO (Release 1.7 — Epic 1)
+-- Rollback: Partial — ver database/templates/ROLLBACK_TEMPLATE.sql.
+--   DROP TABLE connector_sync_runs, connectors (nessa ordem, por causa da FK)
+--   é seguro enquanto nenhum código em produção os referencia; se algum sync
+--   real já rodou, isso descarta o histórico de connector_sync_runs.
 -- ============================================================
 --
 -- Cria:
@@ -12,18 +16,20 @@
 --
 -- SUPERSEDE: connector_configs (migration 0010) está morta — nenhum código
 -- lê ou escreve nela, e sua policy RLS (`USING (false)`) bloqueia até o
--- service-role via PostgREST. Não é removida aqui (sem ferramenta de DDL
--- neste projeto — toda migration é aplicada manualmente pelo CTO no Supabase
--- SQL Editor, ver ADR-017/018). Fica marcada como superada para remoção
--- manual futura, uma vez confirmado que nenhum código a referencia.
+-- service-role via PostgREST. Não é removida aqui (limpeza de dívida técnica
+-- fora do escopo deste Epic, não uma limitação de ferramenta — Database
+-- Migration System V2 já usa Supabase CLI para aplicar DDL real). Fica
+-- marcada como superada para remoção em uma migration futura dedicada, uma
+-- vez confirmado que nenhum código a referencia.
 --
 -- PRINCÍPIO:
 -- Um conector é uma entidade persistente, não apenas uma instância em memória.
 -- Uma execução de sincronização (SyncRun) nunca é sobrescrita — apenas criada
 -- e depois atualizada (running → success/partial/failed).
 --
--- APÓS APLICAR:
--- SELECT tablename, rowsecurity FROM pg_tables WHERE tablename IN ('connectors', 'connector_sync_runs');
+-- Verificação: database/verification/0022_verify.sql (Database Migration
+-- System V2 — verification queries live outside migrations, never embedded
+-- and never auto-run; ver docs/engineering/DATABASE_ENGINEERING.md).
 -- ============================================================
 
 -- ──────────────────────────────────────────────────────────
@@ -78,17 +84,3 @@ CREATE INDEX IF NOT EXISTS idx_connector_sync_runs_merchant
 
 ALTER TABLE connector_sync_runs ENABLE ROW LEVEL SECURITY;
 -- Leitura/escrita exclusivamente via service_role (API routes autenticadas)
-
--- ──────────────────────────────────────────────────────────
--- VERIFICAÇÃO PÓS-EXECUÇÃO
--- ──────────────────────────────────────────────────────────
-
-SELECT tablename, rowsecurity
-FROM pg_tables
-WHERE tablename IN ('connectors', 'connector_sync_runs')
-  AND schemaname = 'public'
-ORDER BY tablename;
-
-SELECT indexname FROM pg_indexes
-WHERE tablename IN ('connectors', 'connector_sync_runs')
-ORDER BY indexname;

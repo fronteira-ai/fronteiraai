@@ -1,9 +1,9 @@
 # RELEASE_1_7_BLUEPRINT.md
 # Blueprint Estratégico — Ecosystem Expansion Platform
 
-**Versão**: 1.1
-**Criado**: 2026-07-01 · **Revisado**: 2026-07-01 (reorganização em Waves, aprovada pelo CTO após entrega do Epic 1)
-**Status**: Epic 1, Wave 2 e Wave 3 entregues e certificados. Waves 4–5 restantes, execução faseada continua.
+**Versão**: 1.3
+**Criado**: 2026-07-01 · **Revisado**: 2026-07-01 (Wave 5 re-escopada pelo CTO de "Merchant Claim + Onboarding" para "Merchant Acquisition & Ownership Platform" — 8 Epics)
+**Status**: Epic 1, Wave 2, Wave 3, Wave 4 e Wave 5 entregues e certificados. Wave 6 restante, execução faseada continua.
 **Tipo de Release**: Platform + Data + Connector Infrastructure (compounding)
 **Fase**: 4 — Expansão do Ecossistema
 **Número de Release**: 1.7
@@ -112,17 +112,39 @@ Escopo:
 - Substitui a comparação de preço-apenas do `DeduplicationStage` por detecção de mudança em todos os campos relevantes (estoque, descrição, imagem).
 - **Antecipa a correção do histórico de preço**: corrige a lacuna do Epic 1 em que uma oferta nova nunca recebe uma linha em `price_history` — a partir desta Wave, todo produto começa a acumular patrimônio temporal **desde a primeira sincronização**, não apenas a partir da primeira atualização de preço.
 
-### WAVE 4 (0025) — Merchant Claim + Onboarding — "Essa loja é sua? Prove — e comece a operar em um clique."
+### WAVE 4 (0025) — Canonical Catalog & Compare Foundation — "Milhares de ofertas independentes, um único catálogo inteligente" — **ENTREGUE**
 
-Une o antigo Epic 5 (Merchant Claim Flow) a um fluxo de Onboarding: reivindicar uma loja não pode terminar na aprovação — o lojista precisa ser guiado a completar seu perfil e assumir a operação imediatamente, sem perder o momentum de "minha loja já existe aqui".
+Re-escopo do CTO em 2026-07-01: a Wave 4 original deste Blueprint (Merchant Claim + Onboarding) foi realocada para a **Wave 5** (ver abaixo) para dar lugar ao Canonical Catalog, priorizado por ser a fundação de que Compare, Search, Recommendation Engine, Merchant Intelligence e o Brain dependerão. Documentação completa: `RELEASE_1_7_WAVE_4_EXECUTION_PLAN.md`.
 
 Escopo:
-- `ClaimService` (interface reservada no Epic 1) implementado de verdade, estendendo `merchant_verifications` com um tipo de verificação de reivindicação de loja. Aprovação cria o vínculo `merchant_stores` — nenhum dado histórico é perdido.
-- Onboarding pós-claim: checklist guiado (completar perfil, confirmar canais de contato, revisar catálogo herdado) reaproveitando os padrões já existentes em `OnboardingWizard`/`computeProfileCompletion()`.
+- **`CanonicalProduct`** (`src/domains/canonical-catalog/`, domínio fundação — nunca depende de `connectors/` nem de `product-identity/`, para que todos os outros domínios possam depender dele) como a identidade permanente do produto. `Product` passa a representar apenas a origem/importação; nenhuma URL existente muda, nenhum `Product` é removido, nenhuma `Offer` perde histórico.
+- **`Offer → Canonical Product`**: nova coluna `offers.canonical_product_id`, preenchida por um bootstrap 1:1 (não uma união) a partir dos `products` já existentes — script `scripts/canonical-catalog-bootstrap.ts`, dry-run por padrão.
+- **Compare Foundation** (`CompareFoundationService`): infraestrutura completa (ranking de ofertas + agregação de histórico de preço por canonical product), mas backend/API apenas — nenhuma página pública nova nesta Wave (`GET /api/canonical-catalog/[slug]`).
+- **Merge Candidates**: Shadow Mode continua — nenhuma união automática, mesmo "aprovar" no Match Review (`PATCH /api/admin/canonical-catalog/merge-candidates/[id]`) só registra uma decisão humana. A lógica de scoring (`CanonicalMergeSuggestionService`) vive em `product-identity/`, que depende de `canonical-catalog/` — nunca o contrário.
+- **Offer Ranking interno**: preço, estoque, recência, confiança verificável (nunca Reputation Score — restrição permanente desde o Release 1.5) e qualidade de listagem. Ainda invisível ao usuário.
+- **Price History Foundation**: histórico passa a pertencer ao Canonical Product (agregado sob demanda a partir do `price_history` já existente, sem nova tabela) — menor/maior/média/variação/tendência.
+- Migration `0025_canonical_catalog.sql` (`canonical_products`, `offers.canonical_product_id`, `merge_candidates`).
+- 10 novos `TrustEventType` (taxonomia apenas — nenhum emitido ainda, mesma disciplina de `StoreDiscovered` na Wave 2).
 
-### WAVE 5 (0026) — SEO, Performance, Hardening e Release Certification — "Pronto para milhões de páginas, pronto para produção"
+### WAVE 5 (0026) — Merchant Acquisition & Ownership Platform — "Loja descoberta → lojista ativo → cliente recorrente" — **ENTREGUE**
 
-Escopo (antigo Epic 7): sitemap-index (`generateSitemaps()`) substituindo o sitemap monolítico atual; retry/backoff/idempotência para execuções de conector; rate limiting, ownership e auditoria; conclusão da lista completa de eventos cognitivos da missão ainda pendentes (`ProductImported`, `ProductUpdated`, `PriceChanged`, `ProductRemoved`, `MerchantDiscovered`, `MerchantClaimRequested/Approved`, `CatalogNormalized`, `SnapshotCreated`, `ImportFailed`); suíte de testes final e Quality Gate completo do Release; relatório final de certificação do Release 1.7.
+Re-escopo do CTO em 2026-07-01, uma segunda vez: o que era "Merchant Claim + Onboarding" (2 bullets, ver histórico de revisões) foi expandido para uma plataforma completa de aquisição — a prioridade deixa de ser infraestrutura e passa a ser conversão de lojas descobertas em clientes pagantes. Toda decisão desta Wave respondeu à pergunta obrigatória: "isso aumenta a conversão de lojistas para clientes do ParaguAI?".
+
+Escopo (8 Epics):
+- **Epic A — Merchant Ownership** (`src/domains/merchant-ownership/`, domínio independente de `connectors/`; depende de `trust/` deliberadamente — reaproveita `VerificationService`/`VerificationEvidenceService`/`EventService` em vez de duplicar a máquina de estados de verificação já existente desde o Release 1.5).
+- **Epic B — Smart Claim Flow**: loja descoberta → botão "Esta loja é minha" (`components/store/ClaimStoreButton.tsx`, em `/store/[slug]` e `/lojas/[slug]`) → login → formulário mínimo (nome/cargo/telefone, e-mail vem da própria sessão) → aprovação automática ou revisão humana → dashboard. `app/merchant/claim/[storeSlug]/page.tsx`.
+- **Epic C — Progressive Verification** (`ProgressiveVerificationEngine`, puro e explicável, mesma disciplina de fatores nomeados das Waves 3/4): compara e-mail/telefone/WhatsApp/website/Instagram submetidos contra os já cadastrados na loja — nunca chama Meta Graph API/WhatsApp Business API (sem credenciais neste ambiente, decisão confirmada com o CTO). Sem checagem de Facebook (`stores` não tem essa coluna — gap documentado, não silencioso).
+- **Epic D — Ownership Levels**: `OwnershipLevel` computado sob demanda (StoreDiscovered → ClaimRequested → IdentityVerified → OwnershipVerified → MerchantVerified → PremiumMerchant) — nenhuma coluna nova, mesma convenção "computado, nunca armazenado" já usada em todo score deste projeto.
+- **Epic E — Delegated Management**: `merchant_delegates` (convite por token, papéis fixos manager/marketing/agency/administrator/operator com matriz de permissões fixa) — ownership nunca é delegada, só permissões de gestão. Backend + fluxo de convite/aceite completo + UI mínima em `/merchant/settings` (confirmado com o CTO — sem página de permissões dedicada).
+- **Epic F — Claim Review Center**: `/admin/claims` + `/admin/claims/[id]` (real, confirmado com o CTO — diferente do precedente de Waves anteriores) — claim, breakdown de sinais, evidências, histórico, eventos do Brain, trust signals. Aprovar/Rejeitar/Solicitar informação/Revogar.
+- **Epic G — Welcome Experience**: estende o `WelcomeBanner` já existente no dashboard (não um banner paralelo) com números reais já computados por `getMerchantDashboardStats()` — produtos sincronizados, lojas vinculadas, trust score inicial.
+- **Epic H — Premium Upgrade Journey**: lead-capture (`merchant_upgrade_leads`, append-only) — sem gateway de pagamento (ADR-035 já existente). Gatilho natural no badge "+N Premium" do Growth Center (antes inerte, agora clicável) e no card de plano em `/merchant/settings`.
+- Migration `0026_merchant_ownership.sql` (`store_claims`, `merchant_delegates`, `merchant_upgrade_leads` + extensão do CHECK/catálogo de `merchant_verifications` com o tipo `store_claim`).
+- 10 novos `TrustEventType` — diferente das Waves anteriores, **8 têm emissão real** (`ClaimRequested`, `ClaimCancelled`, `OwnershipVerified/Rejected/Revoked`, `ManagerInvited/Accepted`, `PremiumUpgradeViewed` — uma claim/delegação/interesse de upgrade sempre tem um merchantId natural). Só `PremiumTrialStarted`/`PremiumActivated` ficam taxonomia apenas (sem mecanismo real de trial/billing).
+
+### WAVE 6 (0027) — SEO, Performance, Hardening e Release Certification — "Pronto para milhões de páginas, pronto para produção"
+
+Escopo (antigo Epic 7): sitemap-index (`generateSitemaps()`) substituindo o sitemap monolítico atual; retry/backoff/idempotência para execuções de conector; rate limiting, ownership e auditoria; conclusão da lista completa de eventos cognitivos da missão ainda pendentes (`ProductImported`, `ProductUpdated`, `PriceChanged`, `ProductRemoved`, `CatalogNormalized`, `SnapshotCreated`, `ImportFailed`, `PremiumTrialStarted`, `PremiumActivated`, e os 10 eventos do Canonical Catalog da Wave 4 — `MerchantDiscovered`/`MerchantClaimRequested/Approved` já entregues na Wave 5 sob os nomes `StoreDiscovered`/`ClaimRequested`/`OwnershipVerified`); suíte de testes final e Quality Gate completo do Release; relatório final de certificação do Release 1.7.
 
 ---
 
@@ -130,18 +152,22 @@ Escopo (antigo Epic 7): sitemap-index (`generateSitemaps()`) substituindo o site
 
 | Asset | Como o Release 1.7 fortalece |
 |---|---|
-| C-3 Normalized Catalog | Product Identity (Wave 3, Core Asset — Capítulo 8) e conectores de descoberta (Wave 2) aceleram diretamente a taxonomia normalizada |
+| C-3 Normalized Catalog | Product Identity (Wave 3, Core Asset — Capítulo 8), Canonical Catalog (Wave 4) e conectores de descoberta (Wave 2) aceleram diretamente a taxonomia normalizada |
 | S-3 Connector Knowledge | Framework único e testável de conectores (Epic 1) substitui scripts ad hoc |
-| S-1 Merchant Network | Merchant Claim + Onboarding (Wave 4) converte descoberta em cadastro sem fricção de marketing |
-| C-1 Historical Price Data | Change Detection + correção de `price_history` para ofertas novas (Wave 3) captura sinais que hoje são invisíveis e fecha uma lacuna de patrimônio histórico |
+| S-1 Merchant Network | Merchant Acquisition & Ownership Platform (Wave 5) converte descoberta em claim verificado e delegação organizacional, sem fricção de marketing |
+| C-1 Historical Price Data | Change Detection + correção de `price_history` para ofertas novas (Wave 3), e agregação por Canonical Product (Wave 4), capturam sinais que hoje são invisíveis e fecham uma lacuna de patrimônio histórico |
+| C-4 Search Intelligence | Compare Foundation (Wave 4) prepara ranking de ofertas por identidade canônica — pré-requisito para busca comparável entre lojas |
+| C-5 Cross-Border Context Model | Identidade canônica (Wave 4) é o pré-requisito estrutural para padrões cambiais/regionais por produto real, não por oferta isolada |
+| C-2 Merchant Trust Score | Progressive Verification (Wave 5) é o primeiro mecanismo real de verificação automática de propriedade — insumo direto para o ADR-041 (scorer ainda não implementado, mas agora tem um primeiro sinal estruturado) |
+| C-6 Buyer Behavioral Knowledge | Delegated Management (Wave 5) amplia o conhecimento de quem realmente opera cada loja — sinal organizacional que hoje não existia |
 
-**Moat reforçado**: o Data Flywheel Moat passa a operar mesmo sem crescimento de cadastro manual — o catálogo cresce por descoberta, não apenas por adesão, o que é estruturalmente difícil de copiar sem o mesmo investimento em conectores compatíveis com termos de uso.
+**Moat reforçado**: o Data Flywheel Moat passa a operar mesmo sem crescimento de cadastro manual — o catálogo cresce por descoberta, não apenas por adesão, o que é estruturalmente difícil de copiar sem o mesmo investimento em conectores compatíveis com termos de uso. A partir da Wave 5, o Merchant Trust Network Moat ganha seu primeiro mecanismo real de conversão: descoberta → claim verificado → cliente, fechando o funil que antes dependia inteiramente de cadastro manual.
 
 ---
 
 ## CAPÍTULO 6 — PARAGUAI BRAIN
 
-O Epic 1 introduz os primeiros 4 eventos cognitivos do domínio de conectores (`ConnectorRegistered`, `ConnectorSyncStarted`, `ConnectorSyncCompleted`, `ConnectorSyncFailed`), e é o primeiro domínio fora de `src/domains/trust/` a alimentar o Brain — um precedente arquitetural relevante para todos os domínios futuros. A lista completa de eventos cognitivos da missão (`ProductImported`, `MerchantDiscovered`, `MerchantClaimApproved`, etc.) é concluída ao longo das Waves 2–5, à medida que as capacidades correspondentes existem de fato — nenhum evento é declarado antes de a capacidade que o gera estar implementada.
+O Epic 1 introduz os primeiros 4 eventos cognitivos do domínio de conectores (`ConnectorRegistered`, `ConnectorSyncStarted`, `ConnectorSyncCompleted`, `ConnectorSyncFailed`), e é o primeiro domínio fora de `src/domains/trust/` a alimentar o Brain — um precedente arquitetural relevante para todos os domínios futuros. A lista completa de eventos cognitivos da missão é concluída ao longo das Waves 2–6, à medida que as capacidades correspondentes existem de fato — nenhum evento é declarado antes de a capacidade que o gera estar implementada. A Wave 4 adiciona 10 eventos do Canonical Catalog (`CanonicalProductCreated`, `OfferLinked`/`OfferUnlinked`, `MergeSuggested`/`Approved`/`Rejected`, `CanonicalViewed`, `CompareViewed`, `PriceHistoryViewed`, `LowestPriceReached`) apenas como taxonomia — nenhum ainda emitido, mesma disciplina do `StoreDiscovered` da Wave 2. A Wave 5 adiciona mais 10 (`ClaimRequested`, `ClaimCancelled`, `OwnershipVerified/Rejected/Revoked`, `ManagerInvited/Accepted`, `PremiumTrialStarted`, `PremiumUpgradeViewed`, `PremiumActivated`) — e é a primeira Wave em que a maioria (8 de 10) tem emissão real, não apenas taxonomia: uma claim, uma delegação ou um clique de interesse em upgrade sempre acontecem dentro de um contexto de merchant já conhecido, diferente dos eventos de sistema/descoberta das Waves anteriores.
 
 ---
 
@@ -188,7 +214,7 @@ Registrar esta decisão agora, antes da implementação, evita que a Wave 3 come
 
 ## DECLARAÇÃO FINAL
 
-O Release 1.7 substitui a dependência de cadastro manual por um motor de descoberta e sincronização contínua da fronteira. O Epic 1 (Connector Platform Framework) é a fundação sobre a qual as quatro Waves seguintes — Merchant Connectors/Scheduler/Discovery, Product Identity/Change Detection/Price History, Merchant Claim/Onboarding e SEO/Performance/Hardening/Certificação — serão construídas. Product Identity é, a partir desta revisão, um Core Asset permanente do ParaguAI — não uma capacidade de uma única Wave.
+O Release 1.7 substitui a dependência de cadastro manual por um motor de descoberta e sincronização contínua da fronteira, e converte essa descoberta em clientes reais. O Epic 1 (Connector Platform Framework) é a fundação sobre a qual as cinco Waves seguintes — Merchant Connectors/Scheduler/Discovery, Product Identity/Change Detection/Price History, Canonical Catalog/Compare Foundation, Merchant Acquisition & Ownership Platform e SEO/Performance/Hardening/Certificação — são construídas. Product Identity é, desde a Wave 3, um Core Asset permanente do ParaguAI — não uma capacidade de uma única Wave. A partir da Wave 4, Canonical Catalog assume o mesmo status: a identidade permanente de produto sobre a qual Compare, Search, Recommendation Engine, Merchant Intelligence e o Brain serão construídos. A partir da Wave 5, o próprio funil de aquisição — descoberta → claim verificado → cliente — deixa de ser manual: o ParaguAI entrega crescimento, e o Claim é apenas o início desse relacionamento.
 
 ---
 
@@ -196,3 +222,5 @@ O Release 1.7 substitui a dependência de cadastro manual por um motor de descob
 
 - v1.0 (2026-07-01): criação, aprovação do CTO para execução faseada, início do Epic 1.
 - v1.1 (2026-07-01): Epic 1 entregue e certificado. CTO aprovou reorganização dos Epics 2–7 remanescentes em 4 Waves (Capítulo 4 reescrito); Product Identity declarado Core Asset com regra de convergência obrigatória e promoção a domínio próprio `src/domains/product-identity/` (Capítulo 8, novo); Wave 3 passa a antecipar a correção de `price_history` para ofertas novas.
+- v1.2 (2026-07-01): Wave 3 entregue e certificada. CTO re-escopou a Wave 4 de "Merchant Claim + Onboarding" para "Canonical Catalog & Compare Foundation" — a fundação de identidade permanente de produto sobre a qual Compare/Search/Recommendation/Merchant Intelligence/Brain dependerão. Merchant Claim + Onboarding realocado para a nova Wave 5; a antiga Wave 5 (SEO/Performance/Hardening/Certificação) torna-se Wave 6. `src/domains/canonical-catalog/` criado como domínio fundação (nunca depende de `connectors/` nem `product-identity/` — todos podem depender dele); `CanonicalMergeSuggestionService` em `product-identity/` é o único ponto de ponte entre os dois domínios.
+- v1.3 (2026-07-01): Wave 4 entregue e certificada. CTO re-escopou a Wave 5 de "Merchant Claim + Onboarding" (2 bullets) para "Merchant Acquisition & Ownership Platform" (8 Epics — Ownership, Smart Claim Flow, Progressive Verification, Ownership Levels, Delegated Management, Claim Review Center, Welcome Experience, Premium Upgrade Journey). Prioridade explícita do CTO: infraestrutura dá lugar a crescimento de negócio. `src/domains/merchant-ownership/` criado, depende de `trust/` deliberadamente (reaproveita verificação/eventos já existentes). Primeira Wave em que a maioria dos novos eventos do Brain (8 de 10) tem emissão real, não apenas taxonomia.

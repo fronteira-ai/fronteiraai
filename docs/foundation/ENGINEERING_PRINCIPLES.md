@@ -139,6 +139,8 @@ Quando um módulo produz um dado que outro consume, esse dado é um contrato. O 
 
 Contratos de dados que não são explicitados tornam-se acoplamento implícito: o módulo consumidor depende de detalhes de implementação do produtor que nunca foram documentados como contrato. Esse acoplamento só é descoberto quando a implementação do produtor muda e o consumidor quebra.
 
+O schema do banco é o contrato mais fundamental de todos — mudá-lo é uma decisão de engenharia com o mesmo rigor de qualquer outro contrato. Ver `docs/engineering/DATABASE_ENGINEERING.md` (Database Migration System V2) para o padrão permanente de migrations, verificação, rollback e automação via Supabase CLI.
+
 ---
 
 ## 6. APIs e Fronteiras de Módulo

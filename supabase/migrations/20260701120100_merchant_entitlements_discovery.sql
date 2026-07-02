@@ -1,6 +1,10 @@
 -- ============================================================
 -- 0023 — Merchant Connectors + Scheduler + Discovery (Release 1.7 — Wave 2)
 -- Status: PRONTO PARA EXECUÇÃO
+-- Rollback: Possible — ALTER TABLE stores DROP COLUMN IF EXISTS
+--   discovered_at, discovery_connector_key; DROP INDEX IF EXISTS
+--   idx_stores_discovered_at. Seguro mesmo se Discovery já rodou: apenas
+--   descarta a proveniência dessas linhas, não a loja em si.
 -- ============================================================
 --
 -- Esta migration cobre apenas o Wave 2:
@@ -13,9 +17,11 @@
 -- 2. import_logs passa a ser considerada SUPERADA a partir deste Wave —
 --    nenhum código escreve mais nela; connector_sync_runs (já existente
 --    desde a migration 0022) é a única fonte de verdade. Não é removida
---    aqui (sem ferramenta de DDL neste projeto — ver ADR-017/018).
+--    aqui (limpeza de dívida técnica fora do escopo desta Wave).
 --
--- APÓS APLICAR, execute as SELECTs de verificação ao final deste arquivo.
+-- Verificação: database/verification/0023_verify.sql (Database Migration
+-- System V2 — verification queries live outside migrations, never embedded
+-- and never auto-run; ver docs/engineering/DATABASE_ENGINEERING.md).
 -- ============================================================
 
 ALTER TABLE stores
@@ -24,13 +30,3 @@ ALTER TABLE stores
 
 CREATE INDEX IF NOT EXISTS idx_stores_discovered_at ON stores (discovered_at)
   WHERE discovered_at IS NOT NULL;
-
--- ──────────────────────────────────────────────────────────
--- VERIFICAÇÃO PÓS-EXECUÇÃO
--- ──────────────────────────────────────────────────────────
-
-SELECT column_name, data_type, is_nullable
-FROM information_schema.columns
-WHERE table_name = 'stores' AND column_name IN ('discovered_at', 'discovery_connector_key');
-
-SELECT indexname FROM pg_indexes WHERE tablename = 'stores' AND indexname = 'idx_stores_discovered_at';

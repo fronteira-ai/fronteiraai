@@ -11,6 +11,8 @@ export interface StorePublicData extends Store {
   verifiedLevel: string | null;
   offerCount: number;
   productCount: number;
+  /** True when no `merchant_stores` row exists yet — Wave 5's Smart Claim Flow entry point. */
+  isUnclaimed: boolean;
 }
 
 export async function getStorePublic(slug: string): Promise<StorePublicData | null> {
@@ -55,7 +57,18 @@ export async function getStorePublic(slug: string): Promise<StorePublicData | nu
     verifiedLevel: merchantData?.verified_level ?? null,
     offerCount: offerCountResult.count ?? 0,
     productCount: uniqueProducts.size,
+    isUnclaimed: !merchantLink.data,
   };
+}
+
+// Standalone check for pages that already have their own Store row via a
+// different service (e.g. app/store/[slug] uses services/store.service.ts)
+// and just need the claim-CTA visibility flag without refetching everything
+// getStorePublic() returns.
+export async function isStoreUnclaimed(storeId: string): Promise<boolean> {
+  const sc = getSupabaseServiceClient();
+  const { data } = await sc.from("merchant_stores").select("id").eq("store_id", storeId).limit(1).maybeSingle();
+  return !data;
 }
 
 export async function getStoresRanking(limit = 30): Promise<StorePublicData[]> {
@@ -101,6 +114,7 @@ export async function getStoresRanking(limit = 30): Promise<StorePublicData[]> {
     verifiedLevel: merchantMap.get(store.id)?.verified_level ?? null,
     offerCount: countMap.get(store.id) ?? 0,
     productCount: 0,
+    isUnclaimed: !merchantMap.has(store.id),
   }));
 
   // Sort by merchant score desc, then by offer count desc, then by rating desc

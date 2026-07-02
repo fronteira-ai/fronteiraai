@@ -1,0 +1,134 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
+import type { CanonicalProduct } from "../domain/CanonicalProduct";
+import type { ICanonicalCatalogRepository } from "../repositories/ICanonicalCatalogRepository";
+import type {
+  CanonicalOfferView,
+  CanonicalProductInput,
+  PaginatedResult,
+  PaginationParams,
+} from "../types/canonical-catalog.types";
+
+function toCanonicalProduct(row: Record<string, unknown>): CanonicalProduct {
+  return {
+    id: row.id as string,
+    canonicalSlug: row.canonical_slug as string,
+    name: row.name as string,
+    brandId: (row.brand_id as string | null) ?? null,
+    categoryId: (row.category_id as string | null) ?? null,
+    imageUrl: (row.image_url as string | null) ?? null,
+    specifications: (row.specifications as Record<string, string> | null) ?? null,
+    createdAt: row.created_at as string,
+    updatedAt: row.updated_at as string,
+  };
+}
+
+export class SupabaseCanonicalCatalogRepository implements ICanonicalCatalogRepository {
+  constructor(private readonly client: SupabaseClient) {}
+
+  async findBySlug(canonicalSlug: string): Promise<CanonicalProduct | null> {
+    const { data, error } = await this.client
+      .from("canonical_products")
+      .select("*")
+      .eq("canonical_slug", canonicalSlug)
+      .maybeSingle();
+    if (error) {
+      console.error("[SupabaseCanonicalCatalogRepository.findBySlug]", error.message);
+      return null;
+    }
+    return data ? toCanonicalProduct(data) : null;
+  }
+
+  async findById(id: string): Promise<CanonicalProduct | null> {
+    const { data, error } = await this.client.from("canonical_products").select("*").eq("id", id).maybeSingle();
+    if (error) {
+      console.error("[SupabaseCanonicalCatalogRepository.findById]", error.message);
+      return null;
+    }
+    return data ? toCanonicalProduct(data) : null;
+  }
+
+  async findOrCreateBySlug(canonicalSlug: string, input: CanonicalProductInput): Promise<CanonicalProduct> {
+    const existing = await this.findBySlug(canonicalSlug);
+    if (existing) return existing;
+
+    const { data, error } = await this.client
+      .from("canonical_products")
+      .insert({
+        canonical_slug: canonicalSlug,
+        name: input.name,
+        brand_id: input.brandId,
+        category_id: input.categoryId,
+        image_url: input.imageUrl,
+        specifications: input.specifications,
+      })
+      .select("*")
+      .single();
+
+    if (error) {
+      // Concurrent creation race: another caller inserted the same slug
+      // between our findBySlug and insert. Read-back instead of failing —
+      // canonical_slug's UNIQUE constraint is what actually prevents
+      // duplicates; this makes the method idempotent under concurrency too.
+      const raced = await this.findBySlug(canonicalSlug);
+      if (raced) return raced;
+      throw new Error(`canonical product insert: ${error.message}`);
+    }
+
+    return toCanonicalProduct(data);
+  }
+
+  async findByBrandId(brandId: string): Promise<CanonicalProduct[]> {
+    const { data, error } = await this.client.from("canonical_products").select("*").eq("brand_id", brandId);
+    if (error) {
+      console.error("[SupabaseCanonicalCatalogRepository.findByBrandId]", error.message);
+      return [];
+    }
+    return (data ?? []).map(toCanonicalProduct);
+  }
+
+  async linkOffer(offerId: string, canonicalProductId: string): Promise<void> {
+    const { error } = await this.client
+      .from("offers")
+      .update({ canonical_product_id: canonicalProductId })
+      .eq("id", offerId);
+    if (error) throw new Error(`offer link: ${error.message}`);
+  }
+
+  async findOffersByCanonicalProductId(
+    canonicalProductId: string,
+    pagination: PaginationParams
+  ): Promise<PaginatedResult<CanonicalOfferView>> {
+    const { limit, offset } = pagination;
+    const { data, error, count } = await this.client
+      .from("offers")
+      .select("id, store_id, price_usd, in_stock, stock_quantity, updated_at, condition, warranty, product_url, stores(slug)", {
+        count: "exact",
+      })
+      .eq("canonical_product_id", canonicalProductId)
+      .range(offset, offset + limit - 1);
+
+    if (error) {
+      console.error("[SupabaseCanonicalCatalogRepository.findOffersByCanonicalProductId]", error.message);
+      return { items: [], total: 0 };
+    }
+
+    const items: CanonicalOfferView[] = (data ?? []).map((row) => {
+      const storeRelation = row.stores as { slug: string } | { slug: string }[] | null;
+      const store = Array.isArray(storeRelation) ? storeRelation[0] : storeRelation;
+      return {
+        offerId: row.id as string,
+        storeId: row.store_id as string,
+        storeSlug: store?.slug ?? "",
+        priceUSD: row.price_usd as number,
+        inStock: row.in_stock as boolean,
+        stockQuantity: (row.stock_quantity as number | null) ?? null,
+        updatedAt: row.updated_at as string,
+        condition: (row.condition as string | null) ?? null,
+        warranty: (row.warranty as string | null) ?? null,
+        productUrl: (row.product_url as string | null) ?? null,
+      };
+    });
+
+    return { items, total: count ?? items.length };
+  }
+}
