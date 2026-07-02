@@ -92,9 +92,9 @@ describe("ClaimService", () => {
       expect(claimRepo.create).not.toHaveBeenCalled();
     });
 
-    it("auto-approves and links the store when signals give high confidence", async () => {
+    it("never auto-approves, even when signals give high confidence (Wave 6 hardening: every signal ProgressiveVerificationEngine checks is also public on /lojas/[slug], so a high score alone cannot be trusted to prove ownership — always routes to human review)", async () => {
       const storeChannels = makeStoreChannels({ phone: "+595981234567", email: "maria@lojaacme.com", website: "lojaacme.com" });
-      const claimRepo = makeClaimRepo({ create: jest.fn().mockResolvedValue(makeClaim({ status: ClaimStatus.Approved })) });
+      const claimRepo = makeClaimRepo({ create: jest.fn().mockResolvedValue(makeClaim({ status: ClaimStatus.AwaitingReview, automatedConfidence: 100 })) });
       const storeLinkRepo = makeStoreLinkRepo();
       const verificationService = makeVerificationService();
       const eventService = makeEventService();
@@ -102,10 +102,13 @@ describe("ClaimService", () => {
       const service = new ClaimService(claimRepo, storeLinkRepo, verificationService, makeEvidenceService(), eventService);
       const result = await service.create("merchant-1", "store-1", makeClaimantInput(), storeChannels, "user-1");
 
-      expect(result.status).toBe(ClaimStatus.Approved);
-      expect(storeLinkRepo.link).toHaveBeenCalledWith("merchant-1", "store-1");
-      expect(verificationService.approveVerification).toHaveBeenCalled();
+      expect(result.status).toBe(ClaimStatus.AwaitingReview);
+      expect(storeLinkRepo.link).not.toHaveBeenCalled();
+      expect(verificationService.approveVerification).not.toHaveBeenCalled();
       expect(eventService.recordEvent).toHaveBeenCalled();
+      expect(claimRepo.create).toHaveBeenCalledWith(
+        expect.objectContaining({ status: ClaimStatus.AwaitingReview })
+      );
     });
 
     it("routes to awaiting_review without linking the store when confidence is low", async () => {

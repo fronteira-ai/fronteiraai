@@ -48,6 +48,19 @@ export class ClaimService {
 
     const result = this.engine.evaluate(input, storeChannels);
 
+    // Wave 6 hardening (2026-07-02, CTO decision): auto-approval disabled.
+    // Every signal ProgressiveVerificationEngine checks (phone/WhatsApp/
+    // website/Instagram/email-domain) is also shown publicly on
+    // /lojas/[slug] — a claimant can copy them straight off the store's own
+    // page and reach the auto-approve threshold with zero private
+    // knowledge, defeating the anti-fraud guarantee this engine was built
+    // for. `result.autoApprovable` is still computed and stored as evidence
+    // (it tells the human reviewer how strong the automated signal match
+    // was), but it no longer skips review. Restoring a fast-track requires
+    // a real private-channel verification (OTP to store phone/email) —
+    // out of scope for a hardening-only wave, deferred to Release 1.8.
+    const autoApprovable = false;
+
     const verification = await this.verificationService.submitVerification(merchantId, VerificationType.StoreClaim, {
       store_id: storeId,
       confidence: result.confidence,
@@ -70,7 +83,7 @@ export class ClaimService {
     const claim = await this.claimRepo.create({
       merchantId,
       storeId,
-      status: result.autoApprovable ? ClaimStatus.Approved : ClaimStatus.AwaitingReview,
+      status: autoApprovable ? ClaimStatus.Approved : ClaimStatus.AwaitingReview,
       claimantName: input.name,
       claimantPhone: input.phone,
       claimantEmail: input.email,
@@ -82,7 +95,7 @@ export class ClaimService {
 
     await this.eventService.recordEvent(toCreateEventInput(claimRequestedEvent(merchantId, storeId, claim.id)));
 
-    if (result.autoApprovable) {
+    if (autoApprovable) {
       await this.storeLinkRepo.link(merchantId, storeId);
       if (verification) await this.verificationService.approveVerification(verification.id, submittedByUserId);
       await this.eventService.recordEvent(
