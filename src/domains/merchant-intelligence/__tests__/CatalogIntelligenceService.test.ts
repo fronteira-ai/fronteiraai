@@ -38,11 +38,13 @@ function mockClient(offers: ReturnType<typeof makeOffer>[], logDays = 3) {
           }),
         };
       }
-      if (table === "import_logs") {
+      if (table === "connector_sync_runs") {
         return {
           select: jest.fn().mockReturnValue({
-            order: jest.fn().mockReturnValue({
-              limit: jest.fn().mockResolvedValue({ data: [{ created_at: lastImportAt, success: true }], error: null }),
+            eq: jest.fn().mockReturnValue({
+              order: jest.fn().mockReturnValue({
+                limit: jest.fn().mockResolvedValue({ data: [{ started_at: lastImportAt, completed_at: lastImportAt }], error: null }),
+              }),
             }),
           }),
         };
@@ -126,8 +128,10 @@ describe("buildCatalogIntelligence", () => {
         const staleDate = new Date(Date.now() - 20 * 86400000).toISOString();
         return {
           select: jest.fn().mockReturnValue({
-            order: jest.fn().mockReturnValue({
-              limit: jest.fn().mockResolvedValue({ data: [{ created_at: staleDate, success: true }], error: null }),
+            eq: jest.fn().mockReturnValue({
+              order: jest.fn().mockReturnValue({
+                limit: jest.fn().mockResolvedValue({ data: [{ started_at: staleDate, completed_at: staleDate }], error: null }),
+              }),
             }),
           }),
         };

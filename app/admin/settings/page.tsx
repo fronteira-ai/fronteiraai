@@ -71,7 +71,7 @@ export default async function SettingsPage() {
               <span className="text-green-400 font-medium">Sim</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-slate-400">Middleware de proteção</span>
+              <span className="text-slate-400">Proxy de proteção</span>
               <span className="text-green-400 font-medium">Ativo</span>
             </div>
             <div className="flex justify-between">

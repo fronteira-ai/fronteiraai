@@ -23,9 +23,10 @@ export async function buildExecutiveSummary(
       .select("id, in_stock, price_usd, products!inner(id, image_url, category_id, brand_id, description)")
       .in("store_id", storeIds),
     serviceClient
-      .from("import_logs")
-      .select("created_at, success, total_persisted")
-      .order("created_at", { ascending: false })
+      .from("connector_sync_runs")
+      .select("started_at, completed_at, status, totals")
+      .eq("merchant_id", merchant.id)
+      .order("started_at", { ascending: false })
       .limit(1),
     serviceClient
       .from("merchant_trust")
@@ -61,7 +62,7 @@ export async function buildExecutiveSummary(
   }).length;
 
   const lastLog = lastImportResult.data?.[0];
-  const lastImportAt = lastLog?.created_at ?? null;
+  const lastImportAt = lastLog?.completed_at ?? lastLog?.started_at ?? null;
   const daysSinceLastImport = lastImportAt
     ? Math.floor((Date.now() - new Date(lastImportAt).getTime()) / (1000 * 60 * 60 * 24))
     : null;
@@ -94,7 +95,7 @@ export async function buildExecutiveSummary(
     contactsAvailable,
     contactsTotal: 4,
     lastImportAt,
-    lastImportSuccess: lastLog?.success ?? null,
+    lastImportSuccess: lastLog ? lastLog.status === "success" : null,
     daysSinceLastImport,
     onboardingDone: merchant.onboarding_done,
     verifiedLevel: merchant.verified_level,

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireAdmin, isAuthError } from "@/lib/admin-auth";
+import { toImportLogShape } from "@/lib/sync-run-mapper";
 import type { DashboardStats } from "@/types/admin";
 
 export async function GET() {
@@ -16,9 +17,9 @@ export async function GET() {
       db.from("categories").select("id", { count: "exact", head: true }),
       db.from("price_history").select("id", { count: "exact", head: true }),
       db
-        .from("import_logs")
+        .from("connector_sync_runs")
         .select("*")
-        .order("created_at", { ascending: false })
+        .order("started_at", { ascending: false })
         .limit(1)
         .maybeSingle(),
     ]);
@@ -30,7 +31,7 @@ export async function GET() {
     brands: brands.count ?? 0,
     categories: categories.count ?? 0,
     priceHistoryEntries: priceHistory.count ?? 0,
-    lastImport: lastImport.data ?? null,
+    lastImport: lastImport.data ? toImportLogShape(lastImport.data) : null,
   };
 
   return NextResponse.json({ data: stats });

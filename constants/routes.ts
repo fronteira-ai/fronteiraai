@@ -76,3 +76,11 @@ export function comparePath(slug: string): string {
 export function compareUrl(slug: string): string {
   return `${SITE_URL}${comparePath(slug)}`;
 }
+
+export function merchantPassportPath(merchantId: string): string {
+  return `/lojistas/${merchantId}`;
+}
+
+export function merchantPassportUrl(merchantId: string): string {
+  return `${SITE_URL}${merchantPassportPath(merchantId)}`;
+}

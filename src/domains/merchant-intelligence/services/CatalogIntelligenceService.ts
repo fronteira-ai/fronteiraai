@@ -32,9 +32,10 @@ export async function buildCatalogIntelligence(
     .in("store_id", storeIds);
 
   const lastImportResult = await serviceClient
-    .from("import_logs")
-    .select("created_at, success")
-    .order("created_at", { ascending: false })
+    .from("connector_sync_runs")
+    .select("started_at, completed_at")
+    .eq("merchant_id", merchantId)
+    .order("started_at", { ascending: false })
     .limit(1);
 
   const offers = (offersResult.data ?? []) as unknown as OfferRow[];
@@ -52,7 +53,7 @@ export async function buildCatalogIntelligence(
   const noPrice = offers.filter((o) => !o.price_usd || o.price_usd <= 0).length;
 
   const lastLog = lastImportResult.data?.[0];
-  const lastImportAt = lastLog?.created_at ?? null;
+  const lastImportAt = lastLog?.completed_at ?? lastLog?.started_at ?? null;
   const daysSinceLastImport = lastImportAt
     ? Math.floor((Date.now() - new Date(lastImportAt).getTime()) / (1000 * 60 * 60 * 24))
     : null;

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import { merchantPassportUrl } from "@/constants/routes";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import { getSupabaseServiceClient } from "@/lib/supabase/service";
@@ -83,9 +84,28 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
   const result = await getMerchantPassport(merchantId);
   if (!result) return { title: "Lojista não encontrado | ParaguAI" };
   const name = result.passport.basic.companyName;
+  const title = `${name} — Identidade Digital | ParaguAI`;
+  const description = `Perfil completo de ${name}: verificações, sinais de confiança, avaliações e histórico público no ParaguAI.`;
+  const url = merchantPassportUrl(merchantId);
+
   return {
-    title: `${name} — Identidade Digital | ParaguAI`,
-    description: `Perfil completo de ${name}: verificações, sinais de confiança, avaliações e histórico público no ParaguAI.`,
+    title,
+    description,
+    alternates: {
+      canonical: url,
+    },
+    openGraph: {
+      title,
+      description,
+      url,
+      siteName: "ParaguAI",
+      type: "profile",
+    },
+    twitter: {
+      card: "summary",
+      title,
+      description,
+    },
   };
 }
 
