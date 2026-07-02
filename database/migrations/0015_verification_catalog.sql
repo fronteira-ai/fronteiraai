@@ -114,10 +114,12 @@ ALTER TABLE verification_evidence ENABLE ROW LEVEL SECURITY;
 ALTER TABLE verification_history ENABLE ROW LEVEL SECURITY;
 
 -- verification_types: public read, admin write
+DROP POLICY IF EXISTS "Public can read active verification types" ON verification_types;
 CREATE POLICY "Public can read active verification types"
   ON verification_types FOR SELECT
   USING (is_active = true);
 
+DROP POLICY IF EXISTS "Admin can manage verification types" ON verification_types;
 CREATE POLICY "Admin can manage verification types"
   ON verification_types FOR ALL
   USING (
@@ -125,12 +127,14 @@ CREATE POLICY "Admin can manage verification types"
   );
 
 -- verification_evidence: merchant reads own, admin reads all, service role writes
+DROP POLICY IF EXISTS "Merchant reads own evidence" ON verification_evidence;
 CREATE POLICY "Merchant reads own evidence"
   ON verification_evidence FOR SELECT
   USING (
     merchant_id = auth.uid() AND deleted_at IS NULL
   );
 
+DROP POLICY IF EXISTS "Admin reads all evidence" ON verification_evidence;
 CREATE POLICY "Admin reads all evidence"
   ON verification_evidence FOR SELECT
   USING (
@@ -138,10 +142,12 @@ CREATE POLICY "Admin reads all evidence"
   );
 
 -- verification_history: merchant reads own, admin reads all
+DROP POLICY IF EXISTS "Merchant reads own verification history" ON verification_history;
 CREATE POLICY "Merchant reads own verification history"
   ON verification_history FOR SELECT
   USING (merchant_id = auth.uid());
 
+DROP POLICY IF EXISTS "Admin reads all verification history" ON verification_history;
 CREATE POLICY "Admin reads all verification history"
   ON verification_history FOR SELECT
   USING (

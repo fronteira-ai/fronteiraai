@@ -34,10 +34,12 @@ CREATE INDEX IF NOT EXISTS trust_signals_type_idx     ON trust_signals (signal_t
 ALTER TABLE trust_signals ENABLE ROW LEVEL SECURITY;
 
 -- Public read for active/public signals
+DROP POLICY IF EXISTS "trust_signals_public_read" ON trust_signals;
 CREATE POLICY "trust_signals_public_read" ON trust_signals
   FOR SELECT USING (is_public = true AND status = 'active');
 
 -- Admins can read all
+DROP POLICY IF EXISTS "trust_signals_admin_all" ON trust_signals;
 CREATE POLICY "trust_signals_admin_all" ON trust_signals
   FOR ALL USING (
     EXISTS (
@@ -71,6 +73,7 @@ CREATE INDEX IF NOT EXISTS signal_provenance_merchant_idx ON signal_provenance (
 ALTER TABLE signal_provenance ENABLE ROW LEVEL SECURITY;
 
 -- Admin read only (provenance is sensitive)
+DROP POLICY IF EXISTS "signal_provenance_admin_read" ON signal_provenance;
 CREATE POLICY "signal_provenance_admin_read" ON signal_provenance
   FOR SELECT USING (
     EXISTS (
@@ -80,6 +83,7 @@ CREATE POLICY "signal_provenance_admin_read" ON signal_provenance
     )
   );
 
+DROP POLICY IF EXISTS "signal_provenance_admin_write" ON signal_provenance;
 CREATE POLICY "signal_provenance_admin_write" ON signal_provenance
   FOR INSERT WITH CHECK (
     EXISTS (
@@ -125,19 +129,23 @@ CREATE INDEX IF NOT EXISTS merchant_reviews_public_idx
 ALTER TABLE merchant_reviews ENABLE ROW LEVEL SECURITY;
 
 -- Public read for approved, non-deleted reviews
+DROP POLICY IF EXISTS "merchant_reviews_public_read" ON merchant_reviews;
 CREATE POLICY "merchant_reviews_public_read" ON merchant_reviews
   FOR SELECT USING (status = 'approved' AND deleted_at IS NULL);
 
 -- Any authenticated user can create their own review
+DROP POLICY IF EXISTS "merchant_reviews_auth_insert" ON merchant_reviews;
 CREATE POLICY "merchant_reviews_auth_insert" ON merchant_reviews
   FOR INSERT WITH CHECK (auth.uid() = reviewer_id);
 
 -- Reviewer can edit their own pending/approved review
+DROP POLICY IF EXISTS "merchant_reviews_reviewer_update" ON merchant_reviews;
 CREATE POLICY "merchant_reviews_reviewer_update" ON merchant_reviews
   FOR UPDATE USING (auth.uid() = reviewer_id AND status IN ('pending', 'approved'))
   WITH CHECK (auth.uid() = reviewer_id);
 
 -- Admin full access
+DROP POLICY IF EXISTS "merchant_reviews_admin_all" ON merchant_reviews;
 CREATE POLICY "merchant_reviews_admin_all" ON merchant_reviews
   FOR ALL USING (
     EXISTS (
@@ -174,14 +182,17 @@ CREATE INDEX IF NOT EXISTS review_reports_reporter_idx ON review_reports (report
 ALTER TABLE review_reports ENABLE ROW LEVEL SECURITY;
 
 -- Authenticated users can report
+DROP POLICY IF EXISTS "review_reports_auth_insert" ON review_reports;
 CREATE POLICY "review_reports_auth_insert" ON review_reports
   FOR INSERT WITH CHECK (auth.uid() = reporter_id);
 
 -- Reporter can see their own reports
+DROP POLICY IF EXISTS "review_reports_reporter_read" ON review_reports;
 CREATE POLICY "review_reports_reporter_read" ON review_reports
   FOR SELECT USING (auth.uid() = reporter_id);
 
 -- Admin full access
+DROP POLICY IF EXISTS "review_reports_admin_all" ON review_reports;
 CREATE POLICY "review_reports_admin_all" ON review_reports
   FOR ALL USING (
     EXISTS (
@@ -220,6 +231,7 @@ CREATE INDEX IF NOT EXISTS review_history_merchant_idx ON review_history (mercha
 ALTER TABLE review_history ENABLE ROW LEVEL SECURITY;
 
 -- Admin read
+DROP POLICY IF EXISTS "review_history_admin_read" ON review_history;
 CREATE POLICY "review_history_admin_read" ON review_history
   FOR SELECT USING (
     EXISTS (
@@ -230,6 +242,7 @@ CREATE POLICY "review_history_admin_read" ON review_history
   );
 
 -- Admin write (moderation actions)
+DROP POLICY IF EXISTS "review_history_admin_insert" ON review_history;
 CREATE POLICY "review_history_admin_insert" ON review_history
   FOR INSERT WITH CHECK (
     EXISTS (
@@ -240,6 +253,7 @@ CREATE POLICY "review_history_admin_insert" ON review_history
   );
 
 -- Service role can insert (for system actions)
+DROP POLICY IF EXISTS "review_history_service_insert" ON review_history;
 CREATE POLICY "review_history_service_insert" ON review_history
   FOR INSERT WITH CHECK (true);
 
@@ -270,10 +284,12 @@ CREATE INDEX IF NOT EXISTS merchant_timeline_visibility_idx ON merchant_timeline
 ALTER TABLE merchant_timeline ENABLE ROW LEVEL SECURITY;
 
 -- Public events visible to all
+DROP POLICY IF EXISTS "merchant_timeline_public_read" ON merchant_timeline;
 CREATE POLICY "merchant_timeline_public_read" ON merchant_timeline
   FOR SELECT USING (visibility = 'public');
 
 -- Merchant reads their own (all visibility levels)
+DROP POLICY IF EXISTS "merchant_timeline_merchant_read" ON merchant_timeline;
 CREATE POLICY "merchant_timeline_merchant_read" ON merchant_timeline
   FOR SELECT USING (
     merchant_id IN (
@@ -282,6 +298,7 @@ CREATE POLICY "merchant_timeline_merchant_read" ON merchant_timeline
   );
 
 -- Admin full access
+DROP POLICY IF EXISTS "merchant_timeline_admin_all" ON merchant_timeline;
 CREATE POLICY "merchant_timeline_admin_all" ON merchant_timeline
   FOR ALL USING (
     EXISTS (
@@ -292,6 +309,7 @@ CREATE POLICY "merchant_timeline_admin_all" ON merchant_timeline
   );
 
 -- Service role insert (triggered by other services)
+DROP POLICY IF EXISTS "merchant_timeline_service_insert" ON merchant_timeline;
 CREATE POLICY "merchant_timeline_service_insert" ON merchant_timeline
   FOR INSERT WITH CHECK (true);
 

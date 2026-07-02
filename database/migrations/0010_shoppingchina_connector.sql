@@ -35,6 +35,7 @@ CREATE TABLE IF NOT EXISTS connector_configs (
 
 ALTER TABLE connector_configs ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "connector_configs_service_only" ON connector_configs;
 CREATE POLICY "connector_configs_service_only"
   ON connector_configs
   FOR ALL

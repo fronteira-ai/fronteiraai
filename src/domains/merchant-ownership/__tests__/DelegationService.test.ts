@@ -97,10 +97,20 @@ describe("DelegationService", () => {
     const eventService = makeEventService();
     const service = new DelegationService(repo, eventService);
 
-    const delegate = await service.accept("token-1", "new-user-id");
+    const delegate = await service.accept("token-1", "new-user-id", "gerente@lojaacme.com");
 
     expect(repo.accept).toHaveBeenCalledWith("delegate-1", "new-user-id");
     expect(eventService.recordEvent).toHaveBeenCalled();
+    expect(delegate).not.toBeNull();
+  });
+
+  it("accepting is case-insensitive on the invited email", async () => {
+    const repo = makeRepo();
+    const service = new DelegationService(repo, makeEventService());
+
+    const delegate = await service.accept("token-1", "new-user-id", "GERENTE@LojaAcme.com");
+
+    expect(repo.accept).toHaveBeenCalledWith("delegate-1", "new-user-id");
     expect(delegate).not.toBeNull();
   });
 
@@ -108,7 +118,17 @@ describe("DelegationService", () => {
     const repo = makeRepo({ findByToken: jest.fn().mockResolvedValue(null) });
     const service = new DelegationService(repo, makeEventService());
 
-    const result = await service.accept("bad-token", "new-user-id");
+    const result = await service.accept("bad-token", "new-user-id", "gerente@lojaacme.com");
+
+    expect(result).toBeNull();
+    expect(repo.accept).not.toHaveBeenCalled();
+  });
+
+  it("rejects accepting when the authenticated session's email doesn't match who the invite was sent to (Wave 6 hardening — token leak should not be enough)", async () => {
+    const repo = makeRepo();
+    const service = new DelegationService(repo, makeEventService());
+
+    const result = await service.accept("token-1", "attacker-user-id", "attacker@example.com");
 
     expect(result).toBeNull();
     expect(repo.accept).not.toHaveBeenCalled();

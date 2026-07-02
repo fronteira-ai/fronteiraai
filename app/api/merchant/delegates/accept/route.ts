@@ -8,13 +8,13 @@ export async function POST(request: NextRequest) {
   const auth = await requireAuth();
   if (isMerchantAuthError(auth)) return auth;
 
-  const { userId, serviceClient } = auth;
+  const { userId, email, serviceClient } = auth;
   const body = (await request.json()) as { token?: string };
 
   if (!body.token) return NextResponse.json({ error: "Token de convite ausente." }, { status: 400 });
 
   const { delegationService } = createMerchantOwnershipServices(serviceClient);
-  const delegate = await delegationService.accept(body.token, userId);
+  const delegate = await delegationService.accept(body.token, userId, email);
 
   if (!delegate) return NextResponse.json({ error: "Convite inválido, expirado ou já utilizado." }, { status: 404 });
 

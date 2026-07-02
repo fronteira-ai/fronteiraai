@@ -43,9 +43,15 @@ export class DelegationService {
     return delegate;
   }
 
-  async accept(inviteToken: string, userId: string): Promise<MerchantDelegate | null> {
+  // Wave 6 hardening (2026-07-02): a leaked/forwarded invite token used to be
+  // enough to accept a delegate seat as ANY authenticated user — the token
+  // alone was never checked against who it was actually issued to. Now the
+  // accepting session's own email (server-resolved by requireAuth(), never
+  // client-supplied) must match the invite's `invitedEmail`.
+  async accept(inviteToken: string, userId: string, acceptingUserEmail: string): Promise<MerchantDelegate | null> {
     const delegate = await this.delegateRepo.findByToken(inviteToken);
     if (!delegate || delegate.status !== DelegateStatus.Invited) return null;
+    if (delegate.invitedEmail.trim().toLowerCase() !== acceptingUserEmail.trim().toLowerCase()) return null;
 
     await this.delegateRepo.accept(delegate.id, userId);
     await this.eventService.recordEvent(toCreateEventInput(managerAcceptedEvent(delegate.merchantId, delegate.id)));

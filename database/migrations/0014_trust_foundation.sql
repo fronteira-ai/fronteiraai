@@ -154,6 +154,7 @@ CREATE INDEX IF NOT EXISTS idx_trust_history_merchant_date
 -- merchant_trust
 ALTER TABLE merchant_trust ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "trust_admin_all" ON merchant_trust;
 CREATE POLICY "trust_admin_all" ON merchant_trust
   FOR ALL
   USING (
@@ -164,6 +165,7 @@ CREATE POLICY "trust_admin_all" ON merchant_trust
     )
   );
 
+DROP POLICY IF EXISTS "trust_public_read_verified" ON merchant_trust;
 CREATE POLICY "trust_public_read_verified" ON merchant_trust
   FOR SELECT
   USING (status = 'verified');
@@ -171,6 +173,7 @@ CREATE POLICY "trust_public_read_verified" ON merchant_trust
 -- merchant_trust_events (admin only — log sensível)
 ALTER TABLE merchant_trust_events ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "trust_events_admin_all" ON merchant_trust_events;
 CREATE POLICY "trust_events_admin_all" ON merchant_trust_events
   FOR ALL
   USING (
@@ -184,6 +187,7 @@ CREATE POLICY "trust_events_admin_all" ON merchant_trust_events
 -- merchant_verifications
 ALTER TABLE merchant_verifications ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "verifications_admin_all" ON merchant_verifications;
 CREATE POLICY "verifications_admin_all" ON merchant_verifications
   FOR ALL
   USING (
@@ -194,6 +198,7 @@ CREATE POLICY "verifications_admin_all" ON merchant_verifications
     )
   );
 
+DROP POLICY IF EXISTS "verifications_merchant_read_own" ON merchant_verifications;
 CREATE POLICY "verifications_merchant_read_own" ON merchant_verifications
   FOR SELECT
   USING (
@@ -205,6 +210,7 @@ CREATE POLICY "verifications_merchant_read_own" ON merchant_verifications
 -- merchant_badges
 ALTER TABLE merchant_badges ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "badges_admin_all" ON merchant_badges;
 CREATE POLICY "badges_admin_all" ON merchant_badges
   FOR ALL
   USING (
@@ -215,6 +221,7 @@ CREATE POLICY "badges_admin_all" ON merchant_badges
     )
   );
 
+DROP POLICY IF EXISTS "badges_public_read_active" ON merchant_badges;
 CREATE POLICY "badges_public_read_active" ON merchant_badges
   FOR SELECT
   USING (is_active = true);
@@ -222,6 +229,7 @@ CREATE POLICY "badges_public_read_active" ON merchant_badges
 -- trust_history (admin only — dados estratégicos)
 ALTER TABLE trust_history ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "trust_history_admin_all" ON trust_history;
 CREATE POLICY "trust_history_admin_all" ON trust_history
   FOR ALL
   USING (

@@ -9,7 +9,7 @@ import Breadcrumb from "@/components/ui/Breadcrumb";
 import StoreOffers from "@/components/store/StoreOffers";
 import StoreGrid from "@/components/store/StoreGrid";
 import ClaimStoreButton from "@/components/store/ClaimStoreButton";
-import { getStorePublic } from "@/services/stores-public.service";
+import { getCachedStorePublic } from "./_cache";
 import { getOffersByStore } from "@/services/offer.service";
 import { getRelatedStores } from "@/services/store.service";
 import {
@@ -21,7 +21,7 @@ type Params = Promise<{ slug: string }>;
 
 export async function generateMetadata({ params }: { params: Params }): Promise<Metadata> {
   const { slug } = await params;
-  const store = await getStorePublic(slug);
+  const store = await getCachedStorePublic(slug);
 
   if (!store) {
     return { title: "Loja não encontrada | ParaguAI" };
@@ -55,7 +55,7 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
 
 export default async function LojaPublicaPage({ params }: { params: Params }) {
   const { slug } = await params;
-  const store = await getStorePublic(slug);
+  const store = await getCachedStorePublic(slug);
   if (!store) notFound();
 
   const [offersReal, related] = await Promise.all([
