@@ -132,29 +132,33 @@ O domínio do ParaguAI é dividido em contextos delimitados. Cada contexto tem r
 
 ### 2.7 Identidade e Acesso
 
-**O quê**: autenticação, autorização e perfis de usuário do sistema.
+**O quê**: autenticação, autorização e perfis de **staff e lojista** — não de comprador (ver §2.8, domínio próprio, deliberadamente separado).
 
-**Responsabilidade**: identificar quem está operando o sistema (admin, operator, merchant), validar permissões e garantir que cada papel só acessa o que lhe cabe. Não é o perfil de compradores — é o perfil dos operadores da plataforma.
+**Responsabilidade**: identificar quem está operando o sistema (admin, operator, merchant), validar permissões e garantir que cada papel só acessa o que lhe cabe.
 
-**Entidades**: `Profile` (tabela `profiles`), `auth.users` (Supabase Auth)
+**Entidades**: `Profile` (tabela `profiles`, `role IN ('admin', 'operator', 'merchant')` — ADR-031 estendeu de admin/operator para incluir merchant na Release 1.2, reaproveitando a mesma sessão/auth em vez de duplicar infraestrutura), `auth.users` (Supabase Auth)
 
-**Quem alimenta**: Supabase Auth + processo de cadastro de merchant/admin
+**Quem alimenta**: Supabase Auth (trigger `handle_new_user()`, cria `profiles` com `role='operator'` por padrão em todo signup) + processo de cadastro de merchant (atualiza para `role='merchant'`)
 
 **Quem consome**: `requireAdmin()`, `requireMerchant()`, todas as API routes protegidas
 
 **Princípio central**: credenciais privilegiadas (service role) nunca alcançam o browser. A separação de acesso é arquitetural, não configurável (ADR-028, ADR-030).
 
+**Dívida conhecida (achada pela auditoria da ADR-046, não corrigida)**: `handle_new_user()` roda incondicionalmente em todo `INSERT` em `auth.users` — se um comprador se cadastrasse hoje, seria rotulado `'operator'` por engano. É precisamente por isso que o Buyer Domain (§2.8) nunca reaproveita `profiles`.
+
 ---
 
-### 2.8 Comprador (Contexto em formação)
+### 2.8 Comprador (Buyer Identity Model — ADR-045/046, Pré-Release 1.8)
 
-**O quê**: o comportamento e preferências do comprador.
+**O quê**: identidade, comportamento e preferências do comprador — domínio próprio, deliberadamente desacoplado de `profiles` (§2.7, staff/merchant) e de `auth.users` (tratado como implementação de autenticação, nunca referenciado diretamente por fora do domínio).
 
-**Responsabilidade**: registrar intenção de compra, favoritos e alertas para personalizar a experiência. Hoje implementado parcialmente: `Favorite` vive no `localStorage`; a tabela `favorites` existe mas não é usada; `types/user.ts` e `types/review.ts` são placeholders.
+**Responsabilidade**: aggregate root `buyers` (identificador canônico `buyers.id`, estável para sempre — sobrevive até à anonimização por LGPD), registrar intenção de compra, favoritos, alertas e consentimento, com ciclo de vida de 6 estados (Visitante Anônimo → Anonymous Session → Buyer Conhecido [não verificado/verificado] → Buyer Autenticado → Buyer Recorrente [rótulo derivado] → Buyer Premium [futuro]) mais um estado terminal de Anonimização. Detalhamento completo, incluindo por que `profiles`/`auth.users` foram descartados como identidade canônica: `docs/product/releases/RELEASE_1_8_BUYER_IDENTITY_MODEL.md`.
 
-**Entidades**: `Favorite` (localStorage hoje), futuramente `User`, `Review`, `Alert`
+**Entidades**: `Favorite` (localStorage hoje — Wave 6 do Release 1.8 migra para `buyer_favorites` server-side); `buyers`/`buyer_consent_log` (schema definido em ADR-045, ainda não criado — arquitetura apenas); futuramente `Review`, `Alert`, `Wishlist`, todos ancorados em `buyers.id`.
 
-**Status**: Release 1.5+ — estrutura de dados definida, persistência em banco pendente.
+**Dívida conhecida (achada pela auditoria da ADR-046, não corrigida)**: `buyer_events`/`buyer_sessions.buyer_id` (Release 1.6, ver §2.10/Analytics) já referenciam `auth.users(id)` diretamente — um acoplamento entre identidade de domínio e mecanismo de autenticação que a Wave 6 do Release 1.8 corrige, migrando o alvo da FK para `buyers.id`.
+
+**Status**: Release 1.5+ — estrutura de dados e ciclo de vida completo definidos (ADR-045/046); persistência em banco e código pendentes para a Wave 6 do Release 1.8.
 
 ---
 
@@ -441,7 +445,7 @@ O domínio do ParaguAI é dividido em contextos delimitados. Cada contexto tem r
 
 ### 3.13 Profile
 
-**Propósito**: estender `auth.users` com o papel do usuário no sistema.
+**Propósito**: estender `auth.users` com o papel do usuário no sistema — **staff e merchant, nunca comprador** (ADR-046 tornou essa exclusão explícita e definitiva, depois de confirmar que `profiles` já era compartilhada por decisão deliberada da ADR-031).
 
 **Responsabilidade**: ser a fonte de verdade sobre quem pode fazer o quê na plataforma. Um `Profile` vincula um usuário de autenticação a um role que determina acesso.
 
@@ -450,6 +454,7 @@ O domínio do ParaguAI é dividido em contextos delimitados. Cada contexto tem r
 - `id` é FK para `auth.users.id` — 1:1
 - `requireAdmin()` verifica `role IN ('admin', 'operator')` antes de retornar service client
 - `requireMerchant()` verifica `role = 'merchant'` antes de retornar service client
+- **Nunca ganha um quarto valor `'buyer'`** — decisão permanente da ADR-046; Buyer tem aggregate root próprio (`buyers`, §2.8), justamente para não repetir, pela segunda vez, o acoplamento de identidade que motivou originalmente esta tabela ser estendida uma vez (ADR-031)
 
 ---
 
@@ -457,9 +462,9 @@ O domínio do ParaguAI é dividido em contextos delimitados. Cada contexto tem r
 
 **Propósito**: permitir que o comprador salve produtos de interesse.
 
-**Status atual**: implementado em `localStorage` via `useFavorites.ts`. A tabela `favorites` existe no Supabase mas não é usada pelo código. `types/favorite.ts` existe como representação achatada para localStorage.
+**Status atual**: implementado em `localStorage` via `useFavorites.ts`. A tabela `favorites` existe no Supabase mas não é usada pelo código (órfã — nunca teve um `buyer_id` real para associar). `types/favorite.ts` existe como representação achatada para localStorage.
 
-**Status futuro**: Release 1.5+ — persistência em banco, sincronização entre dispositivos, base para alertas de preço.
+**Status futuro**: Wave 6 do Release 1.8 — persistência em `buyer_favorites`, ancorada em `buyers.id` (ADR-045/046, `RELEASE_1_8_BUYER_IDENTITY_MODEL.md`), sincronização entre dispositivos, base para alertas de preço. Favoritos continuam funcionando 100% anônimos (localStorage) sem exigir login — a persistência server-side é um upgrade opcional, não um requisito.
 
 ---
 

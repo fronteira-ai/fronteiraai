@@ -220,6 +220,8 @@ São os ativos que diretamente sustentam os Moats permanentes. São os mais vali
 
 **Release 1.7 — Wave 5 (Merchant Acquisition & Ownership Platform)**: Delegated Management amplia o conhecimento organizacional de quem realmente opera cada loja — gerente, marketing, agência, administrador, operador — um sinal comportamental que antes não existia (só o proprietário original era visível). Isso enriquece a base sobre a qual o Brain futuramente distinguirá comportamento do dono versus comportamento de um gestor terceirizado.
 
+**Pré-Release 1.8 — Buyer Identity Model (ADR-045/046)**: o mecanismo técnico exato que faz este ativo avançar de "Incipiente" para "Ativo Maduro" (Síntese do Catálogo) foi definido — a ponte `anonymous_id → buyers.id` (`docs/product/releases/RELEASE_1_8_BUYER_IDENTITY_MODEL.md` §4) permite correlação de sessão persistente através de uma identidade de comprador real, não apenas `anonymous_id` efêmero por dispositivo, exatamente a condição de maturação que "Como nasce" acima já previa. `buyers.id` funciona como chave de pseudonimização controlada por RLS — o Brain recebe o identificador comportamental, nunca as colunas de PII (`email`/`display_name`/`phone`), preservando a separação comportamento/identidade que este próprio Asset e `VISION_2035.md` §10 já exigiam. Implementação (Wave 6) ainda não iniciada — decisão arquitetural completa.
+
 **Moat primário sustentado**: Data Flywheel Moat, ParaguAI Brain Moat.
 
 **Justificativa de classificação Core**: é o ativo que habilita personalização real — não personalização genérica por categoria, mas personalização informada por comportamento específico neste mercado. Sem esse ativo, o Brain é genérico. Com ele, o Brain é contextual.

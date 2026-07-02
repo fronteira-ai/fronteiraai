@@ -220,6 +220,8 @@ O Flywheel é descrito em detalhes no Capítulo 5.
 
 **Release 1.7 — Wave 5 (Merchant Acquisition & Ownership Platform)**: o Flywheel passa a operar também sobre aquisição — cada loja descoberta automaticamente (Wave 2) que recebe um botão "Esta loja é minha" é uma conversão em potencial sem custo de marketing incremental. Quanto mais o catálogo cresce por descoberta, mais superfície existe para claims futuros.
 
+**Pré-Release 1.8 — Buyer Identity Model (ADR-045/046)**: o Flywheel do lado comprador (Capítulo 3, Loop Principal) hoje gira só sobre `anonymous_id` efêmero — a definição do Buyer Domain (`docs/product/releases/RELEASE_1_8_BUYER_IDENTITY_MODEL.md`) é o que permite esse loop acumular através de sessões e dispositivos por comprador real, em vez de reiniciar a cada novo `anonymous_id`. Nenhum mecanismo novo — a mesma aceleração que este Moat já descreve, agora com uma identidade que sobrevive além de uma única visita.
+
 ---
 
 ## Moat 7 — ParaguAI Brain

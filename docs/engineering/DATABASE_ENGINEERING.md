@@ -171,3 +171,12 @@ Nenhuma migration pode conter: SELECT de auditoria, health check, verificação,
 Toda migration deve ser: atômica, versionada, idempotente quando possível, compatível com PostgreSQL, compatível com Supabase, reproduzível, auditável, automatizada.
 
 O SQL Editor do Supabase permanece legítimo apenas para: debug, consultas ad-hoc, inspeção, investigação. **Nunca mais** para aplicar migrations como fluxo padrão — ver ADR de superação do ADR-017 em `docs/operations/DECISIONS.md`.
+
+## 11. Padrão de dado pessoal (LGPD) — estabelecido pela ADR-045/046, obrigatório para qualquer tabela nova com PII
+
+Nenhuma migration futura que armazene dado pessoal identificável (de comprador ou qualquer outro público) deve ser escrita sem seguir o padrão já decidido para o Buyer Identity Model (`docs/product/releases/RELEASE_1_8_BUYER_IDENTITY_MODEL.md`):
+
+- **Deleção é anonimização, nunca hard delete.** A linha e seu `id` sobrevivem; colunas de PII são sobrescritas; `anonymized_at` é setado. Isso preserva integridade referencial e sinal comportamental agregado (`STRATEGIC_ASSETS.md` Anti-Pattern 5 — nunca destruir dado histórico) sem violar direito de apagamento.
+- **FK para `auth.users` usa `ON DELETE SET NULL`, nunca `CASCADE`**, quando a tabela precisa sobreviver à conta de autenticação ser de fato apagada como um tombstone anonimizado.
+- **Todo consentimento é um log INSERT-only** (nunca um campo booleano sobrescrito) — mesma disciplina de `price_history`/`review_history`. É a prova de conformidade, não um estado atual.
+- **Nenhuma tabela de identidade nova reaproveita `profiles`** — `profiles` é exclusiva de staff/operator/merchant (ADR-031), decisão reafirmada como definitiva pela ADR-046. Cada público com ciclo de vida/exigência de dado pessoal diferente ganha seu próprio aggregate root.
