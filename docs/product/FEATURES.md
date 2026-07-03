@@ -31,10 +31,11 @@ Inventário de funcionalidades por estado real. Gerado por leitura do código e 
 - **Arquivos**: `app/search/page.tsx`, `loading.tsx`, `error.tsx`; `hooks/useSearch.ts`; `services/search.service.ts`
 - **Limitação**: sem filtro por tipo, paginação ou autocomplete — 8 resultados por seção; produtos na busca não exibem preço (sem join com offers).
 
-### Página de Loja (`/store/[slug]`)
-- **Objetivo**: perfil completo de loja — contato, horário, ofertas, lojas relacionadas. SEO (metadata + JSON-LD `LocalBusiness`).
+### Página de Loja (`/lojas/[slug]`)
+- **Objetivo**: perfil completo de loja — contato, horário, ofertas, lojas relacionadas, Merchant Score, Claim. SEO (metadata + JSON-LD `LocalBusiness`, breadcrumbs).
 - **Sprint 4.1**: convertida para Server Component com `_cache.ts` (ADR-021).
-- **Arquivos**: `app/store/[slug]/page.tsx`, `layout.tsx`, `_cache.ts`, `loading.tsx`, `error.tsx`, `not-found.tsx`; `components/store/*`
+- **Release 1.8, Sprint 0.1 (Canonical Route Audit)**: `/store/[slug]` — uma segunda implementação mais antiga e mais fina do mesmo perfil de loja, indexada simultaneamente no sitemap — foi removida; `/lojas/[slug]` é a rota canônica única. Redirect 308 permanente em `next.config.ts`.
+- **Arquivos**: `app/lojas/[slug]/page.tsx`, `_cache.ts`, `loading.tsx`, `not-found.tsx`; `components/store/*`
 
 ### Catálogo de Produtos (`/products`)
 - **Objetivo**: listagem filtrada de produtos — categoria, marca, loja, faixa de preço, disponibilidade, busca textual, paginação SSR, ordenação. SEO (metadata + JSON-LD `CollectionPage`).

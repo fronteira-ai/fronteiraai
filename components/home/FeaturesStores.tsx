@@ -29,7 +29,7 @@ export default function FeaturesStores({ stores }: Props) {
       </div>
 
       <div className="mt-12 flex justify-center">
-        <Button href="/stores" variant="secondary">
+        <Button href="/lojas" variant="secondary">
           Ver todas as lojas
         </Button>
       </div>

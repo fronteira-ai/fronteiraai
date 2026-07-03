@@ -11,6 +11,7 @@ import ProductOffers from "@/components/product/ProductOffers";
 import RelatedProducts from "@/components/product/RelatedProducts";
 import FavoriteButton from "@/components/product/FavoriteButton";
 import ShareButton from "@/components/product/ShareButton";
+import ProductViewTracker from "@/components/product/ProductViewTracker";
 import { comparePath } from "@/constants/routes";
 import { getCachedProduct, getCachedOffers, getCachedRelatedProducts } from "./_cache";
 
@@ -32,6 +33,8 @@ export default async function ProductPage({ params }: { params: Params }) {
 
   return (
     <main className="min-h-screen bg-[#050816] text-white">
+
+      <ProductViewTracker productId={product.id} />
 
       <Navbar />
 

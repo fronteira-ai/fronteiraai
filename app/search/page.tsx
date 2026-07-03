@@ -5,6 +5,7 @@ import Footer from "@/components/layout/Footer";
 import SearchBar from "@/components/home/SearchBar";
 import SearchResults from "@/components/search/SearchResults";
 import SearchResultsSkeleton from "@/components/search/SearchResultsSkeleton";
+import SearchViewTracker from "@/components/search/SearchViewTracker";
 import { searchEverything } from "@/services/search.service";
 import { searchUrl } from "@/constants/routes";
 
@@ -70,6 +71,8 @@ export default async function SearchPage({
 
   return (
     <main className="min-h-screen bg-[#050816] text-white">
+      <SearchViewTracker query={q} />
+
       <Navbar />
 
       <section className="mx-auto max-w-7xl px-6 pt-32">

@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { SITE_URL, searchUrl } from "@/constants/routes";
 import Analytics from "@/components/analytics/Analytics";
+import BuyerSessionTracker from "@/components/analytics/BuyerSessionTracker";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -116,6 +117,7 @@ export default function RootLayout({
         />
         {children}
         <Analytics />
+        <BuyerSessionTracker />
       </body>
     </html>
   );

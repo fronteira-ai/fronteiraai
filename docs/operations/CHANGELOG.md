@@ -2,6 +2,22 @@
 
 Reconstruído a partir do histórico real de commits (`git log`) e do estado atual do código. Formato: data, commit, o que mudou de fato (verificado no diff/estado resultante, não só na mensagem).
 
+## 2026-07-02 — Release 1.8 — Sprint 0.1 — Critical Readiness Fixes
+
+Resolve as duas inconsistências críticas encontradas pelo Sprint Zero antes do início de qualquer Wave. `docs/product/releases/RELEASE_1_8_SPRINT_01_REPORT.md` para o relatório completo.
+
+**Achado maior do que o esperado**: investigar por que `hooks/useAnalytics.ts` nunca era chamado revelou que as migrations `0018`-`0021` — Analytics, Decision Engine, Catalog Intelligence, Growth Engine, todo o Release 1.6 a partir do Epic 2 — **nunca haviam sido aplicadas em produção**, apesar de documentadas como entregues ("Merchant OS complete"). Confirmado por query direta contra `information_schema.tables`, não suposição. Corrigido: as 4 migrations movidas para `supabase/migrations/` e aplicadas via `db:push`; todas as 6 tabelas (`buyer_events`, `buyer_sessions`, `merchant_analytics_daily`, `merchant_decision_actions`, `merchant_catalog_snapshots`, `merchant_growth_history`) confirmadas existindo em produção.
+
+**Analytics conectado, evidência de ponta a ponta**: `BuyerSessionTracker` (novo, montado globalmente em `app/layout.tsx`) + `ProductViewTracker`/`StoreViewTracker`/`SearchViewTracker` (novos, ilhas client mínimas em `/product/[slug]`/`/lojas/[slug]`/`/search`). Testado contra um build de produção real: sessão criada via API, evento inserido via API, ambos confirmados por query direta ao banco, depois removidos (dado sintético não deve poluir `C-6 Buyer Behavioral Knowledge`).
+
+**Achado novo, não corrigido, nomeado**: o Brain não recebe nenhum `buyer_events` — zero código bridge entre `merchant-analytics` e `trust`/Brain. Requer arquitetura nova (fora do mandato deste Sprint), candidato a uma Wave própria do Release 1.8.
+
+**Canonical Route Audit**: `/lojas/[slug]` definida oficialmente como URL canônica de loja. `/store/[slug]` removida do código; redirect 308 permanente (`next.config.ts`) verificado funcionando (`curl` confirmou status 308 real). `app/sitemap.ts` corrigido — e uma armadilha evitada: o case removido (`stores`) usava `getStores()` (todas as lojas) enquanto o case que sobrou (`lojas`) usava `getStoresRanking(100)` (top-100) — trocar sem ajustar teria encolhido silenciosamente a cobertura de SEO; corrigido para `getStores()`. `app/robots.ts` (cópia hardcoded separada da lista de sitemaps) também corrigido. `constants/routes.ts`: `storePath`/`storeUrl` → `lojaPath`/`lojaUrl`. Efeito colateral corrigido: `components/store/StoreDetails.tsx` ficou órfão pela remoção de `/store/[slug]` (zero importadores) — removido.
+
+**Knowledge System**: `ARCHITECTURE.md`, `COMPONENT_INDEX.md`, `DEPENDENCY_GRAPH.md`, `FEATURES.md`, `database/migrations/README.md` corrigidos para refletir as mudanças acima.
+
+Quality Gate: lint 0, tsc 0, 281/281 testes, build sucesso, `db:lint` OK (9 migrations).
+
 ## 2026-07-02 — Pré-Release 1.8 — Blueprint, Buyer Identity Model, 2 decisões arquiteturais bloqueadoras resolvidas
 
 Preparação estratégica do Release 1.8 ("Marketplace Expansion & Live Commerce") — mandato do CTO: nenhum código, nenhuma migration, arquitetura apenas. Quatro entregas, todas documentação:

@@ -9,7 +9,7 @@ import { CHUNK_SIZE } from "@/app/product/sitemap";
 // sitemap.xml. Next.js does not auto-publish an index page for split
 // sitemaps, so every chunk is listed directly here — the documented pattern
 // for multi-sitemap sites (robots.txt supports repeated `Sitemap:` lines).
-const STATIC_SITEMAP_IDS = ["static", "stores", "lojas"] as const;
+const STATIC_SITEMAP_IDS = ["static", "lojas"] as const;
 
 export default async function robots(): Promise<MetadataRoute.Robots> {
   const productCount = await getProductSlugsCount();

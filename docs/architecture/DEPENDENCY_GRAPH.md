@@ -76,12 +76,10 @@ Cada componente importa apenas de `types/`, `utils/`, `styles/`, `constants/`, o
 - `app/product/[slug]/_cache.ts` → `services/product.service.ts`, `services/offer.service.ts` (via `React.cache`)
 - `app/product/[slug]/layout.tsx` → `./_cache.ts`, `constants/routes.ts`
 - `app/product/[slug]/page.tsx` → `./_cache.ts`, `components/product/*`
-- `app/store/[slug]/_cache.ts` → `services/store.service.ts`, `services/offer.service.ts`
-- `app/store/[slug]/layout.tsx` → `./_cache.ts`, `constants/routes.ts`
-- `app/store/[slug]/page.tsx` → `./_cache.ts`, `components/store/*`
 - `app/compare/[slug]/page.tsx` → `services/compare.service.ts` (via `React.cache`), `components/compare/*`
 - `app/lojas/page.tsx` → `services/stores-public.service.ts` (service role)
-- `app/lojas/[slug]/page.tsx` → `services/stores-public.service.ts` (service role)
+- `app/lojas/[slug]/_cache.ts` → `services/stores-public.service.ts` (via `React.cache`)
+- `app/lojas/[slug]/page.tsx` → `./_cache.ts`, `services/offer.service.ts`, `services/store.service.ts`, `components/store/*` (rota canônica de loja — `app/store/[slug]` foi removida no Release 1.8 Sprint 0.1, era um duplicado)
 - `app/admin/*` → `lib/admin-auth.ts`, `services/*.service.ts`, `components/admin/*`
 - `app/merchant/*` → `lib/merchant-auth.ts`, `services/merchant.service.ts`, `components/merchant/*`
 - `app/api/admin/*` → `lib/admin-auth.ts`, `lib/supabase/service.ts`

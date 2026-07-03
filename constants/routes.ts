@@ -18,12 +18,17 @@ export function searchUrl(query?: string): string {
   return `${SITE_URL}${searchPath(query)}`;
 }
 
-export function storePath(slug: string): string {
-  return `/store/${slug}`;
+// Release 1.8 — Sprint 0.1 (Canonical Route Audit): /lojas/[slug] is the
+// canonical public store page — /store/[slug] was a duplicate, older
+// implementation, now a permanent (308) redirect via next.config.ts. Any
+// new internal link to a store page should use lojaPath()/lojaUrl(), never
+// hardcode `/store/` or `/lojas/` directly.
+export function lojaPath(slug: string): string {
+  return `/lojas/${slug}`;
 }
 
-export function storeUrl(slug: string): string {
-  return `${SITE_URL}${storePath(slug)}`;
+export function lojaUrl(slug: string): string {
+  return `${SITE_URL}${lojaPath(slug)}`;
 }
 
 export interface ProductsQueryParams {

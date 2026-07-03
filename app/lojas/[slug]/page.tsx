@@ -9,6 +9,7 @@ import Breadcrumb from "@/components/ui/Breadcrumb";
 import StoreOffers from "@/components/store/StoreOffers";
 import StoreGrid from "@/components/store/StoreGrid";
 import ClaimStoreButton from "@/components/store/ClaimStoreButton";
+import StoreViewTracker from "@/components/store/StoreViewTracker";
 import { getCachedStorePublic } from "./_cache";
 import { getOffersByStore } from "@/services/offer.service";
 import { getRelatedStores } from "@/services/store.service";
@@ -90,6 +91,8 @@ export default async function LojaPublicaPage({ params }: { params: Params }) {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
+
+      <StoreViewTracker storeId={store.id} />
 
       <Navbar />
 

@@ -436,7 +436,7 @@ Quatro componentes cobrem listagem e detalhe de loja.
 **`StoreCard`**  
 `components/store/StoreCard.tsx` | **Client Component**
 
-Responsabilidade: card de loja para listagens — logo, nome, cidade, rating, badge de verificada, link para `/store/[slug]` ou `/lojas/[slug]`.
+Responsabilidade: card de loja para listagens — logo, nome, cidade, rating, badge de verificada, link para `/lojas/[slug]` (rota canônica desde o Release 1.8 Sprint 0.1 — `lojaPath()`, `constants/routes.ts`).
 
 Quem usa: `StoreGrid`, `/lojas/page.tsx`.
 
@@ -457,14 +457,7 @@ Status: **Stable**.
 
 ---
 
-**`StoreDetails`**  
-`components/store/StoreDetails.tsx` | Server Component
-
-Responsabilidade: detalhes completos da loja — endereço, contato, horário de funcionamento, redes sociais, mapa (coordenadas).
-
-Quem usa: `app/store/[slug]/page.tsx`, `app/lojas/[slug]/page.tsx`.
-
-Status: **Stable**.
+**`StoreDetails`** — **removido no Release 1.8 Sprint 0.1**: consequência direta da remoção de `app/store/[slug]/` (rota duplicada de `/lojas/[slug]`, ver Canonical Route Audit em `TECH_DEBT.md`) — ficou sem nenhum consumidor (`/lojas/[slug]/page.tsx` já renderiza contato/endereço/horário inline, nunca usou este componente). Confirmado zero importadores antes da remoção.
 
 ---
 
@@ -473,7 +466,7 @@ Status: **Stable**.
 
 Responsabilidade: lista de ofertas ativas de uma loja específica.
 
-Quem usa: `app/store/[slug]/page.tsx`.
+Quem usa: `app/lojas/[slug]/page.tsx`.
 
 Status: **Stable**.
 
@@ -1061,11 +1054,11 @@ O princípio é Server por padrão. Um componente só deve ser marcado `"use cli
 Rotas com `layout.tsx` + `page.tsx` ambos Server Components compartilham fetches via `React.cache()` em um módulo `_cache.ts` por rota. Garante 1 fetch por entidade por request, mesmo quando layout e page precisam dos mesmos dados.
 
 ```
-app/product/[slug]/_cache.ts    ← export const getCachedProduct = cache(getProductBySlug)
-app/store/[slug]/_cache.ts      ← export const getCachedStore   = cache(getStoreBySlug)
+app/product/[slug]/_cache.ts    ← export const getCachedProduct     = cache(getProductBySlug)
+app/lojas/[slug]/_cache.ts      ← export const getCachedStorePublic = cache(getStorePublic)
 ```
 
-Rotas afetadas: `/product/[slug]`, `/store/[slug]`.
+Rotas afetadas: `/product/[slug]`, `/lojas/[slug]` (`/store/[slug]` usava este padrão também antes de ser removida no Release 1.8 Sprint 0.1, por ser um duplicado de `/lojas/[slug]`).
 
 ### 8.3 Suspense para dados assíncronos
 

@@ -216,7 +216,7 @@ app/lojas/page.tsx (Server) → stores-public.service.ts (service role)
 
 Quatro padrões coexistem no app público:
 
-**1. Produto e Loja** (`/product/[slug]`, `/store/[slug]`): `layout.tsx` e `page.tsx` são ambos Server Components e compartilham fetches via `_cache.ts` (ADR-021 — double-fetch eliminado no Sprint 4.1). Antes do Sprint 4.1, essas páginas eram inteiramente `"use client"` + hook, resultando em double-fetch a cada visita.
+**1. Produto e Loja** (`/product/[slug]`, `/lojas/[slug]`): `layout.tsx`/`generateMetadata` e `page.tsx` compartilham fetches via `_cache.ts` (ADR-021 — double-fetch eliminado no Sprint 4.1). Antes do Sprint 4.1, essas páginas eram inteiramente `"use client"` + hook, resultando em double-fetch a cada visita. (`/store/[slug]` foi a rota de loja original nesse padrão; removida no Release 1.8 Sprint 0.1 por ser um duplicado de `/lojas/[slug]` — ver Achados de Segurança/SEO em `TECH_DEBT.md`.)
 
 **2. Compare** (`/compare/[slug]`): Server Component puro; sem layout separado — `generateMetadata` e o corpo usam o mesmo `cache()` inline. Zero double-fetch.
 
@@ -350,7 +350,7 @@ Novas tabelas: `connectors` (registro persistente de conectores) e `connector_sy
 
 ## Server Components vs. Client Components
 
-**Server (default)**: `app/page.tsx`, `app/search/page.tsx`, `app/products/page.tsx`, `app/product/[slug]/layout.tsx` e `page.tsx` (desde Sprint 4.1), `app/store/[slug]/layout.tsx` e `page.tsx` (desde Sprint 4.1), `app/compare/[slug]/page.tsx`, `app/lojas/*`, `app/para-lojistas/`, `Footer`, maioria de `ui/`, todos os componentes de store/product/compare/search, `components/home/*` exceto SearchBar e HeroCTAs.
+**Server (default)**: `app/page.tsx`, `app/search/page.tsx`, `app/products/page.tsx`, `app/product/[slug]/layout.tsx` e `page.tsx` (desde Sprint 4.1), `app/compare/[slug]/page.tsx`, `app/lojas/*` (rota canônica de loja desde o Release 1.8 Sprint 0.1), `app/para-lojistas/`, `Footer`, maioria de `ui/`, todos os componentes de store/product/compare/search, `components/home/*` exceto SearchBar e HeroCTAs.
 
 **Client (`"use client"`)**: `SearchBar`, `HeroCTAs` (estado de auth), `Navbar` (scroll listener), `Reveal`/`StatCard` (IntersectionObserver), `ProductGallery` (imagem ativa), `FavoriteButton`/`ShareButton`, `ProductFilters` (useProductFilters), formulários de admin/merchant, `ToastContext`, `ToastContainer`. Hooks (`useFavorites`, `useSearch`, `useProductFilters`, `useCompare`) são client-only mas não há mais nenhuma page pública inteiramente client-side — padrão resolvido no Sprint 4.1.
 
@@ -366,10 +366,9 @@ App Router puro. Sem route groups, paralelo ou intercepting routes. Parâmetros 
 | `/search?q=` | Server | Busca global |
 | `/products?filtros` | Server | Catálogo filtrado |
 | `/product/[slug]` | Server | Detalhe de produto |
-| `/store/[slug]` | Server | Detalhe de loja |
 | `/compare/[slug]` | Server | Comparação de lojas por produto |
 | `/lojas` | Server | Ranking público de lojas |
-| `/lojas/[slug]` | Server | Página premium por loja |
+| `/lojas/[slug]` | Server | Detalhe de loja (rota canônica — `/store/[slug]` removida no Release 1.8 Sprint 0.1, era um duplicado; agora um redirect 308 em `next.config.ts`) |
 | `/para-lojistas` | Server | Landing page |
 | `/admin/*` | Server (autenticado) | Plataforma de operações |
 | `/merchant/*` | Server (autenticado) | Portal do lojista |
