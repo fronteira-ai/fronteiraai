@@ -49,20 +49,30 @@ function deriveRelationsFromEvent(event: TrustEventRecord): KnowledgeGraphRelati
   }
 
   const merchantId = event.merchant_id;
+  // Buyer-sourced events (Release 1.8, Program 0 Wave 0 — the Brain
+  // analytics bridge) never populate created_by: that column is an FK to
+  // profiles(id), and buyers are deliberately never rows in profiles
+  // (ADR-031, ADR-046). The pseudonymous buyer id — anonymous_id or
+  // buyer_id from buyer_events, never PII — travels in metadata instead.
+  // Falls back to created_by for the (currently theoretical, never
+  // actually emitted) staff-originated case these branches were written
+  // for originally.
+  const buyerId = (meta.buyer_pseudonym as string | undefined) ?? event.created_by ?? undefined;
 
   switch (event.event_type) {
+    case TrustEventType.MerchantViewed:
     case TrustEventType.MerchantProfileViewed:
     case TrustEventType.MerchantPassportViewed:
-      if (event.created_by) {
-        relations.push(make(BrainEntityType.Buyer, event.created_by, GraphRelationType.BuyerViewed, BrainEntityType.Merchant, merchantId, 5));
+      if (buyerId) {
+        relations.push(make(BrainEntityType.Buyer, buyerId, GraphRelationType.BuyerViewed, BrainEntityType.Merchant, merchantId, 5));
       }
       break;
 
     case TrustEventType.ReviewCreated:
-      if (event.created_by && meta.review_id) {
-        relations.push(make(BrainEntityType.Buyer, event.created_by, GraphRelationType.BuyerReviewed, BrainEntityType.Merchant, merchantId, 9));
+      if (buyerId && meta.review_id) {
+        relations.push(make(BrainEntityType.Buyer, buyerId, GraphRelationType.BuyerReviewed, BrainEntityType.Merchant, merchantId, 9));
         relations.push(make(BrainEntityType.Merchant, merchantId, GraphRelationType.MerchantHasReview, BrainEntityType.Review, String(meta.review_id), 8));
-        relations.push(make(BrainEntityType.Review, String(meta.review_id), GraphRelationType.ReviewLinkedToBuyer, BrainEntityType.Buyer, event.created_by, 8));
+        relations.push(make(BrainEntityType.Review, String(meta.review_id), GraphRelationType.ReviewLinkedToBuyer, BrainEntityType.Buyer, buyerId, 8));
       }
       break;
 
@@ -80,14 +90,14 @@ function deriveRelationsFromEvent(event: TrustEventRecord): KnowledgeGraphRelati
       break;
 
     case TrustEventType.MerchantContactClicked:
-      if (event.created_by) {
-        relations.push(make(BrainEntityType.Buyer, event.created_by, GraphRelationType.BuyerContactedVia, BrainEntityType.Merchant, merchantId, 10));
+      if (buyerId) {
+        relations.push(make(BrainEntityType.Buyer, buyerId, GraphRelationType.BuyerContactedVia, BrainEntityType.Merchant, merchantId, 10));
       }
       break;
 
     case TrustEventType.MerchantProfileShared:
-      if (event.created_by) {
-        relations.push(make(BrainEntityType.Buyer, event.created_by, GraphRelationType.BuyerSharedProfile, BrainEntityType.Merchant, merchantId, 8));
+      if (buyerId) {
+        relations.push(make(BrainEntityType.Buyer, buyerId, GraphRelationType.BuyerSharedProfile, BrainEntityType.Merchant, merchantId, 8));
       }
       break;
 

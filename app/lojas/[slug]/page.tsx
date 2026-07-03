@@ -10,12 +10,13 @@ import StoreOffers from "@/components/store/StoreOffers";
 import StoreGrid from "@/components/store/StoreGrid";
 import ClaimStoreButton from "@/components/store/ClaimStoreButton";
 import StoreViewTracker from "@/components/store/StoreViewTracker";
+import StoreContactLinks from "@/components/store/StoreContactLinks";
 import { getCachedStorePublic } from "./_cache";
 import { getOffersByStore } from "@/services/offer.service";
 import { getRelatedStores } from "@/services/store.service";
 import {
-  Shield, Star, Package, Phone, MessageCircle, Globe, MapPin,
-  Clock, TrendingUp, CheckCircle2, Share2, ExternalLink
+  Shield, Star, Package, MapPin,
+  Clock, TrendingUp, CheckCircle2, Share2
 } from "lucide-react";
 
 type Params = Promise<{ slug: string }>;
@@ -92,7 +93,7 @@ export default async function LojaPublicaPage({ params }: { params: Params }) {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
 
-      <StoreViewTracker storeId={store.id} />
+      <StoreViewTracker storeId={store.id} merchantId={store.merchantId} />
 
       <Navbar />
 
@@ -200,33 +201,13 @@ export default async function LojaPublicaPage({ params }: { params: Params }) {
             <div className="rounded-2xl border border-slate-800 bg-slate-900/30 p-5">
               <h2 className="text-sm font-semibold text-slate-400 uppercase tracking-widest mb-4">Contato</h2>
               <div className="space-y-3">
-                {store.phone && (
-                  <a href={`tel:${store.phone}`} className="flex items-center gap-3 text-sm text-slate-300 hover:text-white transition-colors">
-                    <Phone size={15} className="text-slate-500 shrink-0" /> {store.phone}
-                  </a>
-                )}
-                {store.whatsapp && (
-                  <a
-                    href={`https://wa.me/${store.whatsapp.replace(/\D/g, "")}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-3 text-sm text-emerald-400 hover:text-emerald-300 transition-colors"
-                  >
-                    <MessageCircle size={15} className="shrink-0" /> WhatsApp
-                  </a>
-                )}
-                {store.website && (
-                  <a
-                    href={store.website}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-3 text-sm text-blue-400 hover:text-blue-300 transition-colors"
-                  >
-                    <Globe size={15} className="shrink-0" />
-                    <span className="truncate">{store.website.replace(/^https?:\/\//, "")}</span>
-                    <ExternalLink size={11} />
-                  </a>
-                )}
+                <StoreContactLinks
+                  storeId={store.id}
+                  merchantId={store.merchantId}
+                  phone={store.phone}
+                  whatsapp={store.whatsapp}
+                  website={store.website}
+                />
                 {store.instagram && (
                   <a
                     href={`https://instagram.com/${store.instagram.replace("@", "")}`}

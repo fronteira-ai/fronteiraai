@@ -2,8 +2,8 @@ import type { AnalyticsEventPayload, StoredAnalyticsEvent } from "../types/analy
 import type { AnalyticsEventType, AnalyticsWindow } from "../types/enums";
 
 export interface IAnalyticsEventRepository {
-  insert(event: AnalyticsEventPayload): Promise<{ id: string } | null>;
-  insertBatch(events: AnalyticsEventPayload[]): Promise<number>;
+  insert(event: AnalyticsEventPayload): Promise<StoredAnalyticsEvent | null>;
+  insertBatch(events: AnalyticsEventPayload[]): Promise<StoredAnalyticsEvent[]>;
   countByType(
     eventType: AnalyticsEventType,
     since: Date,

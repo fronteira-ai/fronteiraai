@@ -13,6 +13,9 @@ export interface StorePublicData extends Store {
   productCount: number;
   /** True when no `merchant_stores` row exists yet — Wave 5's Smart Claim Flow entry point. */
   isUnclaimed: boolean;
+  /** merchant_stores.merchant_id, when claimed — null for unclaimed stores. Needed to
+   *  attribute buyer_events to a merchant (Release 1.8, Program 0 Wave 0 — Brain bridge). */
+  merchantId: string | null;
 }
 
 export async function getStorePublic(slug: string): Promise<StorePublicData | null> {
@@ -31,7 +34,7 @@ export async function getStorePublic(slug: string): Promise<StorePublicData | nu
   const [merchantLink, offerCountResult, offerProductsResult] = await Promise.all([
     // Merchant data requires service role (merchants table has RLS self-access only)
     sc.from("merchant_stores")
-      .select("merchants!inner(merchant_score, verified_level)")
+      .select("merchant_id, merchants!inner(merchant_score, verified_level)")
       .eq("store_id", store.id)
       .limit(1)
       .maybeSingle(),
@@ -58,6 +61,7 @@ export async function getStorePublic(slug: string): Promise<StorePublicData | nu
     offerCount: offerCountResult.count ?? 0,
     productCount: uniqueProducts.size,
     isUnclaimed: !merchantLink.data,
+    merchantId: (merchantLink.data?.merchant_id as string | undefined) ?? null,
   };
 }
 
@@ -89,7 +93,7 @@ export async function getStoresRanking(limit = 30): Promise<StorePublicData[]> {
   const [merchantLinks, offerData] = await Promise.all([
     // Service role: merchants table has RLS self-access only
     sc.from("merchant_stores")
-      .select("store_id, merchants!inner(merchant_score, verified_level)")
+      .select("store_id, merchant_id, merchants!inner(merchant_score, verified_level)")
       .in("store_id", storeIds),
     // Anon: offers are publicly readable (ADR-019)
     supabase.from("offers")
@@ -97,11 +101,13 @@ export async function getStoresRanking(limit = 30): Promise<StorePublicData[]> {
       .in("store_id", storeIds),
   ]);
 
-  type LinkRow = { store_id: string; merchants: { merchant_score: number; verified_level: string } };
+  type LinkRow = { store_id: string; merchant_id: string; merchants: { merchant_score: number; verified_level: string } };
   const merchantMap = new Map<string, { merchant_score: number; verified_level: string }>();
-  ((merchantLinks.data ?? []) as unknown as LinkRow[]).forEach((link) =>
-    merchantMap.set(link.store_id, link.merchants)
-  );
+  const merchantIdMap = new Map<string, string>();
+  ((merchantLinks.data ?? []) as unknown as LinkRow[]).forEach((link) => {
+    merchantMap.set(link.store_id, link.merchants);
+    merchantIdMap.set(link.store_id, link.merchant_id);
+  });
 
   const countMap = new Map<string, number>();
   ((offerData.data ?? []) as { store_id: string }[]).forEach((o) =>
@@ -115,6 +121,7 @@ export async function getStoresRanking(limit = 30): Promise<StorePublicData[]> {
     offerCount: countMap.get(store.id) ?? 0,
     productCount: 0,
     isUnclaimed: !merchantMap.has(store.id),
+    merchantId: merchantIdMap.get(store.id) ?? null,
   }));
 
   // Sort by merchant score desc, then by offer count desc, then by rating desc

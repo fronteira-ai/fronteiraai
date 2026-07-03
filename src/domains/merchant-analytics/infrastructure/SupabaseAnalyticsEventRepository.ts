@@ -7,7 +7,7 @@ import { windowToDate } from "../services/WindowHelper";
 export class SupabaseAnalyticsEventRepository implements IAnalyticsEventRepository {
   constructor(private readonly client: SupabaseClient) {}
 
-  async insert(event: AnalyticsEventPayload): Promise<{ id: string } | null> {
+  async insert(event: AnalyticsEventPayload): Promise<StoredAnalyticsEvent | null> {
     const { data, error } = await this.client
       .from("buyer_events")
       .insert({
@@ -24,18 +24,18 @@ export class SupabaseAnalyticsEventRepository implements IAnalyticsEventReposito
         metadata: event.metadata ?? {},
         occurred_at: event.occurred_at ?? new Date().toISOString(),
       })
-      .select("id")
+      .select()
       .single();
 
     if (error) {
       console.error("[SupabaseAnalyticsEventRepository.insert]", error.message);
       return null;
     }
-    return data as { id: string };
+    return data as StoredAnalyticsEvent;
   }
 
-  async insertBatch(events: AnalyticsEventPayload[]): Promise<number> {
-    if (events.length === 0) return 0;
+  async insertBatch(events: AnalyticsEventPayload[]): Promise<StoredAnalyticsEvent[]> {
+    if (events.length === 0) return [];
 
     const rows = events.map((e) => ({
       event_type: e.event_type,
@@ -52,15 +52,19 @@ export class SupabaseAnalyticsEventRepository implements IAnalyticsEventReposito
       occurred_at: e.occurred_at ?? new Date().toISOString(),
     }));
 
-    const { error, count } = await this.client
+    // .select() so the caller (EventPlatformService) gets real row ids back —
+    // needed to feed BuyerEventBrainBridgeService (Release 1.8, Program 0
+    // Wave 0) without a second round-trip to re-query what was just inserted.
+    const { data, error } = await this.client
       .from("buyer_events")
-      .insert(rows, { count: "exact" });
+      .insert(rows)
+      .select();
 
     if (error) {
       console.error("[SupabaseAnalyticsEventRepository.insertBatch]", error.message);
-      return 0;
+      return [];
     }
-    return count ?? events.length;
+    return (data ?? []) as StoredAnalyticsEvent[];
   }
 
   async countByType(

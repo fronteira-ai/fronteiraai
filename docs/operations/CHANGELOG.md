@@ -2,6 +2,24 @@
 
 Reconstruído a partir do histórico real de commits (`git log`) e do estado atual do código. Formato: data, commit, o que mudou de fato (verificado no diff/estado resultante, não só na mensagem).
 
+## 2026-07-02 — Release 1.8 — Program 0, Wave 0 — Brain Analytics Integration
+
+A ponte oficial `buyer_events` → Brain. Relatório completo: `docs/product/releases/RELEASE_1_8_PROGRAM_0_WAVE_0_REPORT.md`.
+
+Novo `BuyerEventBrainBridgeService` (`src/domains/merchant-analytics/services/`), rodando sincronamente dentro de `EventPlatformService.processEvent()`/`processBatch()` — sem fila, sem cron. Só `buyer_events` com `merchant_id` resolvido cruzam a ponte (fronteira real: `merchant_trust_events.merchant_id` é `NOT NULL`, schema do Release 1.5) — `MerchantViewed`, `MerchantPassportViewed`, e os 3 cliques de contato consolidados em `MerchantContactClicked` + `contact_channel`. Identidade sempre pseudônima (`buyer_id ?? anonymous_id`), nunca via `created_by` (FK para `profiles(id)` — comprador nunca é uma linha de `profiles`, ADR-031/046). `buyer_events.brain_synced_at`/`brain_sync_error` (migration `20260702110000`) é toda a garantia de idempotência.
+
+**Dois bugs reais encontrados e corrigidos, expostos porque esta foi a primeira chamada de produção que este código já teve**: `CognitiveBrainService.ingest()` (existente desde Release 1.5, só chamado por testes até agora) encaminhava `actor_id` para `created_by` incondicionalmente — violava a FK acima para todo comprador. `KnowledgeGraphService.deriveRelationsFromEvent()` (mesma situação) lia `event.created_by` para identificar o comprador, nunca populado pela mesma razão. Ambos corrigidos na fonte, cobertos por testes novos.
+
+Nova rota `GET /api/trust/merchant/[merchantId]/graph` — primeira a expor `KnowledgeGraphService`, existente desde o Release 1.5 sem nenhum consumidor.
+
+Achado colateral: `src/domains/trust/tests/*.test.ts` (sem `__tests__/`) nunca são descobertos pelo Jest — testes pré-existentes do domínio trust nunca rodaram via `npm test`. Não corrigido nesta Wave.
+
+Testado ponta a ponta contra produção: evento real → `merchant_trust_events` real → `/graph` retornando a relação derivada corretamente, incluindo acúmulo através de duas visitas (`totalRelations` 1→2). Controle negativo confirmado (evento sem merchant nunca sincroniza). Dado sintético removido após confirmação.
+
+**Limitação real, nomeada**: zero lojas reivindicadas em produção hoje (`merchant_stores` vazio) — o mecanismo funciona, mas não há substrato real ainda. Sinais sem merchant (busca, navegação) continuam sem destino no Brain — decisão de arquitetura própria, fora do escopo desta Wave.
+
+Quality Gate: lint 0, tsc 0, 297/297 testes, build sucesso, `db:lint` OK (10 migrations).
+
 ## 2026-07-02 — Release 1.8 — Sprint 0.1 — Critical Readiness Fixes
 
 Resolve as duas inconsistências críticas encontradas pelo Sprint Zero antes do início de qualquer Wave. `docs/product/releases/RELEASE_1_8_SPRINT_01_REPORT.md` para o relatório completo.

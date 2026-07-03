@@ -6,7 +6,7 @@ import { AnalyticsEventType } from "../types/enums";
 function makeEventRepo(): jest.Mocked<IAnalyticsEventRepository> {
   return {
     insert: jest.fn().mockResolvedValue({ id: "evt-1" }),
-    insertBatch: jest.fn().mockResolvedValue(2),
+    insertBatch: jest.fn().mockResolvedValue([{ id: "evt-1" }, { id: "evt-2" }]),
     countByType: jest.fn().mockResolvedValue(0),
     findBySession: jest.fn().mockResolvedValue([]),
     findByMerchant: jest.fn().mockResolvedValue([]),

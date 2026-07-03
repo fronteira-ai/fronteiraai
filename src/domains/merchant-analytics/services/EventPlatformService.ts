@@ -1,7 +1,8 @@
 import type { IAnalyticsEventRepository } from "../repositories/IAnalyticsEventRepository";
 import type { ISessionRepository } from "../repositories/ISessionRepository";
-import type { AnalyticsEventPayload } from "../types/analytics.types";
+import type { AnalyticsEventPayload, StoredAnalyticsEvent } from "../types/analytics.types";
 import { AnalyticsEventType } from "../types/enums";
+import type { BuyerEventBrainBridgeService } from "./BuyerEventBrainBridgeService";
 
 // Valid event types for server-side validation
 const VALID_EVENT_TYPES = new Set<string>(Object.values(AnalyticsEventType));
@@ -12,8 +13,29 @@ const MAX_METADATA_KEYS = 20;
 export class EventPlatformService {
   constructor(
     private readonly eventRepo: IAnalyticsEventRepository,
-    private readonly sessionRepo: ISessionRepository
+    private readonly sessionRepo: ISessionRepository,
+    // Optional so existing tests/callers that don't care about the Brain
+    // don't need to construct one. Release 1.8, Program 0 Wave 0.
+    private readonly brainBridge?: BuyerEventBrainBridgeService
   ) {}
+
+  // Awaited, not fire-and-forget: in a serverless route handler, a promise
+  // left running after the response is sent has no guarantee of completing
+  // (the execution context can be frozen). A bridge failure must never fail
+  // the buyer_events write it came from, though — Promise.allSettled, not
+  // Promise.all, and every rejection is caught individually.
+  private async bridgeToBrain(rows: StoredAnalyticsEvent[]): Promise<void> {
+    if (!this.brainBridge) return;
+    const eligible = rows.filter((r) => r.merchant_id);
+    if (eligible.length === 0) return;
+    await Promise.allSettled(
+      eligible.map((row) =>
+        this.brainBridge!.bridge(row).catch((err) =>
+          console.error("[EventPlatformService.bridgeToBrain]", row.id, String(err))
+        )
+      )
+    );
+  }
 
   async processEvent(
     payload: AnalyticsEventPayload
@@ -56,6 +78,8 @@ export class EventPlatformService {
       return { success: false, error: "storage_error" };
     }
 
+    await this.bridgeToBrain([result]);
+
     return { success: true, event_id: result.id };
   }
 
@@ -71,9 +95,10 @@ export class EventPlatformService {
     const invalid = payloads.length - valid.length;
 
     const sanitized = valid.map((p) => ({ ...p, metadata: this.sanitizeMetadata(p.metadata) }));
-    const inserted = await this.eventRepo.insertBatch(sanitized);
+    const insertedRows = await this.eventRepo.insertBatch(sanitized);
+    await this.bridgeToBrain(insertedRows);
 
-    return { success: true, inserted, errors: invalid };
+    return { success: true, inserted: insertedRows.length, errors: invalid };
   }
 
   private sanitizeMetadata(meta?: Record<string, unknown>): Record<string, unknown> {

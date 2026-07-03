@@ -1,4 +1,5 @@
 import { randomUUID } from "crypto";
+import { CognitiveBrainActorRole } from "../types/enums";
 import type { ITrustEventRepository } from "../repositories/ITrustEventRepository";
 import { getBrainImpact } from "../events/event-registry";
 import type { TrustDomainEvent } from "../events/trust.events";
@@ -70,7 +71,17 @@ export class CognitiveBrainService {
         event_type: domainEvent.eventType,
         source: domainEvent.source,
         metadata: cognitiveEvent.metadata,
-        created_by: context.actor_id,
+        // merchant_trust_events.created_by is an FK to profiles(id). Buyers
+        // are deliberately never profiles rows (ADR-031, ADR-046) — their
+        // pseudonymous actor_id would violate that constraint. Only
+        // non-buyer actors (staff/system, who do have profiles rows) get
+        // written here; a buyer's pseudonym still reaches the Brain, just
+        // via metadata.buyer_pseudonym (no FK, exactly where
+        // KnowledgeGraphService reads it from). Found and fixed in Release
+        // 1.8, Program 0 Wave 0 — the first production caller this method
+        // ever had; every prior test used a staff-shaped actor_id and never
+        // hit this path.
+        created_by: context.actor_role === CognitiveBrainActorRole.Buyer ? undefined : context.actor_id,
       });
       persisted = record !== null;
     } catch (err) {
