@@ -944,3 +944,29 @@ buyer_consent_log  -- INSERT-only, mesma disciplina de review_history/signal_pro
 - Registrar o congelamento apenas como uma seção dentro de `docs/engineering/PREMIUM_HOME_EXPERIENCE.md` — descartada: misturaria "como o sistema foi construído" (vivo, atualiza a cada Wave que tocar a Home) com "o que está proibido mudar" (regra permanente até nova aprovação); o precedente empurraria todo futuro congelamento visual para dentro de documentos de arquitetura já existentes, sem lar próprio.
 - Tratar o congelamento como uma extensão de `docs/foundation/PRODUCT_PRINCIPLES.md` — descartada: a Foundation é permanente e filosófica (por que o ParaguAI existe, como pensa sobre produto), não uma lista de componentes React específicos e o que pode/não pode mudar neles; misturar as duas coisas diluiria o caráter LOCKED da Foundation com detalhe de implementação de uma Wave específica.
 - Não criar categoria nova e recusar o caminho `docs/design/` pedido no mandato — descartada pela mesma razão das ADR-048/049: o CTO já sinalizou a intenção ao nomear o caminho explicitamente ao criar o arquivo vazio `docs/design/DESIGN_CONSTITUTION`; esta ADR formaliza em vez de ignorar ou violar silenciosamente a regra do Knowledge System.
+
+---
+
+## ADR-051 — Definition of Done de Wave: Quality Gate + Commit + Push + Deploy Preview + Documentação, sempre completos
+
+**Data**: 2026-07-06 (PROGRAM Z — Repository Consolidation, RC-1)
+**Status**: Aceita
+
+**Contexto**: RC-1 auditou o repositório e encontrou `HEAD`/`origin/main` parados em `64c276c` ("Program 0 Wave 0 — Brain Analytics Integration") enquanto praticamente todo o Release 1.8 (Programs A, B, C, D) e o início do Release 1.9 (Program F Wave 1, mais o Design Freeze) existiam apenas em working tree local — 149 caminhos alterados, ~300 arquivos, nenhum commit, nenhum push. Múltiplas entradas deste mesmo `DECISIONS.md` e de `CHANGELOG.md`/`PROJECT_STATUS.md` descreviam essas Waves como "entregues" — e, no sentido de "código escrito, testado localmente e funcional", estavam — mas nenhuma delas jamais foi commitada, muito menos deployada. Isso significa que, durante dias, o estado documentado como "verdade do projeto" e o estado realmente versionado/deployável divergiram sem que nenhuma sessão anterior tivesse detectado ou sinalizado a divergência.
+
+**Decisão**: uma Wave só pode ser declarada concluída — em `CHANGELOG.md`, `PROJECT_STATUS.md`, ou qualquer outro documento — quando as cinco condições abaixo estiverem **integralmente** cumpridas, nunca apenas "código funcionando localmente":
+
+1. **Quality Gate**: `lint`, `typecheck`, `test`, `build` (e `db:lint` quando a Wave tocar migrations) executados e verdes contra o estado final da Wave.
+2. **Commit**: as mudanças da Wave existem como commit(s) Conventional Commits reais, agrupados por domínio — nunca apenas em working tree.
+3. **Push**: o(s) commit(s) estão em `origin/main` (ou branch equivalente aprovada) — nunca apenas `HEAD` local.
+4. **Deploy Preview**: existe evidência de que o build deployado (preview ou produção, conforme o pipeline do projeto) reflete o commit — nunca presumido a partir do sucesso do build local.
+5. **Documentação mínima**: os documentos afetados (`CHANGELOG.md` sempre; `PROJECT_STATUS.md`/`TECH_DEBT.md`/outros conforme a natureza da mudança) refletem o estado real, não a intenção.
+
+Se qualquer uma das cinco não puder ser cumprida no momento em que a Wave termina (ex.: push/deploy pendem de aprovação explícita do CTO, por afetarem estado compartilhado/produção), a Wave é registrada como **"commits locais completos, aguardando aprovação para push/deploy"** — nunca como "entregue" ou "concluída" sem qualificação. A qualificação em si não é opcional.
+
+**Consequência**: toda sessão futura, ao declarar uma Wave concluída, deve citar explicitamente as cinco condições (ou nomear qual está pendente e por quê). Este ADR não invalida trabalho anterior — RC-1 já consolidou tudo o que estava pendente até esta data — mas estabelece que a lacuna que RC-1 corrigiu não pode se repetir silenciosamente.
+
+**Alternativas descartadas**:
+- Confiar em Quality Gate local como critério suficiente de "concluído" — descartada: foi exatamente esse critério, usado sozinho, que permitiu múltiplas Waves reais e funcionais se acumularem sem nunca chegarem a `origin/main`; código verde localmente não é sinônimo de código versionado ou deployado.
+- Exigir push/deploy automático ao final de toda Wave, sem checkpoint humano — descartada: pushes para `origin/main` e deploys de produção são ações de alto impacto e baixa reversibilidade (`AI_CONSTITUTION.md`/princípios de engenharia deste projeto já tratam produção com esse cuidado); a regra exige que as cinco condições sejam *nomeadas e rastreadas*, não que sejam automatizadas sem supervisão.
+- Tratar esta lacuna como um incidente isolado do RC-1, sem registrar regra permanente — descartada: sem uma regra explícita, a mesma divergência entre "documentado como pronto" e "realmente versionado" tende a se repetir na próxima sequência de Waves consecutivas sem commit intermediário.
