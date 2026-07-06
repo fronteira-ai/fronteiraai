@@ -180,3 +180,28 @@ Nenhuma migration futura que armazene dado pessoal identificável (de comprador 
 - **FK para `auth.users` usa `ON DELETE SET NULL`, nunca `CASCADE`**, quando a tabela precisa sobreviver à conta de autenticação ser de fato apagada como um tombstone anonimizado.
 - **Todo consentimento é um log INSERT-only** (nunca um campo booleano sobrescrito) — mesma disciplina de `price_history`/`review_history`. É a prova de conformidade, não um estado atual.
 - **Nenhuma tabela de identidade nova reaproveita `profiles`** — `profiles` é exclusiva de staff/operator/merchant (ADR-031), decisão reafirmada como definitiva pela ADR-046. Cada público com ciclo de vida/exigência de dado pessoal diferente ganha seu próprio aggregate root.
+
+---
+
+## 12. Padrões consolidados por precedente — INSERT-only e RLS sem policy pública
+
+Dois padrões que várias migrations já seguiam implicitamente, agora explícitos aqui (Release 1.8 — Program A — Wave 1, ao criar `exchange_rates`):
+
+**INSERT-only para dado de Core Asset (`STRATEGIC_ASSETS.md` Anti-Pattern 5, "nunca sobrescrever histórico"):**
+
+| Tabela | Migration | O que nunca é sobrescrito |
+|---|---|---|
+| `price_history` | `database/migrations/0006` | Preço de uma oferta em um momento — uma correção é uma nova linha |
+| `exchange_rates` | `supabase/migrations/20260703140000_exchange_intelligence.sql` | Cotação capturada — uma nova leitura do provedor é sempre uma nova linha, nunca um `UPDATE` |
+| `market_changes` | `supabase/migrations/20260703170000_realtime_commerce.sql` | Toda mudança de mercado detectada (preço, estoque, catálogo) — o ledger é a fonte única de verdade da qual Volatility/Freshness/Store Update Intelligence/Market Pulse são todos *derivados por leitura*, nunca uma segunda fonte de estado |
+
+Regra: toda tabela que registra "o valor de algo em um momento no tempo" (preço, cotação, evento) é `INSERT`-only por design — nenhum método de `UPDATE` existe no repositório correspondente, mesmo que o schema tecnicamente permitisse. `market_changes` (Program A — Wave 2) leva esse padrão um passo além: em vez de cada engine derivada persistir seu próprio snapshot, a maioria (Volatility, Freshness, Store Update) computa sob demanda diretamente do ledger — zero tabela de estado duplicado, mesma disciplina de `MerchantPriorityService` (Program 0 — Wave 1). Só o Market Pulse (agregado marketplace-wide, caro de recomputar por requisição) ganha um rollup diário persistido (`market_pulse_snapshots`, upsert-by-date, mesmo padrão de `marketplace_health_snapshots`) — cache de leitura, nunca fonte de verdade.
+
+**RLS habilitada, zero policy pública, leitura via service_role no servidor** — o padrão real deste projeto para dado público sem sensibilidade (não um padrão novo, só nunca antes documentado explicitamente):
+
+| Tabela | Consumidor público | Como lê |
+|---|---|---|
+| `canonical_products` | `GET /api/canonical-catalog/[slug]` | Service-role client, no servidor (ADR-036) |
+| `exchange_rates` | `GET /api/exchange/current`, `/history` | Service-role client, no servidor (mesmo padrão) |
+
+Regra: uma tabela pública **não precisa** de uma policy `SELECT` para `anon`/`authenticated` — a rota de API já resolve isso lendo com `service_role` no servidor e decidindo o que expor na resposta (frequentemente um subconjunto de campos, ver `GET /api/exchange/providers`, que nunca expõe texto de erro bruto). Criar uma policy pública nova é uma decisão deliberada e rara neste projeto, não o padrão default — confirme que não há um caminho "service_role no servidor" mais simples antes de propor uma.
