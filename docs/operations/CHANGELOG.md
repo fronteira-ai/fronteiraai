@@ -2,6 +2,33 @@
 
 Reconstruído a partir do histórico real de commits (`git log`) e do estado atual do código. Formato: data, commit, o que mudou de fato (verificado no diff/estado resultante, não só na mensagem).
 
+## 2026-07-06 — PROGRAM Z — Repository Consolidation (RC-1)
+
+Wave de consolidação, não de funcionalidade. Auditoria confirmou que `HEAD`/`origin/main` estavam parados em `64c276c` ("Program 0 Wave 0 — Brain Analytics Integration") enquanto todo o trabalho de Release 1.8 (Programs A-D) e Release 1.9 (Program F Wave 1 + Design Freeze) existia apenas em working tree local, sem nenhum commit — 149 caminhos alterados, ~300 arquivos, zero staged, um único branch/worktree, sem stash.
+
+Nenhum código novo foi escrito, nenhum layout alterado, nenhuma regra de negócio modificada. O trabalho foi organizado em 16 commits Conventional Commits, um por domínio (nunca misturando domínios diferentes):
+
+1. `feat(exchange)` — Exchange Intelligence Platform (domínio + API + admin + migration)
+2. `feat(market-insights)` — Market Intelligence Engine
+3. `feat(marketplace-operations)` — Marketplace Operations Platform
+4. `feat(ui)` — Sparkline + SectionSkeleton (primitivas compartilhadas)
+5. `feat(realtime-commerce)` — Real-Time Commerce Engine
+6. `feat(connectors)` — Connector Platform V2 (SDK, certificação, diretório, observabilidade)
+7. `feat(connectors)` — onboarding de Mega Eletrônicos, Roma Shopping, AtacadoConnect
+8. `feat(trust)` — taxonomia de eventos dos 3 novos domínios do Release 1.8
+9. `feat(canonical-catalog)` — `findAll()` para ranking cross-catálogo
+10. `feat(home)` — Premium Home Experience + `/categorias`
+11. `docs(design)` — Design Constitution + 11ª categoria do Knowledge System (ADR-050)
+12. `docs(marketplace)` — auditoria de certificação Tier 1 (ADR-048)
+13. `docs(business)` — Merchant Partnership Program (ADR-049)
+14. `docs(engineering)` — docs de arquitetura das Waves acima
+15. `docs(release-1.8-1.9)` — CHANGELOG/DECISIONS/PROJECT_STATUS/FOUNDATION_INDEX/roadmaps
+16. `chore(infra)` — navegação admin + cron schedules (arquivos cross-domain únicos)
+
+**Quality Gate**: `lint` (0 erros), `typecheck` (0 erros), `test` (524/524, 81 suites), `build` (compilado com sucesso), `db:lint` (14 migrations, OK) — todos executados contra a working tree completa antes da primeira consolidação e reconfirmados ao final, sem diferença de resultado.
+
+**ADR-051**: nova regra de governança — nenhuma Wave é considerada concluída sem Quality Gate + Commit + Push + Deploy Preview + Documentação mínima cumpridos integralmente. Esta própria Wave expôs por que a regra precisava existir: múltiplas Waves anteriores foram declaradas "entregues" na documentação sem nunca terem sido commitadas.
+
 ## 2026-07-04 — Release 1.9 — Program F — Premium Home Experience, Wave 1
 
 Primeira Wave da Release 1.9 — a fase de fundação foi declarada oficialmente encerrada pelo CTO; o foco passa de infraestrutura para experiência de produto. Home redesenhada seguindo referência visual obrigatória (imagem enviada pelo CTO) + nova página `/categorias`, consumindo exclusivamente os domínios estratégicos consolidados na Release 1.8 — zero regra de negócio dentro de componente React.
