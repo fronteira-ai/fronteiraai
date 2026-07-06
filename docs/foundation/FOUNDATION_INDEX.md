@@ -473,6 +473,9 @@ Os seguintes documentos mudam continuamente — atualizam a cada Release, sprint
 | `docs/operations/NEXT_STEPS.md` | Sempre ao final de cada Release | Autor da Release |
 | `docs/product/MASTER_ROADMAP.md` | Ao completar uma Fase ou redefinir prioridades estratégicas | CTO |
 | `docs/operations/DECISIONS.md` | Sempre que uma decisão Tipo 1 for tomada | Autor do ADR |
+| `docs/marketplace/Tier1_Merchants.md` | Ao auditar/certificar uma nova loja candidata a Connector, ou ao mudar o status de certificação de uma existente | Autor da Release |
+| `docs/business/TIER1_PARTNERS.md` | Sempre que o estágio de negociação com um merchant mudar (contato, reunião, NDA, piloto, parceria oficial) | Time comercial/CTO |
+| `docs/design/DESIGN_CONSTITUTION.md` | Apenas mediante aprovação explícita do CTO para uma exceção ao congelamento visual — nunca para "melhorias" não solicitadas | CTO |
 
 ---
 
@@ -769,7 +772,7 @@ Foundation Index → AI_CONSTITUTION → NORTH_STAR → ARCHITECTURE → DOMAIN_
 
 ### Categorias
 
-Foundation (LOCKED, 8), Governança (2), Arquitetura (3), Contratos (4), Referência (2), Operação (5), Índice (1)
+Foundation (LOCKED, 8), Governança (2), Arquitetura (3), Contratos (4), Referência (2), Operação (5), Marketplace (1, nova em Release 1.8 Program A Wave 3, ADR-048), Business (4, nova em Release 1.8 Program C Wave 0, ADR-049), Design (1, nova em 2026-07-06, ADR-050 — congelamento visual da Premium Home Experience), Índice (1)
 
 ### Documentos permanentes
 

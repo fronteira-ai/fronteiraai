@@ -860,3 +860,87 @@ buyer_consent_log  -- INSERT-only, mesma disciplina de review_history/signal_pro
 - Deixar `buyer_events`/`buyer_sessions.buyer_id` apontando para `auth.users(id)` indefinidamente, sem nomear a correção — descartada: perpetuaria o acoplamento entre identidade de domínio e mecanismo de autenticação identificado na auditoria, tornando mais caro corrigir depois que houver dado de produção real para migrar.
 - Corrigir a inconsistência `profiles(id)` vs. `merchants(id)` no Trust domain como parte desta decisão — descartada por escopo: é uma dívida pré-existente, não introduzida nem agravada pelo Buyer Identity Model; misturar sua correção aqui violaria a própria instrução do CTO de registrar dívidas sem corrigi-las fora do Release específico que as endereçar.
 - Anonimização total (sem pseudonimização) desde o primeiro dia de vida da conta — descartada: inviabilizaria personalização real (histórico, recomendações, "Compra Inteligente"), que depende estruturalmente de alguma continuidade de identidade; a LGPD reconhece pseudonimização com controle de acesso como medida de redução de risco válida (Art. 13), tornando a anonimização total um exagero desnecessário enquanto a conta está ativa.
+
+---
+
+## ADR-047 — Exchange Intelligence Platform: reaproveitar `offers.currency`, RLS sem policy pública, escopo de multi-provider
+
+**Data**: 2026-07-03 (Release 1.8 — Program A — Wave 1)
+**Status**: Aceita
+
+**Contexto**: `RELEASE_1_8_BLUEPRINT.md` Capítulo 3 propôs uma coluna nova `original_currency` em `offers`/`price_history` para capturar a moeda original do preço. Pesquisa de schema feita no início desta Wave (não assumida do Blueprint) encontrou que `offers.currency` **já existe** — coluna real, já preenchida por todo conector (`raw.currency ?? "USD"` em `OfferNormalizer.ts`) — e já significa exatamente "moeda em que o preço original foi informado". Criar uma segunda coluna para o mesmo conceito duplicaria schema sem necessidade.
+
+**Decisão 1 — reaproveitar `offers.currency`**: nenhuma coluna `original_currency` foi criada. `AutomaticCurrencyService.convert()` lê `offers.currency` como "Moeda Original" (Epic 5 do brief). `rateUsed`/`convertedPrice`/`conversionDate`/`rateVersion` são computados sob demanda a cada chamada — nunca persistidos em `offers`/`price_history`, preservando "nunca alterar o preço original" de forma estrutural (não há coluna para alterar). `rateVersion` referencia a linha exata de `exchange_rates` usada (par + `captured_at` + fonte), dando explainability completa sem custo de schema.
+
+**Decisão 2 — RLS habilitada, zero policy pública, leitura via service_role**: `exchange_rates`, `exchange_provider_runs`, `exchange_conversion_log` seguem o mesmo padrão já usado por `canonical_products` (confirmado por releitura da migration `20260701120300_canonical_catalog.sql`: RLS habilitada, nenhuma `CREATE POLICY`, comentário "leitura/escrita exclusivamente via service_role"). As rotas públicas (`/api/exchange/current`, `/history`, `/convert`) leem com o client de `service_role` no servidor — mesmo caminho já usado por `/api/canonical-catalog/[slug]` (ADR-036). Nenhuma policy pública nova foi criada; ver `docs/engineering/DATABASE_ENGINEERING.md` §12 para o padrão agora documentado explicitamente.
+
+**Decisão 3 — escopo do Provider Registry (Epic 2 do brief)**: o brief pediu um motor multi-provedor cobrindo Banco Central do Paraguai, Banco Central do Brasil, AwesomeAPI e um "provedor próprio". A ADR-043 (já aceita, Wave anterior) pesquisou e **rejeitou explicitamente** integração direta com bancos centrais (sem API pública estável, cotação só diária — incompatível com a cadência de 5 minutos já aprovada) e construção de fonte própria (Anti-Pattern de `NORTH_STAR.md` §7, "tecnologias da moda"/"complexidade desnecessária"). Confirmado com o CTO nesta Wave: constrói-se o mecanismo real de registro/failover (`ExchangeProviderRegistryImpl`, prioridade ordenável, múltiplos provedores suportados estruturalmente), mas apenas **um** provedor é de fato registrado (`ExchangeRateApiProvider`, ADR-043). Adicionar um segundo provedor real no futuro é aditivo (`registry.register(...)`) — mas exige sua própria pesquisa (custo, confiabilidade, cobertura de PYG) e, portanto, sua própria ADR, não fabricado nesta Wave.
+
+**Consequência**: nenhuma migration futura deve reintroduzir `original_currency` sem primeiro confirmar que `offers.currency` não resolve o mesmo caso — checar este ADR antes de propor uma coluna nova para "moeda".
+
+**Alternativas descartadas**:
+- Adicionar `original_currency` conforme o Blueprint propunha originalmente — descartada após confirmação de que `offers.currency` já cobre o conceito; manter as duas seria uma fonte dupla de verdade para o mesmo dado.
+- Criar uma policy `SELECT` pública em `exchange_rates` para leitura direta via anon key — descartada: nenhuma rota deste projeto precisa disso (todas as leituras públicas já passam por uma API route com `service_role`), e seria a primeira policy pública deste tipo no projeto, sem precedente nem necessidade real.
+- Integrar Banco Central do Paraguai/Brasil ou construir um scraper próprio nesta Wave — descartada, reafirmando a ADR-043: nenhum dos dois atende a cadência de 5 minutos já aprovada, e um scraper próprio é complexidade sem problema real a resolver hoje.
+
+---
+
+## ADR-048 — `docs/marketplace/` como 9ª categoria oficial do Knowledge System
+
+**Data**: 2026-07-03 (Release 1.8 — Program A — Wave 3, Programa de Certificação de Connectors Tier 1)
+**Status**: Aceita
+
+**Contexto**: O mandato desta Wave (auditoria técnica de 10 lojas candidatas a Connector Tier 1 e criação de `docs/marketplace/Tier1_Merchants.md`) pediu explicitamente um caminho `docs/marketplace/` — uma categoria que não existe nas 8 oficiais do Knowledge System (`foundation/architecture/engineering/product/operations/database/adr/archive`, ver `docs/README.md` §"Regras do Knowledge System" item 1). A regra existente exige aprovação explícita do CTO e uma ADR correspondente antes de criar uma categoria nova — este ADR é essa aprovação, registrada antes da criação do arquivo, não depois.
+
+**Por que nenhuma categoria existente serve**: `Tier1_Merchants.md` (e documentos futuros da mesma família — auditorias de lojas, certificação de conectores, perfis de merchant) não é `product/` (não é sobre o que o *produto ParaguAI* faz ou planeja — é sobre entidades *externas*, as lojas reais da fronteira); não é `engineering/` (não é um padrão de código — é um dossiê técnico-comercial por loja: robots.txt, sitemap, moeda, `Certification Status`, `Integration Strategy`); não é `operations/` (não é o estado do projeto — é o estado do mercado que o projeto observa). Existe uma dimensão real e distinta: documentação sobre o **mercado/lojas que o Marketplace modela**, separada da documentação sobre o **produto que o modela**. `docs/marketplace/` cobre essa dimensão.
+
+**Decisão**: `docs/marketplace/` passa a ser a 9ª categoria oficial. Propósito: documentação sobre entidades reais do mercado da fronteira (lojas, conectores certificados, perfis de merchant) — nunca sobre arquitetura interna do ParaguAI (isso continua em `architecture/`/`engineering/`). Primeiro documento: `Tier1_Merchants.md`. `docs/README.md` (árvore, tabela de categorias, regra 1) e `docs/foundation/FOUNDATION_INDEX.md` atualizados no mesmo commit desta ADR — nenhuma categoria fica fora do mapa (regra 7 do Knowledge System).
+
+**Consequência**: toda auditoria futura de merchant/loja (Tier 2, Tier 3, etc.) tem um lar natural em `docs/marketplace/` sem precisar de uma nova ADR de categoria a cada vez — apenas documentos genuinamente fora desta natureza (mercado real observado) precisam de nova categoria.
+
+**Alternativas descartadas**:
+- Usar `docs/product/TIER1_MERCHANTS.md` — descartada: misturaria "o que o ParaguAI é/planeja" com "o que as lojas da fronteira são", duas perguntas diferentes; o precedente abriria a porta para toda futura documentação de mercado (concorrência, tendências, perfis de loja) ser empurrada para `product/` por falta de lugar próprio.
+- Usar `docs/engineering/TIER1_MERCHANTS.md` (ao lado de `CONNECTOR_GUIDE.md`) — descartada: `engineering/` é sobre como o ParaguAI constrói software, não sobre o que uma loja específica da fronteira usa de tecnologia; um dossiê comercial/técnico por loja externa é uma categoria de informação diferente da que `engineering/` já serve.
+- Não criar categoria nova e recusar o caminho `docs/marketplace/` pedido no mandato — descartada porque o CTO, ao dar a instrução original, já sinalizou a intenção; esta ADR formaliza essa intenção seguindo a própria regra do Knowledge System, em vez de silenciosamente ignorá-la ou silenciosamente violá-la.
+
+---
+
+## ADR-049 — `docs/business/` como 10ª categoria oficial do Knowledge System
+
+**Data**: 2026-07-03 (Release 1.8 — Program C — Wave 0, Merchant Partnership Program)
+**Status**: Aceita
+
+**Contexto**: O mandato desta Wave pediu `docs/business/MERCHANT_PARTNERSHIP_PROGRAM.md`, `docs/business/TIER1_PARTNERS.md` e `docs/business/PARTNERSHIP_PROPOSAL.md` — um caminho fora das 9 categorias oficiais existentes (que já incluem `marketplace/`, criada por ADR-048 há poucas horas nesta mesma Release). Mesma regra do Knowledge System se aplica: categoria nova exige aprovação do CTO + ADR correspondente.
+
+**Por que `docs/marketplace/` (a categoria mais próxima, criada minutos atrás) não serve**: `marketplace/` documenta o que as lojas da fronteira **são** — fatos técnicos observáveis (robots.txt, sitemap, moeda, estrutura de URL) — nunca como o ParaguAI se relaciona comercialmente com elas. Este mandato é o oposto: processo de negociação, NDA, proposta comercial, template de e-mail institucional, pipeline de parceria (`Not Contacted → ... → Official Partner`) — nada disso é uma propriedade técnica de uma loja, é o **processo de desenvolvimento de negócio do próprio ParaguAI**. Misturar as duas neste momento specific criaria um documento (`Tier1_Merchants.md`) que precisaria carregar tanto "o robots.txt bloqueia ClaudeBot" quanto "reunião agendada para 15/07, contato comercial: Fulano" — dados de natureza e ciclo de vida completamente diferentes (um é auditoria técnica estável, o outro é estado de negociação que muda semanalmente).
+
+**Decisão**: `docs/business/` passa a ser a 10ª categoria oficial. Propósito: processo comercial do ParaguAI com terceiros (parcerias de dado, propostas, contratos, pipeline de negociação) — nunca fatos técnicos sobre uma loja (isso continua em `marketplace/`) nem estratégia de produto/roadmap (isso continua em `product/`). Primeiros documentos: `MERCHANT_PARTNERSHIP_PROGRAM.md`, `TIER1_PARTNERS.md`, `PARTNERSHIP_PROPOSAL.md`, `PARTNERSHIP_EMAIL_TEMPLATE.md`. `docs/README.md`/`docs/foundation/FOUNDATION_INDEX.md`/`CLAUDE.md` atualizados no mesmo commit.
+
+**Consequência**: `docs/marketplace/Tier1_Merchants.md` mantém `Certification Status`/`Integration Strategy` (fatos técnicos); `docs/business/TIER1_PARTNERS.md` referencia esses mesmos campos por nome (nunca duplicando o valor) e adiciona o estado comercial (`Partner Status`, `Current Stage`, contatos, datas) — uma tabela lê a outra, nenhuma reescreve a outra. Toda futura documentação de processo comercial (parcerias de mídia, acordos de dado com outras fontes) tem lar natural aqui sem nova ADR de categoria.
+
+**Alternativas descartadas**:
+- Colocar estes documentos dentro de `docs/marketplace/` — descartada pelo motivo acima: misturaria dado técnico estável com estado de negociação volátil no mesmo arquivo, e todo processo comercial futuro (não só merchants) ficaria sem lar natural.
+- Colocar em `docs/product/` — descartada: `product/` é sobre o que o produto ParaguAI faz/planeja, não sobre como a empresa negocia com terceiros — mesmo raciocínio já usado para descartar essa opção na ADR-048.
+- Recusar o caminho `docs/business/` pedido no mandato — descartada pela mesma razão da ADR-048: o CTO já sinalizou a intenção ao nomear o caminho explicitamente; esta ADR formaliza em vez de ignorar ou violar silenciosamente a regra do Knowledge System.
+
+---
+
+## ADR-050 — `docs/design/` como 11ª categoria oficial do Knowledge System; congelamento visual da Premium Home Experience
+
+**Data**: 2026-07-06 (pós Release 1.9 — Program F — Wave 1)
+**Status**: Aceita
+
+**Contexto**: o CTO aprovou formalmente o resultado visual da Premium Home Experience (Home + `/categorias`, gerado a partir do design v0 e integrado aos domínios reais na Wave anterior, ver `docs/engineering/PREMIUM_HOME_EXPERIENCE.md`) como o Design System oficial do ParaguAI, e determinou que esse visual passa a ser **READ-ONLY** — nenhuma nova mudança de espaçamento, tipografia, proporção, sombra, cor, estrutura de card, navegação, Hero ou layout é permitida sem aprovação explícita futura. O mandato pediu um documento formal (`DESIGN_CONSTITUTION`) registrando essa restrição, em um caminho (`docs/design/`) que não existe nas 10 categorias oficiais até então (`foundation/architecture/engineering/product/operations/database/adr/archive/marketplace/business`).
+
+**Por que nenhuma categoria existente serve**: não é `engineering/` (não descreve como o código é construído — `PREMIUM_HOME_EXPERIENCE.md` já faz isso e continua vivo; este documento descreve o que **não pode mudar** no resultado visual, uma pergunta diferente de "como funciona"); não é `product/` (não é sobre o que o produto faz ou planeja — é sobre uma restrição a um resultado visual já entregue); não é `operations/` (não é estado do projeto nem histórico — é uma regra permanente de congelamento, consultada antes de qualquer mudança futura na Home, não depois). Existe uma dimensão real e distinta, já prevista implicitamente pela distinção entre documentos "vivos" e "LOCKED" da Foundation (`FOUNDATION_INDEX.md` Seção II): algumas partes do produto deixam de evoluir livremente e passam a exigir aprovação explícita para qualquer mudança observável. `docs/design/` cobre essa dimensão para superfícies visuais (distinta da Foundation, que cobre princípios, não pixels).
+
+**Decisão 1 — `docs/design/` passa a ser a 11ª categoria oficial**. Propósito: declarar superfícies visuais aprovadas como definitivas pelo CTO e as regras do que pode/não pode mudar em cada uma — nunca arquitetura técnica (isso continua em `engineering/`) nem filosofia de produto (isso continua em `foundation/PRODUCT_PRINCIPLES.md`). Primeiro documento: `DESIGN_CONSTITUTION.md`. `docs/README.md`, `docs/foundation/FOUNDATION_INDEX.md` e `CLAUDE.md` atualizados no mesmo commit desta ADR — nenhuma categoria fica fora do mapa (regra 7 do Knowledge System).
+
+**Decisão 2 — congelamento formal da Premium Home Experience**: `docs/design/DESIGN_CONSTITUTION.md` declara `app/page.tsx`, `app/categorias/page.tsx` e todo `components/home/*.tsx`/`components/home/dashboard/*.tsx` como READ-ONLY visualmente. Proibido sem nova aprovação do CTO: redesign, mudança de espaçamento/tipografia/proporção/sombra/cor/estrutura de card/navegação/Hero/layout, ou substituição de componente por reinterpretação. Permitido e esperado, sem necessidade de aprovação prévia: integração com services reais, remoção de duplicação, performance, acessibilidade, SEO e manutenibilidade — desde que o DOM/pixel renderizado permaneça idêntico.
+
+**Consequência**: toda tarefa futura que toque `app/page.tsx`, `/categorias` ou `components/home/**` deve consultar `docs/design/DESIGN_CONSTITUTION.md` antes de implementar — uma mudança visualmente observável nessas superfícies sem aprovação explícita do CTO é uma violação desta ADR, não uma escolha de execução válida. Futuras superfícies do produto que o CTO aprovar como visual definitivo (ex.: um futuro Merchant Dashboard) ganham seu próprio documento em `docs/design/` sem precisar de nova ADR de categoria.
+
+**Alternativas descartadas**:
+- Registrar o congelamento apenas como uma seção dentro de `docs/engineering/PREMIUM_HOME_EXPERIENCE.md` — descartada: misturaria "como o sistema foi construído" (vivo, atualiza a cada Wave que tocar a Home) com "o que está proibido mudar" (regra permanente até nova aprovação); o precedente empurraria todo futuro congelamento visual para dentro de documentos de arquitetura já existentes, sem lar próprio.
+- Tratar o congelamento como uma extensão de `docs/foundation/PRODUCT_PRINCIPLES.md` — descartada: a Foundation é permanente e filosófica (por que o ParaguAI existe, como pensa sobre produto), não uma lista de componentes React específicos e o que pode/não pode mudar neles; misturar as duas coisas diluiria o caráter LOCKED da Foundation com detalhe de implementação de uma Wave específica.
+- Não criar categoria nova e recusar o caminho `docs/design/` pedido no mandato — descartada pela mesma razão das ADR-048/049: o CTO já sinalizou a intenção ao nomear o caminho explicitamente ao criar o arquivo vazio `docs/design/DESIGN_CONSTITUTION`; esta ADR formaliza em vez de ignorar ou violar silenciosamente a regra do Knowledge System.

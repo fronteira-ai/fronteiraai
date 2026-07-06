@@ -8,7 +8,7 @@ Este é o sistema de conhecimento oficial do ParaguAI. Tudo o que você precisa 
 
 ## Visão Geral
 
-O ParaguAI é uma plataforma de comparação de preços e inteligência operacional para a Tríplice Fronteira. A documentação está organizada em 8 categorias que refletem as diferentes dimensões do projeto.
+O ParaguAI é uma plataforma de comparação de preços e inteligência operacional para a Tríplice Fronteira. A documentação está organizada em 11 categorias que refletem as diferentes dimensões do projeto.
 
 ---
 
@@ -44,6 +44,11 @@ docs/
 │   ├── DATABASE_ENGINEERING.md Database Migration System V2 — padrão, runbook, governança
 │   ├── ACQUISITION.md          Documentação do Acquisition Engine
 │   ├── CONNECTOR_GUIDE.md      Como criar novos Connectors
+│   ├── CONNECTOR_PLATFORM_ARCHITECTURE_REVIEW.md  Fotografia real da Connector Platform (Wave 4)
+│   ├── CONNECTOR_PLATFORM_V2.md                   Industrialização — SDK, Certification, Observability (Wave 5-6)
+│   ├── SOURCE_DISCOVERY_POLICY.md                 Política permanente de escolha de fonte de dado
+│   ├── MARKET_INTELLIGENCE_ENGINE.md              Núcleo de inteligência de preços (Release 1.8 — Program C)
+│   ├── PREMIUM_HOME_EXPERIENCE.md                 Arquitetura da Home Premium + /categorias (Release 1.9 — Program F)
 │   └── AGENTS.md               Avisos críticos para agentes IA
 │
 ├── product/          O que o produto faz e para onde vai
@@ -78,6 +83,21 @@ docs/
 │
 ├── adr/              Futura home de ADRs individuais (atualmente em operations/DECISIONS.md)
 │   └── README.md
+│
+├── marketplace/      Entidades reais do mercado da fronteira — lojas, conectores certificados, perfis de merchant (ADR-048)
+│   ├── README.md
+│   └── Tier1_Merchants.md      Auditoria técnica + certificação dos 10 merchants Tier 1
+│
+├── business/         Processo comercial do ParaguAI com terceiros — parcerias, propostas, pipeline de negociação (ADR-049)
+│   ├── README.md
+│   ├── MERCHANT_PARTNERSHIP_PROGRAM.md   Programa oficial de parcerias — tiers, benefícios, onboarding, integrações
+│   ├── TIER1_PARTNERS.md                 Pipeline de negociação dos 10 merchants Tier 1
+│   ├── PARTNERSHIP_PROPOSAL.md           Template de proposta comercial (PT/ES/EN)
+│   └── PARTNERSHIP_EMAIL_TEMPLATE.md     Template de e-mail institucional (PT/ES/EN)
+│
+├── design/           Superfícies visuais congeladas — o que é READ-ONLY e o que continua permitido mudar (ADR-050)
+│   ├── README.md
+│   └── DESIGN_CONSTITUTION.md  Congelamento da Premium Home Experience (Home + /categorias)
 │
 └── archive/          Documentos obsoletos preservados por contexto histórico
     ├── README.md
@@ -127,6 +147,9 @@ AI_CONSTITUTION → NORTH_STAR → BUSINESS_MODEL → VISION_2035
 | `operations/` | O que aconteceu e o que acontece agora | Para entender contexto ou registrar decisões |
 | `database/` | Como o banco está modelado | Antes de criar ou alterar qualquer tabela |
 | `adr/` | Onde ficarão os ADRs individuais no futuro | N/A por enquanto — ver `operations/DECISIONS.md` |
+| `marketplace/` | O que as lojas reais da fronteira são/usam — não o que o ParaguAI é | Antes de planejar um Connector, avaliar uma loja candidata ou consultar certificação existente |
+| `business/` | Como o ParaguAI se relaciona comercialmente com terceiros — não fatos técnicos sobre eles | Antes de contatar um merchant, preparar uma proposta ou consultar o pipeline de negociação |
+| `design/` | O que está visualmente congelado (READ-ONLY) e o que continua permitido mudar | Antes de tocar em `app/page.tsx`, `/categorias` ou qualquer `components/home/**` |
 | `archive/` | O que existia antes | Para contexto histórico apenas |
 
 ---
@@ -154,7 +177,7 @@ Regras críticas antes de qualquer ação:
 
 Estas regras são permanentes — valem para toda contribuição futura:
 
-1. **Nenhum documento novo pode ser criado diretamente na raiz de `docs/`.** Todo documento deve pertencer a uma das 8 categorias oficiais.
+1. **Nenhum documento novo pode ser criado diretamente na raiz de `docs/`.** Todo documento deve pertencer a uma das 11 categorias oficiais.
 2. **`foundation/` é um conjunto fechado.** Novos documentos aqui requerem aprovação explícita do CTO e representam expansão do núcleo filosófico da empresa.
 3. **Documentos operacionais (`architecture/`, `engineering/`, `product/`, `operations/`, `database/`) devem sempre refletir o código real.** Documentação desatualizada é corrigida, não ignorada.
 4. **`operations/DECISIONS.md` e `operations/CHANGELOG.md` são append-only.** Nunca editar entradas existentes — apenas acrescentar.
@@ -169,4 +192,4 @@ Estas regras são permanentes — valem para toda contribuição futura:
 
 Este Knowledge System é mantido pelo CTO do ParaguAI. Sugestões de melhoria seguem o mesmo processo que qualquer decisão Tipo 1: `foundation/DECISION_FILTER.md`.
 
-Última atualização: **2026-07-02 — árvore de `product/` e `operations/` corrigida para refletir o estado real (Sprint Zero, Fase 2 — Foundation Consistency); Knowledge System v1.0 implementado em 2026-06-28**
+Última atualização: **2026-07-06 — 11ª categoria `design/` adicionada (ADR-050, congelamento visual da Premium Home Experience); 10ª categoria `business/` adicionada (ADR-049, Release 1.8 Program C Wave 0); 9ª categoria `marketplace/` adicionada (ADR-048, Release 1.8 Program A Wave 3); árvore de `product/` e `operations/` corrigida para refletir o estado real (Sprint Zero, Fase 2 — Foundation Consistency); Knowledge System v1.0 implementado em 2026-06-28**

@@ -1,8 +1,9 @@
 # MARKETPLACE_VISION.md
 # A Visão de Produto do Marketplace — ParaguAI
 
-**Versão**: 1.0
+**Versão**: 1.2
 **Criado**: 2026-07-02 (Sprint Zero — Release 1.8 Project Preparation & Foundation Consolidation)
+**Atualizado**: 2026-07-03 — cross-referência ao Program 0 (capacidade operacional), ao Exchange Intelligence Platform (Program A — Wave 1, instrumenta o Cross-Border Context Model) e ao Real-Time Commerce Engine (Program A — Wave 2, instrumenta o Live Commerce Velocity Model).
 **Status**: Orienta todas as decisões de produto do Release 1.8 em diante
 **Hierarquia**: Subordinado a `AI_CONSTITUTION.md`, `NORTH_STAR.md`, `BUSINESS_MODEL.md`, `VISION_2035.md`. Este documento não substitui `VISION_2035.md` — é o horizonte de 5 anos, tático e de produto, dentro do horizonte permanente que `VISION_2035.md` já define. Onde os dois divergirem, `VISION_2035.md` prevalece.
 
@@ -69,7 +70,7 @@ Nenhuma das duas proposta é nova — ambas já existiam na Foundation (`BUSINES
 
 Herdados diretamente do catálogo de Moats já permanente (`MOAT_STRATEGY.md`), expressos aqui na linguagem de produto/marketplace:
 
-- **Preço que já era antigo em qualquer outro lugar, atualizado em minutos aqui** (Live Pricing Engine + Freshness Score, visível e nomeado, não apenas um fator de ranking invisível).
+- **Preço que já era antigo em qualquer outro lugar, atualizado em minutos aqui** (Live Pricing Engine + Freshness Score, visível e nomeado, não apenas um fator de ranking invisível — o Real-Time Commerce Engine, Program A Wave 2, já detecta e classifica cada mudança de preço/estoque em tempo quase real; falta a superfície visível ao comprador, ainda não construída).
 - **Câmbio que nunca engana** — preço original nunca escondido atrás de uma conversão, cotação sempre auditável (Exchange Engine).
 - **Histórico que nenhum concorrente que comece hoje pode ter** (Moat 1 — Historical Data) — visível ao comprador como contexto de decisão, não apenas um ativo interno.
 - **Reputação de loja verificável, não autodeclarada** (Moat 2 — Merchant Trust Network, Progressive Verification).
@@ -102,3 +103,4 @@ Nenhum diferencial listado aqui é aspiracional — todos já têm arquitetura d
 | `MARKETPLACE_STRATEGY.md` | Como, taticamente, esta visão se torna realidade — aquisição, SEO, monetização, Network Effects |
 | `RELEASE_1_8_BLUEPRINT.md` | A arquitetura técnica que constrói o que esta visão descreve |
 | `KPIS.md` | Como medimos se esta visão está de fato se concretizando |
+| `ROADMAP_1_8.md` (Program 0) | A capacidade operacional (Marketplace Operations Platform) que garante que esta visão seja administrável em escala, não apenas construída |

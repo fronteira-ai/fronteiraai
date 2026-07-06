@@ -2,6 +2,261 @@
 
 Reconstruído a partir do histórico real de commits (`git log`) e do estado atual do código. Formato: data, commit, o que mudou de fato (verificado no diff/estado resultante, não só na mensagem).
 
+## 2026-07-04 — Release 1.9 — Program F — Premium Home Experience, Wave 1
+
+Primeira Wave da Release 1.9 — a fase de fundação foi declarada oficialmente encerrada pelo CTO; o foco passa de infraestrutura para experiência de produto. Home redesenhada seguindo referência visual obrigatória (imagem enviada pelo CTO) + nova página `/categorias`, consumindo exclusivamente os domínios estratégicos consolidados na Release 1.8 — zero regra de negócio dentro de componente React.
+
+**Nova camada única de leitura**: `lib/home-premium-service.ts` — cada função compõe um serviço de domínio já existente (Market Intelligence, Marketplace Operations, Exchange Intelligence, Connector Platform, catálogo pré-existente) e retorna dado pronto para renderizar. Nova fábrica `lib/market-insights-factory.ts` (o domínio `market-insights/`, Program C — Wave 1, nunca teve uma até agora — nada fora de seus próprios testes o consumia).
+
+**Blocos novos, cada um Server Component auto-alimentado + `<Suspense>` individual** (streaming granular real): Market Pulse (`MarketPulseService`+`VolatilityService`), Economia do Dia + Ofertas Relâmpago (`PriceIntelligenceService.getSavingsOpportunity`), Câmbio ao Vivo (`ExchangeRateService`/`ExchangeHistoryService`), Marketplace em Tempo Real (mesma fonte do Market Pulse, apresentação em feed cronológico), Câmeras ao Vivo (arquitetura preparada, zero integração, conforme mandato).
+
+**Blocos existentes atualizados com dado real**: Hero (estatísticas reais via `MarketplaceMetricsService`, substituindo números fictícios hardcoded — `Stats.tsx` removido por duplicar exatamente esses números), Lojas em Destaque (`MerchantPriorityService` para ranking + `ConnectorDirectoryService` para quality score/última sincronização reais), Categorias (Home mostra só top 8 por contagem real, `/categorias` nova página lista todas com busca/ordenação/paginação).
+
+**Achados reais confirmados ao vivo, não hipotéticos**: `exchange_rates` está vazia em produção — `EXCHANGE_RATE_API_KEY` nunca foi configurada neste ambiente (confirmado via `exchange_provider_runs.status = "failure"`); não é um bug desta Wave, é uma lacuna de infraestrutura pré-existente exposta pela primeira vez. `market_changes` só tem eventos de criação (`offer_created`/`product_created`) — os 4 conectores do Program D só sincronizaram uma vez cada, então não há ainda uma segunda leitura de preço para comparar. Ambos os casos são tratados com estados vazios honestos, nunca dado fabricado.
+
+**Prova real de integração ponta a ponta**: um "Galaxy S25 Ultra 256GB" vendido tanto por Shopping China (USD 1099) quanto por Mega Eletrônicos (USD 1080, Program D) gera automaticamente uma economia real de USD 19 (1,73%) no card Economia do Dia — hoje superado pelo iPhone 16 Pro (Cellshop, USD 51/4,86%), confirmando que o mecanismo generaliza a qualquer produto com match canônico, não é um caso único cravado.
+
+**Link morto real encontrado e corrigido durante a implementação**: o produto vencedor de uma economia (loja mais barata) precisa linkar por `products.slug`, não pelo `canonical_products.canonical_slug` (identidades diferentes) — corrigido resolvendo o produto bruto vencedor antes de montar o link.
+
+**Performance**: `export const dynamic = "force-dynamic"` trocado por `export const revalidate = 60` — ISR real, confirmado no build (`○ /`, `Revalidate: 1m`).
+
+**Acessibilidade**: `aria-label` adicionado às buscas da Home e de `/categorias` (placeholder sozinho não é suficiente para leitores de tela); hierarquia de headings validada (h1 único por página); globo decorativo do Hero marcado `aria-hidden`.
+
+**Verificado com dev server real rodando**, não apenas build — todas as páginas/blocos confirmados renderizando com dado real via curl, incluindo teste de um link de produto e de categoria reais (ambos HTTP 200).
+
+**Docs**: `docs/engineering/PREMIUM_HOME_EXPERIENCE.md` (novo), `docs/product/ROADMAP_1_9.md` (novo).
+
+Quality Gate: lint 0, typecheck 0, build OK, 524/524 testes.
+
+## 2026-07-04 — Release 1.8 — Program D — Marketplace Coverage Expansion, Wave 1
+
+Primeira Wave pós-fundação: implementar novos merchants usando exclusivamente a infraestrutura já consolidada, prova de que "expansão de Connectors = só um adaptador novo" (a pergunta de fechamento da Wave anterior do Connector Platform).
+
+**Auditoria ao vivo antes de codar** (fetch real de robots.txt/sitemap/página de produto, não apenas leitura passiva do documento de auditoria de 2026-07-03): confirmou Mega Eletrônicos e Roma Shopping como descritos, mas **corrigiu 2 achados da auditoria original** — Atacado Connect tem hoje um sitemap completo (~18.000 produtos reais, não "incompleto" como reportado) e usa JSON-LD schema.org por produto (o sinal estruturado mais limpo dos 3 novos conectores); Mega Eletrônicos exibe preço em formato numérico americano (vírgula-milhar, ponto-decimal) — o oposto da convenção latina que o SDK assumia valer para todo conector da região.
+
+**3 Connectors implementados** (`src/domains/connectors/crawler/{megaeletronicos,romashopping,atacadoconnect}/`), cada um dentro do pipeline existente sem nenhum fluxo paralelo: Delta Import (`connector_url_snapshots`, Program B Wave 2), Capability Matrix, Certification Framework, Observability V2 — tudo reaproveitado sem alteração.
+
+**Correções pontuais inevitáveis** (não uma evolução arquitetural): `parseAmountUSFormat` (nova função no SDK de parsing, isolada — Shopping China continua usando a função original sem qualquer mudança de comportamento); 2 correções de dado em `stores` (linha nova para Roma Shopping, que nunca tinha sido seedada; rename de "Atacado Games" para "Atacado Connect" refletindo o rebranding real do site, encontrado só ao tentar persistir a primeira sincronização real).
+
+**Validado com execução real em produção**, autorizado pelo CTO em duas etapas (5 produtos por loja, depois 200): **597 ofertas reais persistidas** (197 Mega Eletrônicos + 205 Roma Shopping + 206 Atacado Connect), 0 falhas na versão final — Roma Shopping teve 1 falha transitória na primeira tentativa (por causa da linha de `stores` ausente, corrigida antes do sync completo).
+
+**Prova concreta de Canonical Match funcionando cross-merchant**: um "Galaxy S25 Ultra 256GB" passou a ser vendido tanto por Shopping China (USD 1099, já existente) quanto por Mega Eletrônicos (USD 1080, novo) — `PriceIntelligenceService` (Program C — Wave 1, Market Intelligence Engine) calculou automaticamente uma economia real de USD 19 (1.73%) no momento em que a nova oferta foi vinculada ao produto canônico já existente, sem nenhum código novo. Os 3 conectores aparecem corretamente em `ConnectorDirectoryService`/`ConnectorObservabilityService` (health scores 100/80/100, quality scores 69/65/72) — de novo, sem nenhum código novo.
+
+**Canonical Match rate honesto e baixo** (1.0% Mega Eletrônicos, 0.0% Roma Shopping, 0.5% Atacado Connect) — esperado: Product Identity roda em Shadow Mode (não promove merge automaticamente), e os catálogos de eletrônicos/perfumes têm variantes muito específicas de cor/capacidade/edição. Zero produtos canônicos compartilhados entre os 3 novos merchants entre si.
+
+**Achado de tooling, não bloqueante**: Jest não consegue rodar testes unitários de qualquer parser que importe `node-html-parser` — sua dependência transitiva `entities` é publicada como ESM puro, sem condição `require`, quebrando sob o sistema de módulos CJS do Jest. Pré-existente (o próprio `detail-parser.ts` do Shopping China nunca teve cobertura de teste pela mesma razão) — não introduzido por esta Wave. `tsx` (usado por todos os scripts `sync-*.ts` e pela validação ao vivo desta Wave) resolve o mesmo import corretamente. Os parsers de Mega Eletrônicos/Roma Shopping foram validados contra HTML real ao vivo em vez de testes unitários; Atacado Connect (JSON-LD puro) tem cobertura de teste completa.
+
+Quality Gate: lint 0, typecheck 0, build OK, 524/524 testes, `db:lint` OK (14 migrations, inalterado — zero tabela nova).
+
+Mobile Zone/Visão VIP seguem bloqueados até ADR de headless browser.
+
+## 2026-07-04 — Release 1.8 — Program C — Market Intelligence Engine, Wave 1
+
+Núcleo do Market Intelligence Engine — transformar preços em inteligência reutilizável (Brain/Marketplace/Search/Home/APIs futuras/Mobile), zero dashboard, zero página, zero IA generativa.
+
+**Auditoria obrigatória antes de qualquer código** encontrou sobreposição real com quase todos os 10 objetivos do brief: `CanonicalPriceHistoryService` (canonical-catalog, Release 1.7) já computava min/max/avg/trend histórico-blended; `VolatilityEngine` (realtime-commerce, Program A Wave 2) já é o motor de volatilidade estatística real; `ExchangeAnalyticsService.computeBuyerSavings` (exchange, Program A Wave 1) já calcula economia, mas catalog-wide, não per-produto-canônico; Merchant Intelligence (Objetivo 7) já está quase inteiramente coberto por 4 serviços de Waves anteriores juntos (`StoreUpdateIntelligenceService`, `ConnectorObservabilityService`, `MarketplaceCoverageService`, `ProductHealthService`).
+
+**Novo domínio de fundação** `src/domains/market-insights/` (como `canonical-catalog`/`exchange`/`realtime-commerce` — depende deles livremente, nenhum depende de volta) contendo só o que era genuinamente novo:
+- `PriceIntelligenceService` — mediana + dispersão entre lojas (coeficiente de variação) por produto canônico, e `computeSavingsOpportunity` (economia "Loja X vs Loja Y", distinta do savings catalog-wide já existente em Exchange).
+- `VolatilityRollupService` — rollup do `VolatilityEngine` já existente (nenhuma estatística nova) para nível canônico/categoria/merchant, incluindo `getMerchantAggressiveness` (fração de mudanças de preço que são quedas — o único ângulo genuinamente novo de "Merchant Intelligence").
+- `PriceHistoryQueryService` — API interna (nunca pública), compõe `CanonicalPriceHistoryService` + `market_changes` para trend/último preço/primeira aparição/frequência de mudança/estabilidade.
+- `MarketPulseInsightsService` — rollup canônico de `MarketPulseService.getTopMovers()` (já existente, chamado diretamente para "lojas mais atualizaram"/"categorias mais movimentadas", sem wrapper).
+
+**Objetivo 7 (Merchant Intelligence) deliberadamente não implementado** — mapeamento explícito de cada métrica pedida ao serviço já existente que já a cobre, documentado em `docs/engineering/MARKET_INTELLIGENCE_ENGINE.md` §3.
+
+**3 extensões pequenas e aditivas em `canonical-catalog`** (auditadas, zero breaking change, confirmado por typecheck/testes): `CanonicalOfferView.productId` (necessário para cruzar com `market_changes`, que cheaveia no product bruto, não no offer), `ICanonicalCatalogRepository.findByCategoryId`/`findCanonicalProductIdByProductId` (espelha `findByBrandId` já existente), `CanonicalPriceAggregation.lastPriceUSD`/`firstSeenAt` (já computados internamente, só não expostos).
+
+**Zero tabela nova** — tudo compute-on-read, mesma disciplina de `MerchantPriorityService`/`VolatilityService`. Zero `BrainAsset` novo — mapeamento para os 6 já existentes documentado, criação fica para decisão própria futura, mesma disciplina de toda Wave anterior.
+
+**Testes**: 23 novos, funções puras priorizadas (`computePriceStatistics`, `computeSavingsOpportunity` sem I/O).
+
+**Docs**: `docs/engineering/MARKET_INTELLIGENCE_ENGINE.md` (novo, relatório completo da auditoria + decisões de reuso).
+
+Quality Gate: lint 0, typecheck 0, build OK, 506/506 testes, `db:lint` OK (14 migrations, inalterado).
+
+**Limitação honesta central**: valor real proporcional à cobertura de Canonical Match, hoje baixa (só Shopping China com Connector certificado) — estruturalmente correto, estatisticamente pouco significativo até a expansão de Connectors ser retomada.
+
+## 2026-07-04 — Release 1.8 — Program B, Wave 2 — Connector Platform Finalization
+
+Resolve exatamente as 2 limitações honestas nomeadas ao final da Wave 5 (Registry com bootstrap linear; Delta Import sem persistência) — sem implementar novos merchants, sem overengineering (nenhum event bus/Kafka/RabbitMQ/Redis/plugin framework/reflection/DI complexa).
+
+**Delta Import Persistence**: migration `20260704090000_connector_url_snapshots.sql`, auditada contra `DATABASE_ENGINEERING.md`/migrations existentes antes de escrever (confirmado: não duplica `market_changes`, que é o ledger de mudança já comparada — esta tabela é o sinal bruto anterior, do próprio `<lastmod>` do sitemap, usado só para decidir se vale buscar). Tabela única, upsert por `(connector_id, url)`, RLS sem policy pública. `IConnectorUrlSnapshotRepository` vive dentro de `connectors/` (preocupação 100% interna, sem risco de dependência circular, diferente de Certification/Observability).
+
+**Achado real corrigido durante a implementação**: `IConnector.fetch()` não recebia informação de dry-run — persistir o snapshot incondicionalmente teria violado a invariante "dry-run nunca escreve" (`CatalogWriteStage`/`MarketChangeDetectionStage` já garantem isso). Corrigido com `ConnectorFetchOptions` opcional no contrato `IConnector` — aditivo, nenhum connector existente (incluindo os 2 de referência) precisou de qualquer mudança.
+
+**Validado com execução real**, não apenas dry-run: sync real (3 produtos, `--execute`) gravou dado real em `products`/`offers` + 6 eventos em `market_changes`; a sincronização seguinte (dry-run) confirmou exatamente **3 URLs puladas de 27.418 totais** — as mesmas recém-sincronizadas. Delta Import Engine genuinamente operacional em produção.
+
+**Connector Registry V2**: `ConnectorRegistryImpl` não mudou de forma — continua índice em memória puro. `ConnectorDirectoryService` (novo, `lib/`) responde merchant/versão/capabilities/status/certificação/health/quality score, em duas granularidades (`listAll()` barato via registry+health+lookup de `merchant_stores`; `getDetail()` caro, soma Certification+Quality Score sob demanda). Zero reflexão dinâmica, zero plugin loader, zero framework de DI. `bootstrap.ts` permanece registro estático por import — restrição real do bundler da Vercel (imports dinâmicos por varredura de diretório não são estaticamente analisáveis), não dívida adiada por preguiça.
+
+**Observability V2**: `productsProcessedLastSync`/`failuresLastSync` (do `connector_sync_runs` mais recente), `productsChanged`/`offersChanged` (janela fixa de 24h sobre `market_changes`), `qualityScore` — tudo reaproveitando dado já existente, zero tabela nova. `retryCount` permanece `null`, honestamente — nenhum contador de retry é persistido em lugar nenhum ainda.
+
+**Source Discovery Policy**: formalizada em `docs/engineering/SOURCE_DISCOVERY_POLICY.md` (novo) — hierarquia obrigatória (API oficial → API de parceiro → Feed oficial → Sitemap XML → Structured Data → HTML público) e proibições absolutas (nunca contornar Cloudflare/robots.txt, nunca anti-detecção, headless browser exige ADR aprovada).
+
+**Governança**: auditoria de direção de dependência (`grep` de imports proibidos) confirmou zero violações — `connectors/` segue dependendo só de `product-identity`/`realtime-commerce`. 1 inconsistência de nomenclatura corrigida (`sdk/fetch/RateLimiter.ts` → `RateLimitedFetchStrategy.ts`, alinhando com a convenção do diretório). 1 inconsistência pré-existente (`ConnectorRegistryImpl` vs. `connectorRegistry`) auditada e deliberadamente não tocada — baixo valor, alto custo de churn em imports já estabelecidos desde o Release 1.7.
+
+**Docs**: `docs/engineering/CONNECTOR_PLATFORM_V2.md` §14 (novo), `SOURCE_DISCOVERY_POLICY.md` (novo), `TECH_DEBT.md` atualizado.
+
+Quality Gate: lint 0, typecheck 0, build OK, 480/480 testes, `db:lint` OK (14 migrations).
+
+## 2026-07-04 — Release 1.8 — Program A, Wave 5 — Connector Platform V2
+
+Architecture Review completa da Connector Platform seguida de industrialização — sem implementar novos merchants (os 5 pendentes permanecem congelados). Auditoria contra 13 objetivos, cada um resolvido com um veredito explícito: já existe/reaproveitado, construído nesta Wave, ou deliberadamente não construído.
+
+**Connector SDK** (`src/domains/connectors/sdk/`): módulos novos desta Release movidos fisicamente (`HttpFetchStrategy`, novo `RateLimitedFetchStrategy` — substitui o `sleep()` inline —, `SitemapCrawler`, novo `DeltaImportPlanner`, `textParsing`); módulos pré-existentes/testados (`SitemapParser`/`RobotsParser`/field mappers) só re-exportados no lugar, sem mover — churn cosmético evitado.
+
+**Capability Matrix**: `ConnectorCapabilities` obrigatório em `ConnectorMetadata`. Achado real ao declarar honestamente: Shopping China não tem `supportsStock` de verdade (estoque hardcoded).
+
+**Certification Framework + Quality Score** (`lib/connector-certification-service.ts`): o agregador nomeado como dívida desde a Wave 3, construído agora que as tabelas de Real-Time Commerce/Exchange/Marketplace Operations estão em produção. 13 critérios, todos reaproveitando serviços existentes de 5 domínios — vive em `lib/` (não em `src/domains/connectors/`) porque `marketplace-operations` já depende de `connectors`, então a dependência inversa seria circular. `Analytics`/`Brain` reportam `passed: null` (não avaliado) para lojas sem merchant, nunca `false`.
+
+**Connector Observability** (`lib/connector-observability-service.ts`): compõe Health+Freshness+Volatility, mesma razão de viver em `lib/`.
+
+**Delta Import Engine**: lógica de decisão pura construída e testada (`DeltaImportPlanner`), **deliberadamente não conectada** a nenhum Connector real — persistência entre execuções exigiria uma tabela nova sem migration autorizada; um cache em memória teria efeito zero em produção serverless (cron da Vercel = processo novo a cada invocação).
+
+**Snapshot Engine**: já existe como `market_changes` (Wave 2) — não duplicado. **Event-Driven**: auditado, deliberadamente não reescrito (2 consumidores estáveis não justificam um barramento genérico). **Source Discovery**: prioridade já existe como política real (`Integration Strategy`, Wave 3).
+
+**Testes**: 28 novos (SitemapCrawler, textParsing, DeltaImportPlanner, RateLimitedFetchStrategy) — fecha o gap nomeado na Wave 4.
+
+**Docs**: `docs/engineering/CONNECTOR_PLATFORM_V2.md` (novo), `TECH_DEBT.md` atualizado.
+
+Quality Gate: lint 0, typecheck 0, build OK, 480/480 testes, `db:lint` OK — validado com dry-run real ao vivo contra `shoppingchina.com.py` após o refactor.
+
+## 2026-07-04 — Release 1.8 — Program A, Wave 4 — Connector Tier 1 Implementation (parcial, pausada)
+
+Implementação dos primeiros Connectors certificados Tier 1 — pausada pelo CTO após Shopping China e a infraestrutura compartilhada, para uma revisão de arquitetura completa antes de prosseguir com os 3 Connectors restantes.
+
+**2 bloqueios resolvidos antes de qualquer execução real**: migrations das Waves 1-3 nunca aplicadas em produção (`marketplace_operations`/`exchange_intelligence`/`realtime_commerce`) — aplicadas nesta sessão via `db:push`, autorizado pelo CTO, pré-requisito para provar Change Detection/Exchange/Marketplace Operations por Connector. Mobile Zone/Visão VIP confirmados genuinamente client-side-rendered (payload RSC vazio / SPA React pura) — sem Playwright/Puppeteer no projeto, nenhum código escrito para eles nesta Wave.
+
+**Shopping China recertificado**: sitemap real (`shoppingchina.com.py/sitemap.xml`, 27.402 URLs de produto confirmadas ao vivo) substitui 3 categorias hardcoded + corte fixo de produtos. Validado com dry-run real contra o site (5 produtos reais através do pipeline completo). `HttpFetchStrategy` ganha retry/backoff (política linear, mesma de `ExchangeRateApiHttpClient`). Dois módulos novos compartilhados (`crawler/shared/`): `SitemapCrawler` (reaproveita `SitemapParser` do Discovery) e `textParsing.ts` (parsing de preço/moeda regional) — pensados para os próximos 3 Connectors sitemap-driven, não só para Shopping China.
+
+**Pausada por decisão do CTO**: Mega Eletrônicos, Roma Shopping, Atacado Connect não implementados nesta Wave. Entregue em seu lugar: `docs/engineering/CONNECTOR_PLATFORM_ARCHITECTURE_REVIEW.md` — arquitetura completa em camadas, pipeline de 7 estágios, estrutura de diretórios, componentes reutilizáveis, integrações cross-domain, cobertura de testes real, achados relevantes (nenhuma `stores` row confirmada para as 3 lojas do próximo lote; decisão de moeda canônica não é automática).
+
+Quality Gate: lint 0, typecheck 0, build OK, 452/452 testes, `db:lint` OK.
+
+## 2026-07-03 — Release 1.8 — Program C, Wave 0 — Merchant Partnership Program
+
+Programa oficial de parcerias comerciais para os merchants Tier 1 que não podem ser integrados via scraping — resposta direta ao achado de conformidade da Wave anterior (Cellshop, Nissei, Casa Americana, New Zone bloqueiam `ClaudeBot` nomeadamente no `robots.txt`).
+
+**Decisão arquitetural reafirmada, não revisitada**: nunca contornar `robots.txt`, nunca burlar Cloudflare, nunca scraping que viole política pública — o caminho para esse dado é exclusivamente comercial daqui em diante.
+
+**Nova categoria `docs/business/`** (ADR-049, 10ª do Knowledge System) — distinta de `docs/marketplace/` (fatos técnicos sobre lojas) por ser sobre o processo comercial do próprio ParaguAI (negociação, propostas, contratos). `docs/README.md`/`FOUNDATION_INDEX.md`/`CLAUDE.md` atualizados no mesmo commit.
+
+**4 documentos entregues**:
+- `MERCHANT_PARTNERSHIP_PROGRAM.md` — 4 tiers (Integration Partner → Certified Merchant → Official Merchant Partner → Founding Partner), explicitamente distintos de `OwnershipLevel.PremiumMerchant` (jornada de auto-serviço, Release 1.7 Wave 5) — dimensões independentes, não duplicadas. Fluxo de 9 estágios (Contato inicial → ... → Partner Oficial). Partner Integration Requirements mapeados 1:1 a `RawOffer`/`RawProduct` já existentes no Connector Platform — nenhum schema novo. Merchant Integration Score reaproveita `ConnectorHealthService`, `FreshnessService` (`realtime-commerce`), `ProductHealthService` (`catalog-intelligence`), `MarketplaceCoverageService` — zero Engine novo.
+- `TIER1_PARTNERS.md` — pipeline de negociação (`Not Contacted → ... → Official Partner`) dos 10 merchants Tier 1, com ordem de contato recomendada priorizando os 4 bloqueados.
+- `PARTNERSHIP_PROPOSAL.md` / `PARTNERSHIP_EMAIL_TEMPLATE.md` — templates em PT/ES/EN, tom profissional, foco em parceria/visibilidade/analytics — nenhuma menção a scraping, bots ou Cloudflare.
+
+**Achado arquitetural**: uma vez que o feed de um parceiro seja implementado como `IConnector` (formatos já cobertos por `ConnectorType`: JSON/CSV/REST API/XML/Manual Upload/ERP), ele entra no mesmo pipeline que qualquer Connector de scraping — Real-Time Commerce Engine, Catalog Intelligence e Connector Health já se aplicam automaticamente. Nenhuma refatoração de arquitetura necessária para receber dado de parceiro no futuro.
+
+**Zero código de produto** — mandato explícito do CTO ("nenhum código de scraping deverá ser criado"); Wave puramente de documentação/processo. Nenhum contato real feito ainda.
+
+**Docs**: `ROADMAP_1_8.md` (Program C ganha Wave 0), `TECH_DEBT.md` (5 formatos de integração ausentes — GraphQL/FTP/SFTP/Webhook/Google Sheets —, latência do Integration Score não computável, SKU/EAN/GTIN sem campo de primeira classe).
+
+Quality Gate: nenhum código de produto alterado.
+
+## 2026-07-03 — Release 1.8 — Program A, Wave 3 — Programa de Certificação de Connectors Tier 1
+
+Auditoria técnica de 10 lojas Tier 1 nomeadas pelo CTO e criação do processo oficial de certificação de Connector — **Wave deliberadamente sem novo Engine/domínio**, medida pela qualidade da estratégia, não pelo volume de código.
+
+**Conflitos com arquitetura existente, resolvidos antes de escrever qualquer coisa** (auditoria interna paralela à externa, por instrução explícita do CTO): a "Marketplace Priority" pedida duplicava 5 dos 7 fatores de `MerchantPriorityService` (Program 0 Wave 1) — resolvido reaproveitando-o para lojas onboarded e usando a fórmula de pré-onboarding do `RELEASE_1_8_BLUEPRINT.md` Capítulo 1 ("Prospect Score") só para prospects; "Health"/"Canonical Match Rate" do Connector Score já existiam em `ConnectorHealthService`/`MerchantPriorityService`; `docs/marketplace/` (caminho pedido) não era categoria oficial do Knowledge System — resolvido com **ADR-048** (9ª categoria, `docs/README.md`/`FOUNDATION_INDEX.md`/`CLAUDE.md` atualizados).
+
+**Achado crítico de conformidade**: auditoria real de `robots.txt` encontrou que **Cellshop, Nissei, Casa Americana e New Zone bloqueiam `ClaudeBot` nomeadamente** (Cellshop/Nissei também com Cloudflare 403 ativo). Nenhum scraping foi tentado. Confirmado com o CTO: essas 4 permanecem Tier 1/prioritárias, documentadas como `Certification Status: Restricted — Commercial Partnership Recommended` / `Integration Strategy: Data Partnership` — novo campo `Integration Strategy` criado em `Tier1_Merchants.md` (valores: Public Connector, Commercial API, Data Partnership, Merchant Feed, Manual Import, Pending Decision).
+
+**Das 6 restantes**: Shopping China (connector já existe, precisa recertificação — não usa sitemap real hoje), Mega Eletrônicos, Roma Shopping (~50k produtos estimados), Atacado Connect (ex-"Atacado Games") — `Ready for Connector Build`. Mobile Zone, Visão VIP — `Needs Technical Spike` (indícios não confirmados de renderização client-side).
+
+**Processo de certificação**: 15 critérios (`docs/marketplace/Tier1_Merchants.md` §2), Connector Score com 8 sub-scores — todos mapeados a serviços já existentes (Connector Platform, `MarketplaceCoverageService`, `ProductHealthService`, `MerchantPriorityService`, `ConnectorHealthService`, `realtime-commerce`, `MarketplaceAlertService`, `AutomaticCurrencyService`). Limiares numéricos deliberadamente não fixados — sem dado de produção real ainda. Agregador de score não implementado (nomeado em `TECH_DEBT.md`, próxima Wave técnica).
+
+**Docs**: novo `docs/marketplace/` (README + `Tier1_Merchants.md`), ADR-048, 6 gaps novos em `TECH_DEBT.md`, `ROADMAP_1_8.md`/`PROJECT_STATUS.md` atualizados.
+
+Quality Gate: nenhum código de produto alterado — lint/typecheck/build/testes inalterados desta Wave 3 em diante em relação à Wave 2.
+
+## 2026-07-03 — Release 1.8 — Program A, Wave 2 — Real-Time Commerce Engine
+
+O motor que detecta, interpreta, registra e distribui toda mudança de mercado da fronteira em tempo quase real: domínio novo `src/domains/realtime-commerce/` cobrindo Change Detection, Volatility, Freshness, Store Update Intelligence, Market Pulse, Live Activity Feed e a fundação do Buyer Alert Engine — integrado de fato ao pipeline de conectores, não isolado ao lado dele.
+
+**Domínio `src/domains/realtime-commerce/`**: `types/`+`enums/` (`ChangeType` ×15, `VolatilityClass`, `FreshnessClass`, `AlertType`), `change-detection/` (`ChangeDetector` — puro, sem I/O, diffa um snapshot antes/depois em até 9 tipos de mudança; queda de preço ≥15% também dispara `PromotionDetected`, constante nomeada `PROMOTION_PRICE_DROP_THRESHOLD`, mais `ChangeDetectionService` que persiste), `volatility/` (`VolatilityEngine` — 4 fatores explicáveis com teto declarado: frequência, amplitude, velocidade — fração de mudanças na segunda metade *calendárica* da janela, não um índice de mediana que sempre daria ~0.5 — e persistência; `VolatilityService` compute-on-read), `freshness/` (`FreshnessEngine` — thresholds literais do brief, Live/Fresh/Recent/Old/Stale, score interpolado entre âncoras; `FreshnessService`), `services/` (`StoreUpdateEngine` + `StoreUpdateIntelligenceService` — intervalo médio entre eventos de sync, estabilidade de catálogo, e Price Reaction Speed real via mediana do lag até a mudança mais próxima do mesmo produto em outra loja), `market-pulse/` (`MarketPulseService` respondendo as 9 perguntas do brief + `getTopMovers`; `LiveActivityFeedService`, projeção de leitura sobre `market_changes`, sem tabela nova), `alerts/` (`BuyerAlertEngine` — puro, só os 4 gatilhos concretos do brief; `BuyerAlertService`), `dashboard/RealtimeCommerceDashboardService` (composição via `Promise.allSettled`, mesmo padrão de `ExchangeDashboardService`), `repositories/`+`infrastructure/` (3 repositórios Supabase), `events/RealtimeCommerceDomainEvent.ts` (tipos puros, sem import de `trust`), `__tests__/`.
+
+**Integração real com o Connector Platform** (não um domínio isolado que só existiria em teoria): `DeduplicationStage` agora carrega o snapshot pré-escrita (`existingSnapshot`, campo novo em `DeduplicatedOffer`); `CatalogWriteStage` passa a devolver `storeId` em `PersistenceResult`; novo estágio `MarketChangeDetectionStage` roda depois da persistência e chama `ChangeDetectionService.detectAndRecord` — mesmo formato de estágio que `ProductIdentityShadowStage` (Release 1.7 — Wave 3) já usa para depender de um Core Asset sem o possuir. `SyncOrchestrator` ganha o parâmetro de construtor `changeDetectionService`; os 4 testes existentes de `SyncOrchestrator.test.ts` e os fixtures de `CatalogWriteStage.test.ts`/`DeduplicationStage.test.ts` foram atualizados para a nova assinatura — suíte de `connectors` permanece 59/59 verde.
+
+**Migration** `supabase/migrations/20260703170000_realtime_commerce.sql`: `market_changes` (ledger append-only — fonte única de verdade; Volatility/Freshness/Store Update/Market Pulse são todos derivados por leitura, nunca duplicam estado), `market_pulse_snapshots` (rollup diário, upsert-by-date, mesmo padrão de `marketplace_health_snapshots`), `buyer_alert_candidates` (índice único em `rate_limit_key` — o rate limiting é uma constraint de banco, não um cache em processo que se perderia entre execuções do cron). RLS habilitada, zero policy pública nas três. Verificação em `database/verification/realtime_commerce_verify.sql`.
+
+**APIs**: `app/api/admin/realtime-commerce/{overview,market-pulse,alerts,volatility,freshness}` (admin-guarded) + `app/api/cron/realtime-commerce/{market-pulse,buyer-alerts}` (novos, `vercel.json` a cada 15 min).
+
+**UI**: `app/admin/realtime-commerce/page.tsx` — mesmo padrão de abas internas de `/admin/exchange` (Market Pulse/Live Activity/Top Movers/Lojas/Alertas), payload composto buscado uma única vez. Nova entrada "Real-Time" em `AdminSidebar.tsx`. 5 widgets em `components/admin/realtime-commerce/widgets/`.
+
+**Brain**: 10 novos `TrustEventType` sob o banner "Release 1.8 — Program A — Wave 2" (`PriceDropped`, `PriceRaised`, `StockReturned`, `StockOut`, `ProductCreated`, `PromotionDetected`, `StoreHighlyResponsive`, `HighVolatilityDetected`, `LowVolatilityDetected`, `MarketTrendDetected`). **Todos taxonomia apenas** — cada um é marketplace/catálogo-wide por natureza, sem `merchantId` garantido (a maioria das lojas do catálogo ainda não foi reivindicada); resolver loja→merchant por evento de mudança individual não coube no escopo desta Wave. Mesma disciplina de `StoreDiscovered`/`MarketplaceHealthScoreChanged`.
+
+**Gaps documentados, não inventados** (`docs/engineering/TECH_DEBT.md`): `ProductRemoved`/`OfferRemoved` não são detectados automaticamente — exigiria saber que um sync de conector é exaustivo (nenhum `ConnectorMetadata`/`SyncRunOptions` declara isso hoje), e uma heurística sem essa garantia arriscaria falso-positivar ofertas de um sync parcial/paginado como removidas; `CategoryChanged`/`BrandChanged` nunca disparam pela integração real porque `ExistingOfferLookup` (`ICatalogRepository`) não carrega categoria/marca anteriores — o detector já suporta os dois, falta um produtor que forneça o valor; breakdown de categorias/lojas do Market Pulse agrega em JS sobre uma amostra limitada (3000 linhas) em vez de `GROUP BY` Postgres — aceitável no volume atual, revisitar perto de centenas de lojas (mesma classe de dívida do Program 0 Wave 1); `avgSyncTimeMs` do Store Update Intelligence fica como parâmetro opcional não preenchido — exigiria cruzar `connector_sync_runs` por loja, decisão de manter o domínio sem essa dependência cruzada nesta Wave.
+
+**Docs**: `MARKETPLACE_STRATEGY.md`/`MARKETPLACE_VISION.md`/`KPIS.md`/`DATABASE_ENGINEERING.md` atualizados; `ROADMAP_1_8.md` marca Program A/Wave 2 como entregue; `RELEASE_1_8_BLUEPRINT.md` ganha nota de cross-reference.
+
+**Testes**: 37 novos — `ChangeDetector`, `VolatilityEngine`, `FreshnessEngine`, `StoreUpdateEngine`, `BuyerAlertEngine` (todos puros, maior valor por convenção do projeto) — total 452/452.
+
+Quality Gate: lint 0, typecheck 0, 452/452 testes, `db:lint` a rodar antes do `db:push`.
+
+**Migration requer `npm run db:push` pelo CTO** (padrão de toda Wave anterior). **Deferido explicitamente**: detecção de remoção de produto/offer; emissão real dos 10 eventos Brain (depende de cobertura de lojas reivindicadas crescer); `GROUP BY` real para agregação do Market Pulse em escala; wiring de `avgSyncTimeMs`; qualquer superfície pública na Home (Epic 11 é só a fundação).
+
+## 2026-07-03 — Release 1.8 — Program A, Wave 1 — Exchange Intelligence Platform
+
+Uma plataforma de inteligência cambial, não apenas um conversor de moedas: domínio novo `src/domains/exchange/` cobrindo múltiplos provedores (mecanismo real, 1 provedor ativo), cache, histórico permanente, conversão automática, analytics cambial, Brain e um dashboard interno.
+
+**Sem colisão de nomenclatura desta vez** — `docs/product/ROADMAP_1_8.md` já definia Program A / Wave 1 como o Exchange Engine, e o brief usou a mesma numeração.
+
+**Dois pontos resolvidos antes de qualquer código, ambos documentados em ADR-047 (`docs/operations/DECISIONS.md`)**:
+1. O brief pedia um motor multi-provedor real (Banco Central do Paraguai/Brasil, AwesomeAPI, fonte própria). A ADR-043 (já aceita) havia pesquisado e **rejeitado explicitamente** essas alternativas para a cadência de 5 minutos já aprovada (bancos centrais só publicam cotação diária, sem API pública estável; uma fonte própria seria complexidade sem problema real, `NORTH_STAR.md` §7). **Confirmado com o CTO**: constrói-se o mecanismo de registro/failover real e N-provider-capable, mas só o provedor da ADR-043 é de fato registrado — adicionar um segundo exige pesquisa própria e sua própria ADR.
+2. O Blueprint (Capítulo 3) propunha uma coluna nova `original_currency` em `offers`. Pesquisa de schema encontrou que `offers.currency` **já existe** e já significa isso (todo conector já preenche, `"USD"` por padrão) — reaproveitada em vez de duplicada. Blueprint corrigido com uma nota explícita.
+
+Terceiro ponto, também confirmado com o CTO: construir para cadência `*/5 * * * *` no cron da Vercel agora (a cadência que justifica o custo do plano Business da ADR-043); verificação se o plano Vercel atual suporta essa frequência (Hobby é tipicamente diário, Pro suporta minuto-a-minuto) fica como ação separada, fora deste código.
+
+**Domínio `src/domains/exchange/`**: `types/`+`enums/` (Currency, CurrencyPair, ProviderStatus), `providers/` (`IExchangeRateProvider`, `ExchangeProviderRegistryImpl` — espelha `ConnectorRegistry`, ordena por prioridade —, `ExchangeRateApiProvider`, o único provedor real), `infrastructure/` (`ExchangeRateApiHttpClient` — JSON fetch com timeout+retry/backoff, novo: `HttpFetchStrategy` existente não tem retry e é HTML-shaped —, os 3 repositórios Supabase), `cache/` (`ExchangeRateCache`, TTL 60s em memória — "warm/cold" do brief colapsa numa única camada, o Postgres já cumpre o papel de "fria", refresh a cada 5 min via cron), `repositories/`, `history/` (`ExchangeHistoryService.getRateAt()` para consistência de gráficos históricos), `services/` (`ExchangeRateService.refresh()` — tenta provedores em ordem de prioridade, insere/nunca atualiza `exchange_rates`, degrada para a última cotação válida se todos falharem, nunca fabrica uma linha na falha — Anti-Pattern 5; `AutomaticCurrencyService.convert()` — reaproveita `offers.currency`, nunca persiste nada em `offers`/`price_history`, `rateVersion` referencia a linha exata usada; `ExchangeProviderHealthService`, espelha `ConnectorHealthService`), `analytics/` (`formulas.ts`, puro — variação cambial, velocidade de reação por loja e impacto por categoria explicitamente rotulados **proxy**/**simplificado**, não modelos causais; valorização de catálogo aproximada revertendo deltas observados a partir do total atual, sem snapshot diário real; economia do comprador), `events/` (tipos puros, sem import de `trust` — Epic 1: "exchange jamais depende de outros domínios"), `dashboard/` (`ExchangeDashboardService`, composição via `Promise.allSettled`), `__tests__/` (não `tests/` literal — mesma correção deliberada do bug de descoberta do Jest já nomeada no Program 0 Wave 0). `lib/exchange-factory.ts` (wiring, cache compartilhado no processo). `lib/exchange-trust-bridge.ts` — as factory functions de `TrustEventType` vivem **fora** do domínio (não em `src/domains/exchange/events/`), justamente porque o domínio nunca pode depender de `trust`.
+
+**Migration** `supabase/migrations/20260703140000_exchange_intelligence.sql`: `exchange_rates` (INSERT-only, mesma disciplina de `price_history`), `exchange_provider_runs` (mesmo padrão de `connector_sync_runs`), `exchange_conversion_log` (INSERT-only, mínima, evita acoplar este domínio à taxonomia de eventos de `merchant-analytics`). RLS habilitada, zero policy pública nas três — mesmo padrão de `canonical_products`, agora documentado explicitamente em `docs/engineering/DATABASE_ENGINEERING.md` §12.
+
+**APIs**: `app/api/exchange/{current,history,providers,health,convert}` (públicas, service-role-backed, mesmo padrão de `/api/canonical-catalog/[slug]`; `/providers` retorna só campos reduzidos, nunca texto de erro bruto) + `app/api/admin/exchange/{overview,provider-runs}` (admin-guarded) + `app/api/cron/exchange/refresh` (novo, `vercel.json` a cada 5 min, emite `StoreRateReactionFast`/`Slow` best-effort para lojas reivindicadas com reação notável).
+
+**UI**: `app/admin/exchange/page.tsx` — mesmo padrão de abas internas de `/admin/marketplace-operations` (Overview/Histórico/Provedores/Analytics), payload composto buscado uma única vez. Nova entrada "Câmbio" em `AdminSidebar.tsx`. 5 widgets em `components/admin/exchange/widgets/`.
+
+**Brain**: 5 novos `TrustEventType` sob o banner "Release 1.8 — Program A — Wave 1". Só `StoreRateReactionFast`/`StoreRateReactionSlow` têm `merchantId` real (via `merchant_stores`, só lojas reivindicadas) e são de fato emitidos; os outros 3 (`ExchangeRateSignificantMove`, `ExchangeProviderFailoverOccurred`, `ExchangeProviderAllFailed`) são marketplace-wide, taxonomia apenas. Nenhum `BrainAsset` novo (só 6 existem desde o Release 1.5, mesma decisão do Program 0 Wave 1).
+
+**Gaps documentados, não inventados** (`docs/engineering/TECH_DEBT.md`): terceira superfície pública sem rate limiting real (mesma postura de `/api/compare`); cache por instância serverless, não compartilhado (inofensivo — o DB já limita a defasagem a ~5 min); multi-provider é mecanismo real com 1 provedor de fato registrado; valorização de catálogo é aproximação, não snapshot diário; reaction-lag/category-impact são proxies de correlação, não causais; bug pré-existente do ShoppingChina (preço em Guarani gravado em `price_usd`) nomeado, não corrigido nesta Wave; "número de conversões" mede chamadas à API, não exibições reais ao comprador (sem consumidor de UI ainda).
+
+**Docs**: `MARKETPLACE_STRATEGY.md`/`MARKETPLACE_VISION.md`/`KPIS.md` atualizados; `ROADMAP_1_8.md` marca Program A/Wave 1 como entregue; `RELEASE_1_8_BLUEPRINT.md` Capítulo 3 corrigido (nota sobre `offers.currency`); `DATABASE_ENGINEERING.md` ganha §12 (INSERT-only e RLS-sem-policy-pública como padrões explícitos); novo `docs/engineering/EXCHANGE_FOUNDATION_FOR_LIVE_PRICING.md` (Epic 10); ADR-047 nova em `DECISIONS.md`.
+
+**Testes**: 54 novos — `formulas.ts` (pura, maior valor por convenção do projeto), `ExchangeRateCache`, `ExchangeProviderRegistry`, `ExchangeRateApiProvider` (fetch mockado, sucesso/falha/malformado), `ExchangeHistoryService` (limites de ponto-no-tempo), `ExchangeRateService` (os 3 caminhos de failover: sucesso direto, fallback para o 2º provedor, degradação para última cotação válida quando todos falham), `AutomaticCurrencyService`, `ExchangeProviderHealthService`, mais extensão do `event-registry.test.ts` — total 415/415.
+
+Quality Gate: lint 0, typecheck 0, 415/415 testes, build 174 rotas, `db:lint` OK (12 migrations, nenhum SELECT embutido).
+
+**Migration requer `npm run db:push` pelo CTO** (padrão de toda Wave anterior). **Deferido explicitamente**: segundo provedor real de câmbio (exige pesquisa própria de custo/confiabilidade/cobertura de PYG + ADR); rate limiting real na API pública; correção do bug de currency do ShoppingChina; snapshot diário real de valor de catálogo (em vez da aproximação por reversão de deltas); qualquer consumidor de UI para `convert()` (Live Pricing, Buyer Experience, etc. — Epic 10 é só a fundação documentada).
+
+## 2026-07-03 — Release 1.8 — Program 0, Wave 1 — Marketplace Operations Platform
+
+O Centro de Operações do Marketplace: domínio novo `src/domains/marketplace-operations/` cobrindo Health Score, Merchant Priority, Coverage, Connector Health, Metrics e Alertas, mais um dashboard interno.
+
+**Colisão de nomenclatura resolvida antes de qualquer código**: o brief do CTO usava "Program A / Wave 1", mas `docs/product/ROADMAP_1_8.md` (Sprint Zero) já define Program A / Wave 1 como o Exchange Engine (ADR-043 resolvido, ainda não construído). Arquivado como **Program 0 — Wave 1**, mesma trilha de infraestrutura/operações do Program 0 Wave 0 (Brain Analytics Integration) — Program A e sua sequência de Waves permanecem intocados.
+
+**Escopo trimado deliberadamente**: 10 Epics do brief original equivalem a ~2x uma Wave normal (Release 1.6 teve 5 Epics, Release 1.7 teve 7, cada um entregue em um dia com DDD+testes+APIs+widgets completos). Epics 1/2/3/5/6/8 construídos por completo. Epic 4 (Coverage): cobertura por categoria/marca/cidade real; segmento e faixa de preço deliberadamente ausentes (`stores` não tem coluna de segmento). Epic 7 (Dashboard): reduzido de 13 seções para 5 abas (Overview/Cobertura/Conectores/Prioridade/Alertas) — Growth/Analytics/Claims/Canonical-merge já têm páginas próprias, esta dashboard não as duplica. Epic 9 (Brain): só taxonomia — nenhum `BrainAsset` novo (só 6 existem desde o Release 1.5; expandir a taxonomia central é decisão própria, fora do mandato de uma única Wave). Epic 10: puramente documentação, zero código (`docs/engineering/MARKETPLACE_FOUNDATION_SCALE_AUDIT.md`).
+
+**Domínio `src/domains/marketplace-operations/`**: `types/` (enums + interfaces), `metrics/` (agregação read-only: `StoreMetrics`, `CatalogMetrics`, `SyncMetrics`, `BuyerMetrics`, `BrainMetrics`, compostas em `MarketplaceMetricsService`), `scoring/` (funções puras — `HealthScoring` com `WEIGHTS` somando exatamente 100 nos 8 fatores documentados; `PriorityScoring` com 7 fatores reais, Premium/SEO deliberadamente sem peso; `CoverageScoring` para detecção de gaps), `health/MarketplaceHealthEngine` (composição via `Promise.allSettled`, mesmo padrão de isolamento de `app/api/admin/platform-health/route.ts` — um fator falhando nunca derruba o score inteiro), `services/` (`MerchantPriorityService` — 100% compute-on-read, sem tabela própria, mesma lógica do `merchant-decision`: uma segunda fonte de verdade persistida arriscaria divergir do score ao vivo; `MarketplaceCoverageService`; `MarketplaceAlertService` + `AlertRules` puras, 8 regras, dedupe-on-create por `(alert_type, subject_type, subject_id)`, lifecycle `pending/acknowledged/resolved/ignored` mesmo padrão do `ActionService`), `dashboard/MarketplaceOperationsDashboardService` (Epic 7, composição via `Promise.allSettled`), `repositories/`+`infrastructure/` (`SupabaseMarketplaceSnapshotRepository`, `SupabaseMarketplaceAlertRepository`), `events/marketplace-operations.events.ts`, `__tests__/` — deliberadamente não `tests/` (literal do brief) para não repetir o bug de descoberta do Jest já nomeado no Program 0 Wave 0 (`src/domains/trust/tests/*.test.ts` nunca rodam). `lib/marketplace-operations-factory.ts` (mesmo padrão de todo `lib/*-factory.ts` já existente).
+
+**Connector Platform estendido, não duplicado**: `src/domains/connectors/services/ConnectorHealthService.ts` (novo) — health score 0-100 (60% uptime + 40% taxa de sucesso), duração média, itens importados. `app/api/admin/monitor/summary/route.ts` (Ecosystem Monitor, Release 1.7 — Wave 2) refatorado para delegar a este serviço em vez de inlinear o cálculo — uma implementação, dois consumidores (Ecosystem Monitor e Marketplace Operations).
+
+**Migration** `supabase/migrations/20260703100000_marketplace_operations.sql`: `marketplace_health_snapshots` (uma linha/dia, marketplace-wide — sem dimensão `merchant_id`, mesmo padrão de `merchant_catalog_snapshots`), `marketplace_alerts` (lifecycle completo). RLS habilitada em ambas, sem policy pública (mesma postura de `canonical_products`/`store_claims`). Verificação em `database/verification/marketplace_operations_verify.sql`.
+
+**APIs**: 10 rotas em `app/api/admin/marketplace-operations/` (`health`, `health/history`, `priority`, `coverage`, `connectors`, `metrics`, `alerts`[`/[id]`], `dashboard/overview`) + `GET /api/cron/marketplace-operations/snapshot` (novo, `vercel.json` agendado às 07:00 diariamente, após o sync de conectores às 06:00 — persiste o snapshot do dia e roda a varredura de regras de alerta).
+
+**UI**: `app/admin/marketplace-operations/page.tsx` — primeira página `/admin` a usar o padrão de abas internas já estabelecido em `app/merchant/dashboard/page.tsx`, mas buscando o payload composto (`dashboard/overview`) uma única vez em vez de um fetch por aba (a própria razão de existir do endpoint composto). Nova entrada "Operações" em `components/admin/layout/AdminSidebar.tsx`. 7 widgets em `components/admin/marketplace-operations/widgets/`.
+
+**Brain**: 5 novos `TrustEventType` sob o banner "Release 1.8 — Program 0 — Wave 1". Só `MerchantPriorityTierChanged` tem `merchantId` real (por loja) e ganhou factory function em `marketplace-operations.events.ts` — **não emitido nesta Wave**: detectar uma mudança real de tier exige conhecer o tier anterior, e `MerchantPriorityService` é deliberadamente compute-on-read sem histórico persistido; plumbing pronto, emissão adiada, mesma postura do Product Identity Engine em Shadow Mode (Release 1.7 — Wave 3). Os outros 4 (`MarketplaceHealthScoreChanged`, `ConnectorHealthDegraded`, `MarketplaceAlertRaised`, `MarketplaceCoverageSnapshotTaken`) são marketplace-wide, sem merchant natural — taxonomia apenas, mesma disciplina do `StoreDiscovered` (Release 1.7 — Wave 2).
+
+**Gaps documentados, não inventados** (`docs/engineering/TECH_DEBT.md`): sem coluna de segmento em `stores` (Coverage não reporta por segmento/preço); sem premium/SEO real (Priority Engine não pondera nenhum dos dois); sem contagem de retries em `connector_sync_runs`; "latência" reportada é duração de execução (`avgDurationSeconds`), não latência por requisição (dado não existe); sem histórico de estoque (`price_history` só rastreia preço); Knowledge Graph não agregado marketplace-wide (`knowledgeRelations: null`, honesto, não zero fabricado); agregação por categoria/marca em memória (JS), não `GROUP BY` Postgres — aceitável hoje, precisa mudar perto de 500 mil produtos (`docs/engineering/MARKETPLACE_FOUNDATION_SCALE_AUDIT.md`, Epic 10).
+
+**Docs**: `MARKETPLACE_STRATEGY.md`/`MARKETPLACE_VISION.md`/`KPIS.md` atualizados (já existiam desde o Sprint Zero — esta Wave não os recriou); `ROADMAP_1_8.md` ganha a seção "PROGRAM 0" (Wave 0 retroativa + Wave 1); `RELEASE_1_8_BLUEPRINT.md` ganha uma nota de cross-reference no Capítulo 13 (Program 0 roda fora da sequência de 8 Waves do Blueprint); novo `docs/engineering/MARKETPLACE_FOUNDATION_SCALE_AUDIT.md` (Epic 10).
+
+**Testes**: 64 novos — `HealthScoring`/`PriorityScoring`/`CoverageScoring`/`AlertRules` (funções puras, maior valor de teste por convenção do projeto), `ConnectorHealthService`, `MarketplaceHealthEngine` (isolamento via `Promise.allSettled`), `MerchantPriorityService`, `MarketplaceAlertService`, `MarketplaceSnapshotService`, mais uma extensão do `event-registry.test.ts` — total 361/361.
+
+Quality Gate: lint 0, typecheck 0, 361/361 testes, build 165 rotas, `db:lint` OK (11 migrations, nenhum SELECT embutido).
+
+**Migration requer `npm run db:push` pelo CTO** (padrão de toda Wave anterior desde a Database Migration System V2). **Deferido explicitamente**: emissão real de `MerchantPriorityTierChanged` (exige histórico de tier, hoje inexistente por decisão); migração de `CatalogMetrics.getCategoryCoverage()`/`getBrandCoverage()` de agregação em memória para `GROUP BY` Postgres; novo `BrainAsset` dedicado a "Marketplace Intelligence" (precisa de ADR próprio); cobertura por segmento/faixa de preço (sem coluna real de segmento).
+
 ## 2026-07-02 — Release 1.8 — Program 0, Wave 0 — Brain Analytics Integration
 
 A ponte oficial `buyer_events` → Brain. Relatório completo: `docs/product/releases/RELEASE_1_8_PROGRAM_0_WAVE_0_REPORT.md`.

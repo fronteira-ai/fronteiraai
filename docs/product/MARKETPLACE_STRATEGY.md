@@ -1,8 +1,9 @@
 # MARKETPLACE_STRATEGY.md
 # Como o ParaguAI se Torna o Maior Marketplace Inteligente da Fronteira
 
-**Versão**: 1.0
+**Versão**: 1.3
 **Criado**: 2026-07-02 (Sprint Zero — Release 1.8 Project Preparation & Foundation Consolidation)
+**Atualizado**: 2026-07-03 — adiciona a Seção 10 (Operações do Marketplace, Program 0 Wave 1); nota o Exchange Intelligence Platform (Program A Wave 1) e o Real-Time Commerce Engine (Program A Wave 2) na Seção 8 (Assets), fechando o Programa A.
 **Status**: Orienta a execução tática do Release 1.8
 **Hierarquia**: Operacionaliza `MARKETPLACE_VISION.md`. Subordinado a `BUSINESS_MODEL.md` (a lógica econômica permanente) e `MOAT_STRATEGY.md` (os mecanismos de defensabilidade permanentes) — este documento não redefine nenhum dos dois, aplica-os taticamente ao Release 1.8.
 
@@ -72,13 +73,19 @@ O Data Flywheel (`BUSINESS_MODEL.md` §4, `MOAT_STRATEGY.md` Capítulo 5) gira m
 
 ## 8. Assets
 
-Ver `STRATEGIC_ASSETS.md` (catálogo permanente) e `RELEASE_1_8_BLUEPRINT.md` Capítulo 10 (reconciliação já feita — apenas C-7 Live Commerce Velocity é genuinamente novo). Taticamente, este Release matura mais ativos existentes do que cria novos — C-5 (Cross-Border Context), F-4 (Marketplace Liquidity Model) e C-6 (Buyer Behavioral Knowledge) avançam de estágio, o que por si é mais valioso a curto prazo do que criar um ativo novo do zero.
+Ver `STRATEGIC_ASSETS.md` (catálogo permanente) e `RELEASE_1_8_BLUEPRINT.md` Capítulo 10 (reconciliação já feita — apenas C-7 Live Commerce Velocity é genuinamente novo). Taticamente, este Release matura mais ativos existentes do que cria novos — C-5 (Cross-Border Context), F-4 (Marketplace Liquidity Model) e C-6 (Buyer Behavioral Knowledge) avançam de estágio, o que por si é mais valioso a curto prazo do que criar um ativo novo do zero. O Exchange Intelligence Platform (Program A — Wave 1, entregue 2026-07-03) é precisamente a instrumentação que faz C-5 avançar de "Implícito, não estruturado" para "Instrumentado" — cotação real, histórico permanente (`exchange_rates`) e analytics cambial (variação, valorização de catálogo, economia do comprador), sem criar Asset/Moat novo. O Real-Time Commerce Engine (Program A — Wave 2, entregue 2026-07-03) é o que faz **C-7 Live Commerce Velocity** deixar de ser apenas um nome reservado e passar a ter instrumentação real: toda mudança de preço/estoque/catálogo detectada e registrada em `market_changes` (ledger append-only), Volatility/Freshness computados por produto/oferta, Store Update Intelligence rankeando lojas por responsividade real — o insumo de dado bruto que o Live Pricing Engine (ainda não construído) vai consumir.
 
 ---
 
 ## 9. Moats
 
 Ver `MOAT_STRATEGY.md` (catálogo permanente) e `RELEASE_1_8_BLUEPRINT.md` Capítulo 11 (reconciliação — apenas Moat 9 Live Commerce Velocity é novo; "SEO Dominance" foi explicitamente rejeitada como Moat independente, reframeada como amplificador de Moats 1/6 já existentes). Taticamente, o Moat que mais acelera neste Release é o Moat 6 (Data Flywheel) — não por um mecanismo novo, mas porque múltiplos insumos do Flywheel (Seção 7) melhoram simultaneamente pela primeira vez.
+
+---
+
+## 10. Operações do Marketplace (Program 0)
+
+Diferente das Seções 1-9 (todas voltadas a valor de negócio direto), esta seção é sobre a **capacidade de administrar** o que as demais seções constroem — sem ela, crescer o marketplace (Seção 4) significa crescer às cegas. O Marketplace Operations Platform (`docs/product/ROADMAP_1_8.md`, Program 0, Wave 1) responde operacionalmente às mesmas perguntas que `NORTH_STAR.md` já faz estrategicamente: quantas lojas temos, quantas estão saudáveis, onde investir esforço primeiro. O Merchant Priority Engine, em particular, é o insumo tático mais direto para as Seções 2 (Aquisição de Lojistas) e 4 (Marketplace) — toda decisão futura de "que loja priorizar" (Live Pricing, Discovery, Sync, SEO) passa a ter um score explicável em vez de intuição, sem introduzir um Asset ou Moat novo — matura a capacidade operacional que já sustenta todos os catalogados.
 
 ---
 
