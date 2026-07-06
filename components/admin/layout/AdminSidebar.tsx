@@ -13,6 +13,9 @@ import {
   BadgeCheck,
   Activity,
   UserCheck,
+  Gauge,
+  DollarSign,
+  Radio,
   type LucideIcon,
 } from "lucide-react";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
@@ -37,6 +40,9 @@ const nav: NavItem[] = [
   },
   { type: "leaf", label: "Importações", href: "/admin/imports", icon: Upload },
   { type: "leaf", label: "Ecossistema", href: "/admin/monitor", icon: Activity },
+  { type: "leaf", label: "Operações", href: "/admin/marketplace-operations", icon: Gauge },
+  { type: "leaf", label: "Câmbio", href: "/admin/exchange", icon: DollarSign },
+  { type: "leaf", label: "Real-Time", href: "/admin/realtime-commerce", icon: Radio },
   { type: "leaf", label: "Claims", href: "/admin/claims", icon: UserCheck },
   { type: "leaf", label: "Qualidade", href: "/admin/quality", icon: ShieldCheck },
   {

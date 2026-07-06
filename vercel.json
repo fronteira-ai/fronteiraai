@@ -1,5 +1,9 @@
 {
   "crons": [
-    { "path": "/api/cron/connectors/sync", "schedule": "0 6 * * *" }
+    { "path": "/api/cron/connectors/sync", "schedule": "0 6 * * *" },
+    { "path": "/api/cron/marketplace-operations/snapshot", "schedule": "0 7 * * *" },
+    { "path": "/api/cron/exchange/refresh", "schedule": "*/5 * * * *" },
+    { "path": "/api/cron/realtime-commerce/market-pulse", "schedule": "*/15 * * * *" },
+    { "path": "/api/cron/realtime-commerce/buyer-alerts", "schedule": "*/15 * * * *" }
   ]
 }
