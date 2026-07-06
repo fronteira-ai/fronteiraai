@@ -49,3 +49,35 @@ describe("TRUST_EVENT_BRAIN_IMPACT registry — Wave 5 events", () => {
     }
   });
 });
+
+describe("TRUST_EVENT_BRAIN_IMPACT registry — Release 1.8 Program 0 Wave 1 (Marketplace Operations) events", () => {
+  it("maps every Wave 1 event to at least one BrainAsset, including taxonomy-only ones", () => {
+    const wave1Events = [
+      TrustEventType.MerchantPriorityTierChanged,
+      TrustEventType.MarketplaceHealthScoreChanged,
+      TrustEventType.ConnectorHealthDegraded,
+      TrustEventType.MarketplaceAlertRaised,
+      TrustEventType.MarketplaceCoverageSnapshotTaken,
+    ];
+
+    for (const eventType of wave1Events) {
+      expect(getBrainImpact(eventType).length).toBeGreaterThan(0);
+    }
+  });
+});
+
+describe("TRUST_EVENT_BRAIN_IMPACT registry — Release 1.8 Program A Wave 1 (Exchange Intelligence) events", () => {
+  it("maps every event to at least one BrainAsset, including taxonomy-only ones", () => {
+    const exchangeEvents = [
+      TrustEventType.ExchangeRateSignificantMove,
+      TrustEventType.ExchangeProviderFailoverOccurred,
+      TrustEventType.ExchangeProviderAllFailed,
+      TrustEventType.StoreRateReactionFast,
+      TrustEventType.StoreRateReactionSlow,
+    ];
+
+    for (const eventType of exchangeEvents) {
+      expect(getBrainImpact(eventType).length).toBeGreaterThan(0);
+    }
+  });
+});

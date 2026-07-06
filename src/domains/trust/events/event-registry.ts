@@ -628,6 +628,108 @@ export const TRUST_EVENT_BRAIN_IMPACT: TrustEventBrainImpact[] = [
       { asset: BrainAsset.RecommendationKnowledge, description: "Base para calibrar futuras recomendações de upgrade (ativação real ainda é manual nesta Wave)" },
     ],
   },
+
+  // Release 1.8 — Program 0 — Wave 1 — Marketplace Operations Platform.
+  // Registered for all five (required even for taxonomy-only events, same
+  // discipline as the canonical-catalog Wave 4 entries) — only
+  // MerchantPriorityTierChanged has a real factory function/emission (see
+  // src/domains/marketplace-operations/events/marketplace-operations.events.ts).
+  {
+    eventType: TrustEventType.MerchantPriorityTierChanged,
+    assets: [
+      { asset: BrainAsset.MerchantTrust, description: "Mudança de tier de prioridade reflete a evolução do valor de negócio do merchant" },
+      { asset: BrainAsset.HistoricalData, description: "Registra a transição de tier no histórico permanente" },
+    ],
+  },
+  {
+    eventType: TrustEventType.MarketplaceHealthScoreChanged,
+    assets: [{ asset: BrainAsset.HistoricalData, description: "Registra a evolução diária da saúde do marketplace como um todo" }],
+  },
+  {
+    eventType: TrustEventType.ConnectorHealthDegraded,
+    assets: [{ asset: BrainAsset.HistoricalData, description: "Registra degradação de saúde de conector para análise histórica de confiabilidade" }],
+  },
+  {
+    eventType: TrustEventType.MarketplaceAlertRaised,
+    assets: [{ asset: BrainAsset.HistoricalData, description: "Todo alerta operacional levantado fica registrado no histórico permanente" }],
+  },
+  {
+    eventType: TrustEventType.MarketplaceCoverageSnapshotTaken,
+    assets: [{ asset: BrainAsset.SearchIntelligence, description: "Cobertura de catálogo por categoria/marca alimenta futura relevância de busca" }],
+  },
+
+  // Release 1.8 — Program A — Wave 1 — Exchange Intelligence Platform.
+  {
+    eventType: TrustEventType.ExchangeRateSignificantMove,
+    assets: [{ asset: BrainAsset.HistoricalData, description: "Movimentos cambiais significativos alimentam o Cross-Border Context Model (C-5)" }],
+  },
+  {
+    eventType: TrustEventType.ExchangeProviderFailoverOccurred,
+    assets: [{ asset: BrainAsset.HistoricalData, description: "Registra qual provedor de câmbio de fato atendeu cada ciclo, para auditoria de confiabilidade" }],
+  },
+  {
+    eventType: TrustEventType.ExchangeProviderAllFailed,
+    assets: [{ asset: BrainAsset.HistoricalData, description: "Falha total de provedores é registrada para análise de confiabilidade da fonte de câmbio" }],
+  },
+  {
+    eventType: TrustEventType.StoreRateReactionFast,
+    assets: [
+      { asset: BrainAsset.MerchantTrust, description: "Reação rápida a movimento cambial é um sinal de operação ativa/atenta do merchant" },
+      { asset: BrainAsset.HistoricalData, description: "Registra o tempo de reação da loja para análise histórica" },
+    ],
+  },
+  {
+    eventType: TrustEventType.StoreRateReactionSlow,
+    assets: [{ asset: BrainAsset.HistoricalData, description: "Reação lenta a movimento cambial é registrada para análise de atualização de preços" }],
+  },
+
+  // Release 1.8 — Program A — Wave 2 — Real-Time Commerce Engine.
+  // Taxonomy-only — see the doc comment on these TrustEventType members in
+  // types/enums.ts for why none of these have a factory function/real
+  // emission yet.
+  {
+    eventType: TrustEventType.PriceDropped,
+    assets: [{ asset: BrainAsset.HistoricalData, description: "Queda de preço detectada alimenta o histórico de mudanças de mercado em tempo quase real" }],
+  },
+  {
+    eventType: TrustEventType.PriceRaised,
+    assets: [{ asset: BrainAsset.HistoricalData, description: "Aumento de preço detectado alimenta o histórico de mudanças de mercado em tempo quase real" }],
+  },
+  {
+    eventType: TrustEventType.StockReturned,
+    assets: [{ asset: BrainAsset.HistoricalData, description: "Retorno de estoque é um sinal de disponibilidade relevante para futuros alertas de comprador" }],
+  },
+  {
+    eventType: TrustEventType.StockOut,
+    assets: [{ asset: BrainAsset.HistoricalData, description: "Ruptura de estoque é registrada para análise de disponibilidade e confiabilidade da loja" }],
+  },
+  {
+    eventType: TrustEventType.ProductCreated,
+    assets: [{ asset: BrainAsset.SearchIntelligence, description: "Novo produto detectado em tempo quase real amplia a cobertura de catálogo disponível para busca" }],
+  },
+  {
+    eventType: TrustEventType.PromotionDetected,
+    assets: [
+      { asset: BrainAsset.HistoricalData, description: "Promoção detectada por queda de preço acima do limiar é registrada para análise de campanhas" },
+      { asset: BrainAsset.RecommendationKnowledge, description: "Base para futuros alertas de promoção ao comprador (não enviados nesta Wave)" },
+    ],
+  },
+  {
+    eventType: TrustEventType.StoreHighlyResponsive,
+    assets: [{ asset: BrainAsset.MerchantTrust, description: "Alta responsividade a mudanças de mercado é um sinal de operação ativa da loja" }],
+  },
+  {
+    eventType: TrustEventType.HighVolatilityDetected,
+    assets: [{ asset: BrainAsset.RecommendationKnowledge, description: "Alta volatilidade de preço de um produto é insumo para futuras recomendações de timing de compra" }],
+  },
+  {
+    eventType: TrustEventType.LowVolatilityDetected,
+    assets: [{ asset: BrainAsset.RecommendationKnowledge, description: "Baixa volatilidade indica preço estável — insumo para confiança na decisão de compra" }],
+  },
+  {
+    eventType: TrustEventType.MarketTrendDetected,
+    assets: [{ asset: BrainAsset.HistoricalData, description: "Tendência de mercado (categoria mais barata/mais cara) é registrada no histórico do Market Pulse" }],
+  },
 ];
 
 export function getBrainImpact(eventType: TrustEventType): BrainAsset[] {

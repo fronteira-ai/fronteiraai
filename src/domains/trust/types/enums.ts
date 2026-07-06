@@ -349,6 +349,58 @@ export enum TrustEventType {
   PremiumTrialStarted = "premium_trial_started",
   PremiumUpgradeViewed = "premium_upgrade_viewed",
   PremiumActivated     = "premium_activated",
+
+  // Release 1.8 — Program 0 — Wave 1 — Marketplace Operations Platform.
+  // MerchantPriorityTierChanged has a natural merchantId (it's a per-store/
+  // per-merchant recomputation) and gets a real factory function + real
+  // emission — see src/domains/marketplace-operations/events/marketplace-operations.events.ts.
+  // The other four are marketplace-wide with no natural merchant scope —
+  // taxonomy-only, never emitted, same class as StoreDiscovered (Wave 2)
+  // and the canonical-catalog events (Wave 4).
+  MerchantPriorityTierChanged   = "merchant_priority_tier_changed",
+  MarketplaceHealthScoreChanged = "marketplace_health_score_changed",
+  ConnectorHealthDegraded       = "connector_health_degraded",
+  MarketplaceAlertRaised        = "marketplace_alert_raised",
+  MarketplaceCoverageSnapshotTaken = "marketplace_coverage_snapshot_taken",
+
+  // Release 1.8 — Program A — Wave 1 — Exchange Intelligence Platform.
+  // StoreRateReaction{Fast,Slow} have a natural merchantId (a specific
+  // store's reaction lag, compared to the marketplace median) and get real
+  // factory functions + real emission — see lib/exchange-trust-bridge.ts
+  // (application-layer factories, NOT inside src/domains/exchange/ — that
+  // domain must never import trust, Epic 1's rule; the bridge lives in
+  // lib/, the same layer app/api routes wire domains together from). The
+  // other three are marketplace-wide (a rate move, a provider failover)
+  // with no natural merchant scope — taxonomy-only, never emitted, same
+  // class as StoreDiscovered/MarketplaceHealthScoreChanged.
+  ExchangeRateSignificantMove       = "exchange_rate_significant_move",
+  ExchangeProviderFailoverOccurred  = "exchange_provider_failover_occurred",
+  ExchangeProviderAllFailed         = "exchange_provider_all_failed",
+  StoreRateReactionFast             = "store_rate_reaction_fast",
+  StoreRateReactionSlow             = "store_rate_reaction_slow",
+
+  // Release 1.8 — Program A — Wave 2 — Real-Time Commerce Engine.
+  // Taxonomy-only this Wave, same discipline as StoreDiscovered/
+  // MarketplaceHealthScoreChanged: every one of these is marketplace/
+  // catalog-wide by nature (a price change, a volatility read, a store's
+  // responsiveness rank) with no guaranteed per-merchant scope —
+  // TrustDomainEvent.merchantId is a required string, and most stores in
+  // the catalog are not yet claimed by a merchant (merchant-ownership,
+  // Wave 5). Resolving store→merchant per market_change would mean an extra
+  // lookup on every single detected change, which does not belong in this
+  // Wave's scope. Registered here so future ingestion (once claimed-store
+  // coverage is high enough to be worth it) never has to revisit the
+  // taxonomy — see docs/engineering/TECH_DEBT.md.
+  PriceDropped              = "price_dropped",
+  PriceRaised               = "price_raised",
+  StockReturned             = "stock_returned",
+  StockOut                  = "stock_out",
+  ProductCreated            = "product_created",
+  PromotionDetected         = "promotion_detected",
+  StoreHighlyResponsive     = "store_highly_responsive",
+  HighVolatilityDetected    = "high_volatility_detected",
+  LowVolatilityDetected     = "low_volatility_detected",
+  MarketTrendDetected       = "market_trend_detected",
 }
 
 export enum TrustSource {
