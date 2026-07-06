@@ -14,6 +14,12 @@
 # same convention as database.yml: CRON_SECRET (secret) and CRON_APP_URL
 # (variable, e.g. https://fronteiraai.vercel.app — no trailing slash).
 # Without them, every job below is skipped rather than failing noisily.
+#
+# Hardening (RC-3 Final Hardening): every call goes through
+# .github/scripts/call-cron-endpoint.sh — explicit timeout, up to 3
+# attempts with exponential backoff, structured per-attempt logging
+# (endpoint/timestamp/duration/HTTP status/outcome), and a hard workflow
+# failure with a ::error:: annotation if all attempts are exhausted.
 name: High-Frequency Cron Triggers
 
 on:
@@ -44,10 +50,13 @@ jobs:
     needs: check-config
     if: needs.check-config.outputs.configured == 'true' && github.event.schedule == '*/5 * * * *' || github.event_name == 'workflow_dispatch'
     steps:
+      - uses: actions/checkout@v4
       - name: Trigger /api/cron/exchange/refresh
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
         run: |
-          curl --fail --show-error --silent \
-            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+          bash .github/scripts/call-cron-endpoint.sh \
+            "exchange-refresh" \
             "${{ vars.CRON_APP_URL }}/api/cron/exchange/refresh"
 
   realtime-commerce-15min:
@@ -56,13 +65,18 @@ jobs:
     needs: check-config
     if: needs.check-config.outputs.configured == 'true' && github.event.schedule == '*/15 * * * *' || github.event_name == 'workflow_dispatch'
     steps:
+      - uses: actions/checkout@v4
       - name: Trigger /api/cron/realtime-commerce/market-pulse
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
         run: |
-          curl --fail --show-error --silent \
-            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+          bash .github/scripts/call-cron-endpoint.sh \
+            "realtime-commerce-market-pulse" \
             "${{ vars.CRON_APP_URL }}/api/cron/realtime-commerce/market-pulse"
       - name: Trigger /api/cron/realtime-commerce/buyer-alerts
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
         run: |
-          curl --fail --show-error --silent \
-            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+          bash .github/scripts/call-cron-endpoint.sh \
+            "realtime-commerce-buyer-alerts" \
             "${{ vars.CRON_APP_URL }}/api/cron/realtime-commerce/buyer-alerts"
