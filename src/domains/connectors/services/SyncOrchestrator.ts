@@ -13,8 +13,10 @@ import { DeduplicationStage } from "./stages/DeduplicationStage";
 import { ProductIdentityShadowStage } from "./stages/ProductIdentityShadowStage";
 import { MediaStage } from "./stages/MediaStage";
 import { CatalogWriteStage } from "./stages/CatalogWriteStage";
+import { MarketChangeDetectionStage } from "./stages/MarketChangeDetectionStage";
 import type { ISyncStage } from "./stages/ISyncStage";
 import type { ProductIdentityService } from "@/src/domains/product-identity/services/ProductIdentityService";
+import type { ChangeDetectionService } from "@/src/domains/realtime-commerce/change-detection/ChangeDetectionService";
 import { EventService } from "@/src/domains/trust/services/EventService";
 import type { TrustDomainEvent } from "@/src/domains/trust/events/trust.events";
 import {
@@ -65,6 +67,7 @@ export class SyncOrchestrator {
     private readonly syncRunRepo: ISyncRunRepository,
     private readonly eventService: EventService,
     private readonly productIdentityService: ProductIdentityService,
+    private readonly changeDetectionService: ChangeDetectionService,
     options: SyncOrchestratorOptions = {}
   ) {
     this.defaultSkipMedia = options.skipMedia ?? false;
@@ -78,6 +81,7 @@ export class SyncOrchestrator {
       new ProductIdentityShadowStage(),
       ...(skipMedia ? [] : [new MediaStage()]),
       new CatalogWriteStage(),
+      new MarketChangeDetectionStage(),
     ];
   }
 
@@ -112,6 +116,7 @@ export class SyncOrchestrator {
       catalogRepo: this.catalogRepo,
       storage: this.storage,
       productIdentityService: this.productIdentityService,
+      changeDetectionService: this.changeDetectionService,
       raw: items,
       validated: [],
       normalized: [],

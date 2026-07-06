@@ -7,6 +7,7 @@ import { SyncRunStatus, ConnectorStatus } from "../types/enums";
 import { EventService } from "@/src/domains/trust/services/EventService";
 import type { ITrustEventRepository } from "@/src/domains/trust/repositories/ITrustEventRepository";
 import type { ProductIdentityService } from "@/src/domains/product-identity/services/ProductIdentityService";
+import type { ChangeDetectionService } from "@/src/domains/realtime-commerce/change-detection/ChangeDetectionService";
 
 function makeCatalogRepo(): ICatalogRepository {
   return {
@@ -78,6 +79,10 @@ function makeProductIdentityService(): ProductIdentityService {
   return { evaluateAndLog: jest.fn().mockResolvedValue(undefined) } as unknown as ProductIdentityService;
 }
 
+function makeChangeDetectionService(): ChangeDetectionService {
+  return { detectAndRecord: jest.fn().mockResolvedValue([]) } as unknown as ChangeDetectionService;
+}
+
 describe("SyncOrchestrator", () => {
   it("runs stages in order and persists a connector + sync run", async () => {
     const catalogRepo = makeCatalogRepo();
@@ -90,6 +95,7 @@ describe("SyncOrchestrator", () => {
       syncRunRepo,
       makeEventService(),
       makeProductIdentityService(),
+      makeChangeDetectionService(),
       { skipMedia: true }
     );
 
@@ -110,6 +116,7 @@ describe("SyncOrchestrator", () => {
       "deduplication",
       "product-identity-shadow",
       "persistence",
+      "market-change-detection",
     ]);
   });
 
@@ -121,6 +128,7 @@ describe("SyncOrchestrator", () => {
       makeSyncRunRepo(),
       makeEventService(),
       makeProductIdentityService(),
+      makeChangeDetectionService(),
       { skipMedia: true }
     );
 
@@ -138,6 +146,7 @@ describe("SyncOrchestrator", () => {
       makeSyncRunRepo(),
       makeEventService(),
       makeProductIdentityService(),
+      makeChangeDetectionService(),
       { skipMedia: true }
     );
 
@@ -156,6 +165,7 @@ describe("SyncOrchestrator", () => {
       makeSyncRunRepo(),
       eventService,
       makeProductIdentityService(),
+      makeChangeDetectionService(),
       { skipMedia: true }
     );
 

@@ -1,4 +1,4 @@
-import type { IFetchStrategy } from "../../crawler/fetch/IFetchStrategy";
+import type { IFetchStrategy } from "../../sdk/fetch/IFetchStrategy";
 import type { IDiscoverySource, DiscoveryResult } from "../types/discovery.types";
 import { RobotsParser } from "../parsers/RobotsParser";
 import { SitemapParser } from "../parsers/SitemapParser";

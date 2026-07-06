@@ -56,10 +56,22 @@ export class DeduplicationStage implements ISyncStage {
     }
 
     if (!this.hasChanged(normalized, existingOffer)) {
-      return { normalized, status: "skip", existingProductId, existingOfferId: existingOffer.offerId };
+      return {
+        normalized,
+        status: "skip",
+        existingProductId,
+        existingOfferId: existingOffer.offerId,
+        existingSnapshot: existingOffer,
+      };
     }
 
-    return { normalized, status: "update", existingProductId, existingOfferId: existingOffer.offerId };
+    return {
+      normalized,
+      status: "update",
+      existingProductId,
+      existingOfferId: existingOffer.offerId,
+      existingSnapshot: existingOffer,
+    };
   }
 
   // Wave 3 — Change Detection: replaces the price-only comparison

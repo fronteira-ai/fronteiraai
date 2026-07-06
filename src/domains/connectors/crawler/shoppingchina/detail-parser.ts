@@ -1,18 +1,10 @@
 import { parse } from "node-html-parser";
 import type { RawOffer } from "../../types/raw.types";
+import { parseAmount as cleanPrice, cleanText } from "../../sdk/parsing/textParsing";
 
 export interface ParsedDetail {
   offer: RawOffer | null;
   error?: string;
-}
-
-function cleanPrice(raw: string): number {
-  // Handles "91.000", "1.234.567", "13,00" → number
-  return parseFloat(raw.replace(/\./g, "").replace(",", ".")) || 0;
-}
-
-function cleanText(raw: string): string {
-  return raw.replace(/\s+/g, " ").trim();
 }
 
 export function parseDetailPage(

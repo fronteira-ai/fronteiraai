@@ -1,7 +1,21 @@
 import type { RawOffer } from "../types/raw.types";
 import type { NormalizedOffer } from "../types/pipeline.types";
 import type { ConnectorMetadata } from "../types/connector.types";
+import type { ConnectorCapabilities } from "../types/capability.types";
 import { ConnectorType } from "../types/enums";
+
+const TEST_CAPABILITIES: ConnectorCapabilities = {
+  supportsRealtime: false,
+  supportsSearch: false,
+  supportsPagination: false,
+  supportsImages: false,
+  supportsBrands: false,
+  supportsCategories: false,
+  supportsStock: false,
+  supportsExchange: false,
+  supportsStructuredData: false,
+  supportsCanonicalMatching: false,
+};
 
 export function makeRawOffer(overrides: Partial<RawOffer> = {}): RawOffer {
   return {
@@ -20,6 +34,7 @@ export function makeConnectorMetadata(overrides: Partial<ConnectorMetadata> = {}
     version: "1.0",
     type: ConnectorType.JsonFile,
     storeSlug: "test-store",
+    capabilities: TEST_CAPABILITIES,
     ...overrides,
   };
 }

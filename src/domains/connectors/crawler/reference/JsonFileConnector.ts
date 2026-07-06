@@ -5,6 +5,22 @@ import type { ConnectorBatch } from "../../types/raw.types";
 import { ConnectorType } from "../../types/enums";
 import { JsonFieldMapper } from "../../mapping/JsonFieldMapper";
 import { connectorRegistry } from "../../services/ConnectorRegistry";
+import type { ConnectorCapabilities } from "../../types/capability.types";
+
+// Same honesty as CsvFileConnector's declaration — a JSON feed's inStock/
+// currency are real mapped fields (JsonFieldMapper.ts), not hardcoded.
+const JSON_CAPABILITIES: ConnectorCapabilities = {
+  supportsRealtime: false,
+  supportsSearch: false,
+  supportsPagination: false,
+  supportsImages: true,
+  supportsBrands: true,
+  supportsCategories: true,
+  supportsStock: true,
+  supportsExchange: true,
+  supportsStructuredData: false,
+  supportsCanonicalMatching: true,
+};
 
 export interface JsonFileConnectorOptions {
   filePath: string;
@@ -25,6 +41,7 @@ export class JsonFileConnector implements IConnector {
       version: options.version ?? "1.0",
       type: ConnectorType.JsonFile,
       storeSlug: options.storeSlug,
+      capabilities: JSON_CAPABILITIES,
     };
   }
 

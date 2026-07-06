@@ -1,4 +1,4 @@
-import { HttpFetchStrategy } from "../crawler/fetch/HttpFetchStrategy";
+import { HttpFetchStrategy } from "../sdk/fetch/HttpFetchStrategy";
 
 describe("HttpFetchStrategy", () => {
   const originalFetch = global.fetch;

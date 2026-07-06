@@ -1,18 +1,15 @@
 export const SHOPPING_CHINA_CONFIG = {
   connectorId: "shoppingchina",
-  connectorVersion: "1.0.0",
+  connectorVersion: "2.0.0",
   storeSlug: "shopping-china",
   baseUrl: "https://www.shoppingchina.com.py",
+  sitemapUrl: "https://www.shoppingchina.com.py/sitemap.xml",
 
-  // Categories to crawl — add or remove as needed
-  categories: [
-    { slug: "electronicos", name: "Eletrônicos" },
-    { slug: "informatica", name: "Informática" },
-    { slug: "celulares", name: "Celulares" },
-  ],
-
-  // Maximum products per category per sync (raise for full crawl)
-  maxProductsPerCategory: 10,
+  // Maximum products per sync — the real sitemap has 20,000+ URLs (mixed
+  // category + product); this caps how many /producto/ URLs are fetched in
+  // one run. Raise for a full crawl once the connector is certified and
+  // running on a real schedule.
+  maxProducts: 200,
 
   // Milliseconds to wait between HTTP requests (be respectful)
   requestDelayMs: 500,

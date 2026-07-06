@@ -5,6 +5,25 @@ import type { ConnectorBatch } from "../../types/raw.types";
 import { ConnectorType } from "../../types/enums";
 import { CsvFieldMapper, type CsvFieldMap } from "../../mapping/CsvFieldMapper";
 import { connectorRegistry } from "../../services/ConnectorRegistry";
+import type { ConnectorCapabilities } from "../../types/capability.types";
+
+// A CSV file genuinely carries whatever the sender put in each column —
+// unlike a scraper's heuristics, `inStock`/`currency` here are real mapped
+// fields (see CsvFieldMapper.ts), not hardcoded defaults. No pagination (one
+// file, read whole), no search, no structured-data/canonical signal beyond
+// what a plain CSV can carry.
+const CSV_CAPABILITIES: ConnectorCapabilities = {
+  supportsRealtime: false,
+  supportsSearch: false,
+  supportsPagination: false,
+  supportsImages: true,
+  supportsBrands: true,
+  supportsCategories: true,
+  supportsStock: true,
+  supportsExchange: true,
+  supportsStructuredData: false,
+  supportsCanonicalMatching: true,
+};
 
 export interface CsvFileConnectorOptions {
   filePath: string;
@@ -26,6 +45,7 @@ export class CsvFileConnector implements IConnector {
       version: options.version ?? "1.0",
       type: ConnectorType.CsvFile,
       storeSlug: options.storeSlug,
+      capabilities: CSV_CAPABILITIES,
     };
     this.mapper = new CsvFieldMapper(options.fieldMap);
   }

@@ -1,5 +1,16 @@
-import type { IConnector } from "../types/connector.types";
+import type { IConnector, ConnectorMetadata } from "../types/connector.types";
+import type { ConnectorCapabilities } from "../types/capability.types";
 
+// Connector Platform V2 (Wave 5) — deliberately stays a pure in-memory index
+// of currently-loaded code (register/discover), never gains a DB dependency.
+// "Status"/"certification"/"metrics" queries are live, persisted data, owned
+// by ConnectorHealthService/the certification aggregator — mixing that I/O
+// into this class would violate the single responsibility that makes it
+// trivially testable today (ConnectorRegistry.test.ts has zero mocks).
+// `ConnectorDirectoryService` (services/ConnectorDirectoryService.ts) is the
+// facade that answers "capability + status + certification + metrics" for
+// every connector in one call, composing this registry with those services
+// — see docs/engineering/CONNECTOR_PLATFORM_V2.md §2.
 export class ConnectorRegistryImpl {
   private readonly connectors = new Map<string, IConnector>();
 
@@ -19,6 +30,17 @@ export class ConnectorRegistryImpl {
 
   list(): IConnector[] {
     return [...this.connectors.values()];
+  }
+
+  listMetadata(): ConnectorMetadata[] {
+    return this.list().map((c) => c.metadata);
+  }
+
+  /** Discover connectors by declared capability — e.g. `findByCapability(c
+   * => c.supportsExchange)` for every connector whose currency data is
+   * reliable enough to feed Exchange Intelligence. */
+  findByCapability(predicate: (capabilities: ConnectorCapabilities) => boolean): IConnector[] {
+    return this.list().filter((c) => predicate(c.metadata.capabilities));
   }
 
   has(id: string): boolean {

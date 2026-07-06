@@ -1,7 +1,8 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { RawOffer } from "./raw.types";
-import type { ICatalogRepository } from "../repositories/ICatalogRepository";
+import type { ICatalogRepository, ExistingOfferLookup } from "../repositories/ICatalogRepository";
 import type { ProductIdentityService } from "@/src/domains/product-identity/services/ProductIdentityService";
+import type { ChangeDetectionService } from "@/src/domains/realtime-commerce/change-detection/ChangeDetectionService";
 
 export interface NormalizedOffer {
   raw: RawOffer;
@@ -39,6 +40,10 @@ export interface DeduplicatedOffer {
   status: DeduplicationStatus;
   existingProductId?: string;
   existingOfferId?: string;
+  /** Wave 2 — Real-Time Commerce Engine: the pre-write snapshot used by
+   * MarketChangeDetectionStage to diff against the freshly normalized offer.
+   * null for "new" items (nothing to compare against). */
+  existingSnapshot?: ExistingOfferLookup | null;
 }
 
 export interface PersistenceResult {
@@ -48,6 +53,9 @@ export interface PersistenceResult {
   productId?: string;
   offerId?: string;
   existingOfferId?: string;
+  /** Wave 2 — Real-Time Commerce Engine: threaded through so
+   * MarketChangeDetectionStage doesn't re-resolve storeSlug -> storeId. */
+  storeId?: string;
   error?: string;
 }
 
@@ -96,6 +104,9 @@ export interface PipelineContext {
   storage: SupabaseClient;
   /** Product Identity is a Core Asset domain connectors/ depends on, never owns (RELEASE_1_7_BLUEPRINT.md Chapter 8). Shadow Mode only — see ProductIdentityShadowStage. */
   productIdentityService: ProductIdentityService;
+  /** Real-Time Commerce Engine (Wave 2) is a Core Asset domain connectors/
+   * depends on, never owns — see MarketChangeDetectionStage. */
+  changeDetectionService: ChangeDetectionService;
   raw: RawOffer[];
   validated: RawOffer[];
   normalized: NormalizedOffer[];

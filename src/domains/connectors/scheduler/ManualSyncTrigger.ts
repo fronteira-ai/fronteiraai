@@ -9,7 +9,7 @@ export class ManualSyncTrigger {
   constructor(private readonly syncOrchestrator: SyncOrchestrator) {}
 
   async trigger(connector: IConnector, options: SyncRunOptions = {}): Promise<SyncRunOutcome> {
-    const batch = await connector.fetch();
+    const batch = await connector.fetch({ dryRun: options.dryRun ?? false });
     return this.syncOrchestrator.run(connector.metadata, batch.items, options);
   }
 }

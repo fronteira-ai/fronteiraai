@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin, isAuthError } from "@/lib/admin-auth";
 import { DiscoveryService } from "@/src/domains/connectors/discovery/services/DiscoveryService";
 import { SitemapDiscoverySource } from "@/src/domains/connectors/discovery/services/SitemapDiscoverySource";
-import { HttpFetchStrategy } from "@/src/domains/connectors/crawler/fetch/HttpFetchStrategy";
+import { HttpFetchStrategy } from "@/src/domains/connectors/sdk/fetch/HttpFetchStrategy";
 
 // Release 1.7 — Wave 2: admin-triggered, single-domain discovery. No seed-list
 // table, no automatic bulk sweep — deferred until there's a decided source

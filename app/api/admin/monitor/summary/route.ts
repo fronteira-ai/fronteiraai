@@ -1,45 +1,20 @@
 import { NextResponse } from "next/server";
 import { requireAdmin, isAuthError } from "@/lib/admin-auth";
 import { createConnectorsServices } from "@/lib/connectors-factory";
+import type { ConnectorHealthSummary } from "@/src/domains/connectors/services/ConnectorHealthService";
 
-export interface ConnectorHealthSummary {
-  connectorKey: string;
-  name: string;
-  status: string;
-  storeSlug: string;
-  lastSyncAt: string | null;
-  lastStatus: string | null;
-  errorRate: number;
-}
+export type { ConnectorHealthSummary };
 
-// Ecosystem Monitor (Release 1.7 — Wave 2). Computed on read from
-// connector_sync_runs — no new aggregate table, per this project's
-// established "compute on-demand" philosophy (ADR-034).
+// Ecosystem Monitor (Release 1.7 — Wave 2). Delegates the per-connector
+// health computation to ConnectorHealthService (Release 1.8 — Program 0 —
+// Wave 1, Epic 5) instead of inlining it — one implementation, reused by
+// both this route and the Marketplace Operations dashboard.
 export async function GET() {
   const auth = await requireAdmin();
   if (isAuthError(auth)) return auth;
 
-  const { connectorRepo, syncRunRepo } = createConnectorsServices(auth.serviceClient);
-
-  const connectors = await connectorRepo.list();
-
-  const perConnector: ConnectorHealthSummary[] = await Promise.all(
-    connectors.map(async (c) => {
-      const recent = await syncRunRepo.findByConnector(c.id, 20);
-      const lastRun = recent[0] ?? null;
-      const errorRate = recent.length > 0 ? recent.filter((r) => r.status === "failed").length / recent.length : 0;
-
-      return {
-        connectorKey: c.connectorKey,
-        name: c.name,
-        status: c.status,
-        storeSlug: c.storeSlug,
-        lastSyncAt: lastRun?.completedAt ?? lastRun?.startedAt ?? null,
-        lastStatus: lastRun?.status ?? null,
-        errorRate,
-      };
-    })
-  );
+  const { healthService } = createConnectorsServices(auth.serviceClient);
+  const perConnector = await healthService.getSummaries();
 
   return NextResponse.json({ data: perConnector });
 }

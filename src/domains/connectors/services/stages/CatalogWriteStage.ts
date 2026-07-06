@@ -107,7 +107,14 @@ export class CatalogWriteStage implements ISyncStage {
         source: "crawler",
       });
 
-      return { productSlug: p.slug, storeSlug: o.storeSlug, action: "updated", productId, offerId: existingOfferId };
+      return {
+        productSlug: p.slug,
+        storeSlug: o.storeSlug,
+        action: "updated",
+        productId,
+        offerId: existingOfferId,
+        storeId,
+      };
     }
 
     // New offer (or new product + new offer).
@@ -137,6 +144,6 @@ export class CatalogWriteStage implements ISyncStage {
     });
 
     const action = existingProductId ? "updated" : "created";
-    return { productSlug: p.slug, storeSlug: o.storeSlug, action, productId, offerId };
+    return { productSlug: p.slug, storeSlug: o.storeSlug, action, productId, offerId, storeId };
   }
 }

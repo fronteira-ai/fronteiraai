@@ -8,6 +8,9 @@ import "./reference/CsvFileConnector";
 
 // Production connectors
 import "./shoppingchina/index";
+import "./megaeletronicos/index";
+import "./romashopping/index";
+import "./atacadoconnect/index";
 
 let bootstrapped = false;
 

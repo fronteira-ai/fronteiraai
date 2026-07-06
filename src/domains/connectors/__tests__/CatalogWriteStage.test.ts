@@ -27,6 +27,7 @@ function makeContext(catalogRepo: ICatalogRepository, deduplicated: Deduplicated
     catalogRepo,
     storage: {} as never,
     productIdentityService: { evaluateAndLog: jest.fn().mockResolvedValue(undefined) } as never,
+    changeDetectionService: { detectAndRecord: jest.fn().mockResolvedValue([]) } as never,
     raw: [],
     validated: [],
     normalized: [],
