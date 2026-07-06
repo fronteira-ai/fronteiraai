@@ -12,9 +12,23 @@ import { analytics } from "@/utils/analytics";
 type Props = {
   store: Store;
   productCount?: number;
+  /** 0-100 Connector Quality Score (Connector Platform, Program A — Wave 5)
+   * — omitted entirely (not shown as 0) for stores with no active Connector
+   * yet, since a real quality signal doesn't exist for them. */
+  qualityScore?: number | null;
+  /** Last successful Connector sync, ISO timestamp. Same reasoning as
+   * `qualityScore` — `null` means "no Connector," not "never updated." */
+  lastSyncAt?: string | null;
 };
 
-function StoreCard({ store, productCount }: Props) {
+function timeAgo(iso: string): string {
+  const hours = Math.round((Date.now() - new Date(iso).getTime()) / (1000 * 60 * 60));
+  if (hours < 1) return "atualizada agora";
+  if (hours < 24) return `atualizada há ${hours}h`;
+  return `atualizada há ${Math.round(hours / 24)}d`;
+}
+
+function StoreCard({ store, productCount, qualityScore, lastSyncAt }: Props) {
   const handleClick = useCallback(() => {
     analytics.viewStore(store.slug, store.name);
   }, [store.slug, store.name]);
@@ -67,10 +81,17 @@ function StoreCard({ store, productCount }: Props) {
 
           {productCount !== undefined ? (
             <span className="text-sm text-slate-400">
-              {productCount.toLocaleString("pt-BR")} produtos
+              {productCount.toLocaleString("pt-BR")} ofertas
             </span>
           ) : null}
         </div>
+
+        {qualityScore != null || lastSyncAt ? (
+          <div className="mt-3 flex items-center justify-between text-xs text-slate-500">
+            {qualityScore != null ? <span>Qualidade {qualityScore}/100</span> : <span />}
+            {lastSyncAt ? <span>{timeAgo(lastSyncAt)}</span> : null}
+          </div>
+        ) : null}
 
         <span className="mt-8 block w-full rounded-2xl bg-blue-600 py-3 text-center font-semibold text-white transition group-hover:bg-blue-500">
           Ver Loja

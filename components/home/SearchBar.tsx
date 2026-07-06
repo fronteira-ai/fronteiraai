@@ -31,6 +31,7 @@ export default function SearchBar({ defaultValue = "" }: Props) {
           onChange={(e) => setQuery(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && submit()}
           placeholder="O que você deseja comprar hoje?"
+          aria-label="Buscar produtos"
           className="flex-1 bg-transparent px-5 py-6 text-lg text-white outline-none placeholder:text-slate-500"
         />
 

@@ -127,6 +127,14 @@ body {
   }
 }
 
+/* Release 1.9 — Program F — Wave 1 (Premium Home Experience): the dashed
+   Brasil<->Paraguai connection arc in HeroGlobe. */
+@keyframes dash {
+  to {
+    stroke-dashoffset: -28;
+  }
+}
+
 /* Acessibilidade: respeita a preferência do usuário por menos movimento,
    encurtando virtualmente a duração de toda animação/transição do site. */
 @media (prefers-reduced-motion: reduce) {

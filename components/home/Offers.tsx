@@ -4,12 +4,24 @@ import Button from "@/components/ui/Button";
 import Reveal from "@/components/ui/Reveal";
 import ProductCard from "@/components/product/ProductCard";
 import { ProductHighlight } from "@/types/product";
+import { getProductsCatalog } from "@/services/product.service";
 
-type Props = {
-  products: ProductHighlight[];
-};
+const FEATURED_PRODUCTS_LIMIT = 4;
 
-export default function Offers({ products }: Props) {
+// "Produtos Mais Buscados"/"Produtos Populares" — reuses the existing
+// product catalog service (services/product.service.ts, pre-existing,
+// unchanged) rather than a new query.
+export default async function Offers() {
+  const { products: catalogProducts } = await getProductsCatalog({ perPage: FEATURED_PRODUCTS_LIMIT });
+  const products: ProductHighlight[] = catalogProducts.map((p) => ({
+    id: p.id,
+    slug: p.slug,
+    name: p.name,
+    imageUrl: p.image_url,
+    priceUSD: p.lowestPriceUSD ?? undefined,
+    inStock: p.inStock,
+  }));
+
   return (
     <Section id="produtos">
       <SectionTitle
