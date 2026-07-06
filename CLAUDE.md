@@ -63,7 +63,7 @@ ParaguAI ("fronteiraai-web") is a price-comparison marketplace site (Portuguese-
 
 **Database**: modeled in `docs/database/DATABASE.md` and `docs/database/ERD.md`. Core entities: `stores` ⟶ `offers` ⟶ `products` ⟶ `brands`/`categories`/images; `users` ⟶ `favorites`/`alerts`/`reviews`. Key philosophy stated in those docs: a product is unique, a store is unique, an offer is unique, and **price belongs to the offer, not the product** (since the same product can have different prices/stock per store). Planned-but-not-yet-built tables are listed there too (`price_history`, `reviews`, `coupons`, `crawler_logs`, `ai_embeddings`, etc.) — `database/migrations`, `database/seed`, `database/sql` contain the actual migration and seed scripts.
 
-**Docs**: The Knowledge System lives under `docs/` organized into 8 categories:
+**Docs**: The Knowledge System lives under `docs/` organized into 11 categories:
 - `docs/foundation/` — 9 permanent/LOCKED documents (AI_CONSTITUTION → RELEASE_STRATEGY + FOUNDATION_INDEX)
 - `docs/architecture/` — ARCHITECTURE, DOMAIN_MODEL, COMPONENT_INDEX, API_CONTRACTS, DEPENDENCY_GRAPH
 - `docs/engineering/` — CONVENTIONS, GLOSSARY, TECH_DEBT, ACQUISITION, CONNECTOR_GUIDE, AGENTS
@@ -71,6 +71,11 @@ ParaguAI ("fronteiraai-web") is a price-comparison marketplace site (Portuguese-
 - `docs/operations/` — PROJECT_STATUS, CHANGELOG, NEXT_STEPS, DECISIONS
 - `docs/database/` — DATABASE, ERD
 - `docs/adr/` — future home of individual ADR files (currently consolidated in DECISIONS.md)
+- `docs/marketplace/` — real-world merchant/store documentation (not ParaguAI's own product/architecture) — Tier1_Merchants.md, connector certification records (ADR-048, Release 1.8 Program A Wave 3)
+- `docs/business/` — ParaguAI's commercial process with third parties — merchant partnerships, proposals, negotiation pipeline (ADR-049, Release 1.8 Program C Wave 0)
+- `docs/design/` — frozen (READ-ONLY) visual surfaces and what's still allowed to change on them — DESIGN_CONSTITUTION.md (ADR-050, Home + /categorias frozen 2026-07-06)
 - `docs/archive/` — deprecated documents preserved for historical context
 
-**Knowledge System rule**: No document may be created directly in `docs/`. Every document must belong to one of the 8 official categories above. New categories require explicit CTO approval and a corresponding ADR.
+**Knowledge System rule**: No document may be created directly in `docs/`. Every document must belong to one of the 11 official categories above. New categories require explicit CTO approval and a corresponding ADR.
+
+**Home UI freeze**: `app/page.tsx`, `app/categorias/page.tsx`, and every component in `components/home/**` are visually READ-ONLY per `docs/design/DESIGN_CONSTITUTION.md` (ADR-050). Do not change spacing, typography, proportions, shadows, colors, card structure, navigation, the Hero, or layout — even as an unrequested "improvement." Service integration, dedup, performance, accessibility, SEO, and maintainability work is expected and welcome, as long as the rendered DOM/pixels stay identical. Read the full rules before touching any of these files.
