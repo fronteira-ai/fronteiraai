@@ -1,0 +1,68 @@
+# Repository Consolidation RC-3 — Infrastructure Decoupling.
+#
+# Vercel Hobby rejects deployments that declare a cron schedule more
+# frequent than once a day (vercel.json's own "crons" array is checked at
+# deploy time — see docs/engineering/CRON_INFRASTRUCTURE.md). These three
+# routes were previously triggered by vercel.json entries at */5 and */15;
+# they are ordinary Next.js Route Handlers authenticated by a shared
+# secret (lib/cron-auth.ts) with zero Vercel-specific coupling, so any
+# scheduler capable of an authenticated HTTP GET can trigger them
+# identically. This workflow replaces the Vercel-native trigger — no
+# route, API, service, or domain logic changed.
+#
+# DORMANT until configured (Settings → Secrets and variables → Actions),
+# same convention as database.yml: CRON_SECRET (secret) and CRON_APP_URL
+# (variable, e.g. https://fronteiraai.vercel.app — no trailing slash).
+# Without them, every job below is skipped rather than failing noisily.
+name: High-Frequency Cron Triggers
+
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+    - cron: "*/15 * * * *"
+  workflow_dispatch:
+
+jobs:
+  check-config:
+    name: Check required secrets/variables
+    runs-on: ubuntu-latest
+    outputs:
+      configured: ${{ steps.check.outputs.configured }}
+    steps:
+      - id: check
+        run: |
+          if [ -z "${{ secrets.CRON_SECRET }}" ] || [ -z "${{ vars.CRON_APP_URL }}" ]; then
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::CRON_SECRET and/or CRON_APP_URL not configured — skipping all cron triggers. See docs/engineering/CRON_INFRASTRUCTURE.md."
+          else
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+          fi
+
+  exchange-refresh:
+    name: Exchange rate refresh (every 5 min)
+    runs-on: ubuntu-latest
+    needs: check-config
+    if: needs.check-config.outputs.configured == 'true' && github.event.schedule == '*/5 * * * *' || github.event_name == 'workflow_dispatch'
+    steps:
+      - name: Trigger /api/cron/exchange/refresh
+        run: |
+          curl --fail --show-error --silent \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            "${{ vars.CRON_APP_URL }}/api/cron/exchange/refresh"
+
+  realtime-commerce-15min:
+    name: Market pulse + buyer alerts (every 15 min)
+    runs-on: ubuntu-latest
+    needs: check-config
+    if: needs.check-config.outputs.configured == 'true' && github.event.schedule == '*/15 * * * *' || github.event_name == 'workflow_dispatch'
+    steps:
+      - name: Trigger /api/cron/realtime-commerce/market-pulse
+        run: |
+          curl --fail --show-error --silent \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            "${{ vars.CRON_APP_URL }}/api/cron/realtime-commerce/market-pulse"
+      - name: Trigger /api/cron/realtime-commerce/buyer-alerts
+        run: |
+          curl --fail --show-error --silent \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            "${{ vars.CRON_APP_URL }}/api/cron/realtime-commerce/buyer-alerts"

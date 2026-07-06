@@ -2,6 +2,13 @@
 
 Itens identificados por leitura completa do código. Nenhum é bloqueante hoje (build/lint/TS passam), mas todos custam mais quanto mais tarde forem corrigidos.
 
+## PROGRAM Z — RC-3 — Infrastructure Decoupling (2026-07-06) — pendência de configuração manual
+
+Ver `docs/engineering/CRON_INFRASTRUCTURE.md` para o relatório completo.
+
+- **`CRON_SECRET`/`CRON_APP_URL` ainda não configurados no GitHub Actions**: `.github/workflows/high-frequency-crons.yml` existe mas fica dormant (nenhuma chamada HTTP real) até esses dois valores serem cadastrados em Settings → Secrets and variables → Actions. Até lá, `/api/cron/exchange/refresh` e as duas rotas de `realtime-commerce` (`market-pulse`, `buyer-alerts`) não são disparadas por nenhum scheduler — mesmo efeito prático de já não serem disparadas pela Vercel Hobby antes desta Wave.
+- **Migração para Supabase `pg_cron`/`pg_net` não implementada**: recomendada como a infraestrutura definitiva da Release 2.0 (mais confiável que o scheduler do GitHub Actions para cadência sub-hora), mas exige uma migration de schema/extensões — fora do escopo desta Wave (RC-3 foi restrita a não alterar banco) e requer sua própria ADR.
+
 ## Release 1.9 — Program F — Wave 1 — Premium Home Experience (2026-07-04) — gaps documentados, não corrigidos
 
 Ver `docs/engineering/PREMIUM_HOME_EXPERIENCE.md` para o relatório completo.
