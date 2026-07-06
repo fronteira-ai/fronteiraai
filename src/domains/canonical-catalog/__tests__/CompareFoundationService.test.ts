@@ -24,6 +24,7 @@ function makeCanonicalProduct(): CanonicalProduct {
 function makeOffer(overrides: Partial<CanonicalOfferView> = {}): CanonicalOfferView {
   return {
     offerId: "offer-1",
+    productId: "product-1",
     storeId: "store-1",
     storeSlug: "test-store",
     priceUSD: 100,
@@ -44,6 +45,9 @@ describe("CompareFoundationService", () => {
       findById: jest.fn(),
       findOrCreateBySlug: jest.fn(),
       findByBrandId: jest.fn(),
+      findByCategoryId: jest.fn(),
+      findCanonicalProductIdByProductId: jest.fn(),
+      findAll: jest.fn(),
       linkOffer: jest.fn(),
       findOffersByCanonicalProductId: jest.fn(),
     };
@@ -67,6 +71,9 @@ describe("CompareFoundationService", () => {
       findById: jest.fn(),
       findOrCreateBySlug: jest.fn(),
       findByBrandId: jest.fn(),
+      findByCategoryId: jest.fn(),
+      findCanonicalProductIdByProductId: jest.fn(),
+      findAll: jest.fn(),
       linkOffer: jest.fn(),
       findOffersByCanonicalProductId: jest.fn().mockResolvedValue({ items: offers, total: 2 }),
     };

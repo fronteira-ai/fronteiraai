@@ -4,6 +4,10 @@
 // own domain boundaries.
 export interface CanonicalOfferView {
   offerId: string;
+  /** Release 1.8 — Program C — Market Intelligence Engine, Wave 1. Added so
+   * callers can cross into `market_changes`/`VolatilityEngine` (both keyed
+   * on the raw `products.id`, not `offerId`) without a second query. */
+  productId: string;
   storeId: string;
   storeSlug: string;
   priceUSD: number;

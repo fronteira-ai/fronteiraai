@@ -86,6 +86,15 @@ export class SupabaseCanonicalCatalogRepository implements ICanonicalCatalogRepo
     return (data ?? []).map(toCanonicalProduct);
   }
 
+  async findByCategoryId(categoryId: string): Promise<CanonicalProduct[]> {
+    const { data, error } = await this.client.from("canonical_products").select("*").eq("category_id", categoryId);
+    if (error) {
+      console.error("[SupabaseCanonicalCatalogRepository.findByCategoryId]", error.message);
+      return [];
+    }
+    return (data ?? []).map(toCanonicalProduct);
+  }
+
   async linkOffer(offerId: string, canonicalProductId: string): Promise<void> {
     const { error } = await this.client
       .from("offers")
@@ -101,7 +110,7 @@ export class SupabaseCanonicalCatalogRepository implements ICanonicalCatalogRepo
     const { limit, offset } = pagination;
     const { data, error, count } = await this.client
       .from("offers")
-      .select("id, store_id, price_usd, in_stock, stock_quantity, updated_at, condition, warranty, product_url, stores(slug)", {
+      .select("id, product_id, store_id, price_usd, in_stock, stock_quantity, updated_at, condition, warranty, product_url, stores(slug)", {
         count: "exact",
       })
       .eq("canonical_product_id", canonicalProductId)
@@ -117,6 +126,7 @@ export class SupabaseCanonicalCatalogRepository implements ICanonicalCatalogRepo
       const store = Array.isArray(storeRelation) ? storeRelation[0] : storeRelation;
       return {
         offerId: row.id as string,
+        productId: row.product_id as string,
         storeId: row.store_id as string,
         storeSlug: store?.slug ?? "",
         priceUSD: row.price_usd as number,
@@ -130,5 +140,37 @@ export class SupabaseCanonicalCatalogRepository implements ICanonicalCatalogRepo
     });
 
     return { items, total: count ?? items.length };
+  }
+
+  async findAll(pagination: PaginationParams): Promise<PaginatedResult<CanonicalProduct>> {
+    const { limit, offset } = pagination;
+    const { data, error, count } = await this.client
+      .from("canonical_products")
+      .select("*", { count: "exact" })
+      .range(offset, offset + limit - 1);
+
+    if (error) {
+      console.error("[SupabaseCanonicalCatalogRepository.findAll]", error.message);
+      return { items: [], total: 0 };
+    }
+
+    const items = (data ?? []).map(toCanonicalProduct);
+    return { items, total: count ?? items.length };
+  }
+
+  async findCanonicalProductIdByProductId(productId: string): Promise<string | null> {
+    const { data, error } = await this.client
+      .from("offers")
+      .select("canonical_product_id")
+      .eq("product_id", productId)
+      .not("canonical_product_id", "is", null)
+      .limit(1)
+      .maybeSingle();
+
+    if (error) {
+      console.error("[SupabaseCanonicalCatalogRepository.findCanonicalProductIdByProductId]", error.message);
+      return null;
+    }
+    return (data?.canonical_product_id as string | null) ?? null;
   }
 }

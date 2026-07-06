@@ -4,6 +4,7 @@ import type { CanonicalOfferView } from "../types/canonical-catalog.types";
 function makeOffer(overrides: Partial<CanonicalOfferView> = {}): CanonicalOfferView {
   return {
     offerId: "offer-1",
+    productId: "product-1",
     storeId: "store-1",
     storeSlug: "test-store",
     priceUSD: 100,

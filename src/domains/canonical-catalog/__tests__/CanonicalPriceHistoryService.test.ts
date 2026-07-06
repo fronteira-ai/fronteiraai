@@ -15,6 +15,8 @@ describe("computePriceAggregation", () => {
       variationPercent: null,
       trend: "unknown",
       lastUpdatedAt: null,
+      lastPriceUSD: null,
+      firstSeenAt: null,
     });
   });
 
@@ -54,6 +56,30 @@ describe("computePriceAggregation", () => {
     const result = computePriceAggregation(history, [40]);
     expect(result.variationPercent).toBeCloseTo(-60);
     expect(result.trend).toBe("down");
+  });
+
+  it("exposes lastPriceUSD as the live offer price when one exists", () => {
+    const history = [point({ priceUSD: 100, recordedAt: "2026-06-01T00:00:00Z" })];
+    const result = computePriceAggregation(history, [40]);
+    expect(result.lastPriceUSD).toBe(40);
+  });
+
+  it("exposes lastPriceUSD as the latest historical price when there is no live offer", () => {
+    const history = [
+      point({ priceUSD: 100, recordedAt: "2026-06-01T00:00:00Z" }),
+      point({ priceUSD: 90, recordedAt: "2026-06-15T00:00:00Z" }),
+    ];
+    const result = computePriceAggregation(history, []);
+    expect(result.lastPriceUSD).toBe(90);
+  });
+
+  it("exposes firstSeenAt as the earliest historical point's timestamp", () => {
+    const history = [
+      point({ priceUSD: 100, recordedAt: "2026-06-15T00:00:00Z" }),
+      point({ priceUSD: 90, recordedAt: "2026-06-01T00:00:00Z" }),
+    ];
+    const result = computePriceAggregation(history, []);
+    expect(result.firstSeenAt).toBe("2026-06-01T00:00:00Z");
   });
 });
 
