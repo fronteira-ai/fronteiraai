@@ -35,7 +35,7 @@ export default function Navbar() {
           : "border-transparent bg-[#050816]/30"
       }`}
     >
-      <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-8">
+      <div className="mx-auto flex h-16 max-w-[1600px] items-center justify-between px-6 lg:px-10">
         <Link href="/" className="flex items-center transition-transform duration-300 hover:scale-[1.02]">
           <Logo size="md" />
         </Link>

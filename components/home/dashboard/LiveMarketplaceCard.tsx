@@ -1,4 +1,4 @@
-import { Radio } from "lucide-react";
+import { Radio, ShoppingBag } from "lucide-react";
 import DashboardCardShell from "./DashboardCardShell";
 import { getSupabaseServiceClient } from "@/lib/supabase/service";
 import { getLiveMarketplaceFeed } from "@/lib/home-premium-service";
@@ -23,17 +23,20 @@ export default async function LiveMarketplaceCard() {
       {feed.length === 0 ? (
         <p className="text-sm text-slate-500">Nenhuma atualização nas últimas 24h.</p>
       ) : (
-        <ul className="space-y-3">
+        <ul className="flex flex-col gap-3">
           {feed.map((entry, i) => (
-            <li key={`${entry.productName}-${i}`} className="flex items-center justify-between gap-2 text-xs">
-              <div className="min-w-0">
-                <p className="truncate font-semibold text-white">{entry.productName}</p>
-                <p className="text-slate-500">
+            <li key={`${entry.productName}-${i}`} className="flex items-center gap-3">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/5 text-brand-cyan">
+                <ShoppingBag size={18} />
+              </span>
+              <span className="min-w-0 flex-1">
+                <p className="truncate text-[13px] font-medium text-white">{entry.productName}</p>
+                <p className="truncate text-[11px] text-slate-500">
                   {entry.storeName ?? "Loja parceira"} · {timeAgo(entry.occurredAt)}
                 </p>
-              </div>
+              </span>
               {entry.newPriceUSD ? (
-                <span className="shrink-0 font-bold text-blue-300">US$ {entry.newPriceUSD}</span>
+                <span className="shrink-0 text-[13px] font-bold text-white">US$ {entry.newPriceUSD}</span>
               ) : null}
             </li>
           ))}

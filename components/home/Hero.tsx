@@ -1,126 +1,102 @@
-import { Zap, ShieldCheck, Sparkles as SparklesIcon } from "lucide-react";
-import SearchBar from "./SearchBar";
-import HeroCTAs from "./HeroCTAs";
-import HeroGlobe from "./HeroGlobe";
-import StoreCarousel from "./StoreCarousel";
-import Badge from "@/components/ui/Badge";
-import StatCard from "@/components/ui/StatCard";
+import Image from "next/image";
+import { Sparkles, ArrowLeftRight, Store, Flower2 } from "lucide-react";
+import HeroStats from "./HeroStats";
 import Reveal from "@/components/ui/Reveal";
-import { animations } from "@/styles/animations";
 import { getSupabaseServiceClient } from "@/lib/supabase/service";
 import { getHomeStats } from "@/lib/home-premium-service";
 
 const featureBullets = [
-  { icon: Zap, label: "Preços em tempo real" },
-  { icon: ShieldCheck, label: "Centenas de lojas confiáveis" },
-  { icon: SparklesIcon, label: "IA que encontra o melhor para você" },
+  { icon: ArrowLeftRight, title: "Compare preços", sub: "em tempo real", color: "text-brand-blue" },
+  { icon: Store, title: "Centenas de lojas", sub: "confiáveis", color: "text-brand-purple" },
+  { icon: Sparkles, title: "IA que encontra", sub: "o melhor para você", color: "text-positive" },
 ] as const;
 
-// Stats come from MarketplaceMetricsService (marketplace-operations,
-// Program 0 — Wave 1) — real counts, not the fictional numbers this
-// section used to hardcode.
+// Release 1.9 — Program F — Wave 2 (v0 realignment, ADR-050 v1.1). Rebuilt
+// against the CTO-approved v0 export: a photographic bridge backdrop instead
+// of the previous CSS/SVG globe scene. Stats still come from
+// MarketplaceMetricsService (via getHomeStats) — only the visual treatment
+// changed. Search, store row and the "Comparar preços"/"Sou Lojista" CTAs
+// used to live inside this component; the v0 layout treats them as separate
+// sections below the hero (see app/page.tsx).
 export default async function Hero() {
   const client = getSupabaseServiceClient();
   const stats = await getHomeStats(client);
 
   return (
-    <section className="relative flex min-h-[92vh] items-center justify-center overflow-hidden bg-[#050816] pt-32 pb-[60px]">
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,#2563eb22,transparent_65%)]" />
+    <section className="relative overflow-hidden bg-[oklch(0.14_0.03_265)] pt-28">
+      <div className="pointer-events-none absolute inset-0 overflow-hidden">
+        <Image
+          src="/hero-bridge.png"
+          alt="Ponte da Amizade iluminada à noite, com a bandeira do Paraguai à esquerda e a bandeira do Brasil à direita sobre uma cidade futurista"
+          fill
+          priority
+          className="object-cover object-[50%_47%]"
+        />
+        <div className="absolute inset-0 bg-[linear-gradient(to_right,oklch(0.14_0.03_265)_22%,oklch(0.14_0.03_265/0.55)_44%,transparent_64%)]" />
+        <div className="absolute inset-x-0 bottom-0 h-28 bg-gradient-to-t from-[oklch(0.14_0.03_265)] to-transparent" />
+      </div>
 
-      <div
-        className="absolute inset-0 opacity-[0.03]"
-        style={{
-          backgroundImage:
-            "linear-gradient(#ffffff 1px, transparent 1px), linear-gradient(90deg,#ffffff 1px, transparent 1px)",
-          backgroundSize: "60px 60px",
-        }}
-      />
-
-      <div
-        className={`absolute left-1/2 top-1/3 h-[700px] w-[700px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-blue-600/30 blur-[180px] ${animations.glow}`}
-      />
-
-      <div className="pointer-events-none absolute left-[8%] top-[24%] hidden h-20 w-20 rounded-3xl border border-blue-500/20 bg-blue-500/5 backdrop-blur-xl lg:block animate-[float_6s_ease-in-out_infinite]" />
-      <div className="pointer-events-none absolute right-[10%] top-[58%] hidden h-14 w-14 rounded-2xl border border-cyan-400/20 bg-cyan-400/5 backdrop-blur-xl lg:block animate-[float_8s_ease-in-out_infinite]" />
-      <div className="pointer-events-none absolute right-[18%] top-[18%] hidden h-10 w-10 rounded-full border border-blue-400/30 bg-blue-400/10 backdrop-blur-xl lg:block animate-[float_7s_ease-in-out_infinite]" />
-
-      <div className="relative z-10 mx-auto grid w-full max-w-7xl grid-cols-1 items-center gap-10 px-6 lg:grid-cols-[1fr_auto]">
-        <div className="flex flex-col items-center text-center lg:items-start lg:text-left">
+      <div className="relative z-10 mx-auto grid max-w-[1600px] grid-cols-1 gap-8 px-6 lg:grid-cols-12 lg:px-10">
+        <div className="lg:col-span-5">
           <Reveal direction="up">
-            <Badge className="bg-[linear-gradient(110deg,rgba(59,130,246,0.10)_40%,rgba(59,130,246,0.28)_50%,rgba(59,130,246,0.10)_60%)] bg-[length:200%_100%] animate-[shimmer_3s_linear_infinite]">
-              Inteligência Artificial para compras no Paraguai
-            </Badge>
+            <span className="inline-flex items-center gap-2 rounded-full border border-brand-blue/20 bg-brand-blue/5 px-4 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-brand-cyan backdrop-blur-sm">
+              <Sparkles size={14} />
+              Inteligência artificial para compras no Paraguai
+            </span>
           </Reveal>
 
           <Reveal direction="up" delay={100}>
-            <h1 className="mt-8 max-w-4xl text-5xl font-black leading-[1.05] text-white md:text-7xl">
-              O jeito mais inteligente de
-              <br />
-              <span
-                className={`bg-gradient-to-r from-cyan-300 via-blue-400 to-cyan-400 bg-[length:200%_auto] bg-clip-text text-transparent ${animations.gradientShift}`}
-              >
+            <h1 className="mt-6 max-w-xl font-home-display text-[40px] font-extrabold leading-[1.05] tracking-tight text-white sm:text-[46px]">
+              <span className="block">O jeito mais</span>
+              <span className="block">inteligente de</span>
+              <span className="block bg-gradient-to-r from-brand-blue to-brand-purple bg-clip-text text-transparent">
                 comprar no Paraguai.
               </span>
             </h1>
           </Reveal>
 
           <Reveal direction="up" delay={180}>
-            <p className="mt-8 max-w-2xl text-xl leading-9 text-slate-400">
+            <p className="mt-6 max-w-md text-[15px] leading-relaxed text-slate-400">
               Compare preços entre centenas de lojas, converse com a nossa IA e
               descubra exatamente onde vale a pena comprar — antes de
               atravessar a fronteira.
             </p>
           </Reveal>
 
-          <Reveal direction="up" delay={220} className="mt-6 flex flex-wrap justify-center gap-x-6 gap-y-3 lg:justify-start">
-            {featureBullets.map(({ icon: Icon, label }) => (
-              <span key={label} className="flex items-center gap-2 text-sm text-slate-300">
-                <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-blue-500/10 text-blue-400">
-                  <Icon size={15} />
+          <Reveal direction="up" delay={220} className="mt-7 flex flex-wrap items-center gap-x-7 gap-y-4">
+            {featureBullets.map((f) => (
+              <div key={f.title} className="flex items-center gap-2.5">
+                <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/5 ${f.color}`}>
+                  <f.icon size={16} />
                 </span>
-                {label}
-              </span>
+                <span className="text-[13px] leading-tight">
+                  <span className="block font-semibold text-white">{f.title}</span>
+                  <span className="block text-slate-400">{f.sub}</span>
+                </span>
+              </div>
             ))}
           </Reveal>
-
-          <Reveal direction="up" delay={260} className="w-full max-w-5xl">
-            <SearchBar />
-          </Reveal>
-
-          <Reveal direction="up" delay={300} className="w-full max-w-5xl lg:self-start">
-            <StoreCarousel />
-          </Reveal>
-
-          <Reveal direction="up" delay={320} className="w-full">
-            <HeroCTAs />
-          </Reveal>
         </div>
 
-        <Reveal direction="left" delay={200} className="relative flex justify-center">
-          <HeroGlobe />
-          <div className="absolute -bottom-4 right-0 hidden max-w-[220px] rounded-2xl border border-slate-700 bg-slate-900/90 p-4 shadow-2xl shadow-blue-500/10 backdrop-blur-xl lg:block">
-            <p className="text-sm font-bold text-white">Economize tempo e dinheiro</p>
-            <p className="mt-1 text-xs leading-relaxed text-slate-400">
-              Nossa IA analisa milhares de preços para você.
-            </p>
+        <div className="hidden lg:col-span-4 lg:block" />
+
+        <Reveal direction="left" delay={200} className="flex flex-col gap-3 lg:col-span-3">
+          <div className="glass-card flex items-start gap-3 rounded-2xl p-4">
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-brand-purple/15 text-brand-purple">
+              <Flower2 size={18} />
+            </span>
+            <div>
+              <p className="text-balance font-home-display text-[15px] font-bold leading-tight text-white">
+                Economize tempo e dinheiro
+              </p>
+              <p className="mt-1 text-[12.5px] leading-snug text-slate-400">
+                Nossa IA analisa milhares de preços para você
+              </p>
+            </div>
           </div>
+          <HeroStats stats={stats} />
         </Reveal>
       </div>
-
-      <Reveal
-        direction="up"
-        delay={400}
-        className="relative z-10 mt-20 flex w-full flex-wrap justify-center gap-6 px-6"
-      >
-        <StatCard value={stats.stores} suffix="+" label="Lojas parceiras" />
-        <StatCard value={stats.offers} suffix="+" label="Ofertas ativas" />
-        <StatCard value={stats.products} suffix="+" label="Produtos cadastrados" />
-        <div className="flex min-h-[180px] min-w-[260px] max-w-[420px] shrink-0 flex-col items-center justify-center gap-3 rounded-3xl border border-amber-500/30 bg-amber-500/5 px-4 py-9 text-center backdrop-blur sm:min-w-[260px] sm:px-7">
-          <ShieldCheck size={28} className="text-amber-400" />
-          <p className="text-lg font-bold text-amber-300">Economia garantida</p>
-          <p className="text-sm text-slate-400">Sempre o melhor preço encontrado</p>
-        </div>
-      </Reveal>
     </section>
   );
 }

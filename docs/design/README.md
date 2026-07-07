@@ -10,7 +10,9 @@ Registrar decisões de congelamento visual — telas ou componentes que passaram
 
 | Documento | Responde |
 |---|---|
-| `DESIGN_CONSTITUTION.md` | Congelamento da Premium Home Experience (Home + `/categorias`) — aprovado pelo CTO em 2026-07-06 (Release 1.9, ADR-050) |
+| `DESIGN_CONSTITUTION.md` | Congelamento da Premium Home Experience (Home + `/categorias`) — aprovado pelo CTO em 2026-07-06 (Release 1.9, ADR-050), reafirmado como artefato de produção na v1.2 (ADR-053) |
+| `HOME_COMPONENTS.md` | Registro operacional vivo de cada componente visual da Home — status, última alteração, responsável, dependências e impacto. Atualizado a cada Sprint de componente (ADR-053) |
+| `HOME_AUDIT_2026_07_06.md` | Auditoria pontual (arquitetura/dados, não pixel) da Home congelada contra `PREMIUM_HOME_EXPERIENCE.md` |
 
 ## Quando criar um novo documento aqui
 

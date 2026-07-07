@@ -16,20 +16,20 @@ type Props = {
 // cards read as one cohesive strip instead of 5 unrelated components.
 export default function DashboardCardShell({ icon, title, href, hrefLabel, badge, children }: Props) {
   return (
-    <div className="flex h-full flex-col rounded-3xl border border-slate-800 bg-slate-900/60 p-5 backdrop-blur">
+    <div className="glass-card flex h-full flex-col rounded-3xl p-5">
       <div className="mb-4 flex items-center justify-between gap-2">
         <div className="flex items-center gap-2">
-          <span className="text-slate-400">{icon}</span>
+          <span className="text-brand-cyan">{icon}</span>
           <h3 className="text-xs font-bold uppercase tracking-wider text-white">{title}</h3>
         </div>
         {href ? (
-          <Link href={href} className="flex items-center gap-1 text-xs font-semibold text-blue-400 hover:text-blue-300">
+          <Link href={href} className="flex items-center gap-1 text-xs font-medium text-brand-cyan transition-colors hover:text-brand-blue">
             {hrefLabel ?? "Ver todas"}
             <ArrowRight size={12} />
           </Link>
         ) : badge ? (
-          <span className="flex items-center gap-1 text-xs font-semibold text-emerald-400">
-            <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
+          <span className="flex items-center gap-1 text-xs font-semibold text-positive">
+            <span className="h-1.5 w-1.5 rounded-full bg-positive animate-pulse" />
             {badge}
           </span>
         ) : null}

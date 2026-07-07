@@ -992,3 +992,24 @@ Se qualquer uma das cinco não puder ser cumprida no momento em que a Wave termi
 - Reduzir a frequência dos 3 crons para diário só para caber no Hobby — descartada explicitamente pelo mandato do CTO ("não quero uma solução temporária apagando funcionalidades") e seria uma perda real de capacidade (ADR-043 já justificou a cadência de 5 minutos do câmbio pelo custo/benefício do plano Business da ExchangeRate-API).
 - Fazer upgrade do plano Vercel para Pro só para manter os crons nativos — não descartada tecnicamente, mas fora do escopo desta ADR (decisão de custo/negócio do CTO, não uma decisão de arquitetura de engenharia).
 - Implementar `pg_cron`/`pg_net` imediatamente nesta Wave — descartada porque violaria a restrição explícita de não alterar banco nesta Wave; nomeada como próxima etapa em vez de silenciosamente adiada sem registro.
+
+---
+
+## ADR-053 — Home Premium: congelamento reafirmado (v1.2) + desenvolvimento visual exclusivamente por Sprint de componente isolado
+
+**Data**: 2026-07-06 (PROGRAM Z — RC-7)
+**Status**: Aceita
+
+**Contexto**: entre a aprovação inicial do congelamento (ADR-050, v1.0) e esta data, a Home passou por duas rodadas adicionais de ajuste explicitamente autorizadas pelo CTO — RC-5 (realinhamento contra um novo export do v0.app, `DESIGN_CONSTITUTION.md` v1.1) e RC-6 (restauração do sistema de largura/containers para bater com o v0, incluindo alinhar `Navbar` a `max-w-[1600px]`, e correção do preenchimento vertical de `StoreCarousel`/`CategoriesCard`). Depois dessas correções, o CTO aprovou oficialmente o resultado como artefato de produção e determinou que toda evolução visual futura passe a ocorrer **exclusivamente por Sprint isolada de um único componente por vez** — nunca mais múltiplos componentes na mesma sessão sem autorização explícita.
+
+**Decisão 1 — reafirmação do congelamento como v1.2**: `docs/design/DESIGN_CONSTITUTION.md` passa para v1.2. A superfície coberta e as proibições da v1.1 continuam integralmente válidas; a v1.2 não muda o que está congelado, apenas encerra formalmente o ciclo de correções RC-5/RC-6 e estabelece o processo de mudança futura (Decisão 2).
+
+**Decisão 2 — Sprint de componente isolado como único modo de evolução visual futura**: nenhuma tarefa futura pode alterar mais de um componente visual da Home na mesma Sprint sem autorização explícita do CTO. Toda Sprint segue a sequência fixa: (1) auditar somente o componente-alvo; (2) listar problemas encontrados; (3) propor melhorias; (4) aguardar aprovação explícita; (5) modificar apenas aquele componente; (6) rodar `lint`/`typecheck`/`test`/`build`; (7) aguardar aprovação do resultado; (8) commit. Durante a Sprint, proibido tocar em qualquer outro componente, layout global, wrappers, grids, containers, services, APIs, arquitetura ou integrações — isolamento é a regra, não uma preferência.
+
+**Decisão 3 — novo documento vivo `docs/design/HOME_COMPONENTS.md`**: registro de todos os componentes visuais da Home (Hero, Navbar, Search, os 4+3 cards do dashboard, Lojas em Destaque, Categorias, Câmeras, Benefícios, CTA, Footer, e as seções sem equivalente no v0), cada um com Status (Frozen / Em desenvolvimento / Em revisão / Concluído), última alteração, responsável, dependências e impacto de blast radius. Este documento é atualizado a cada Sprint — é o registro operacional que `DESIGN_CONSTITUTION.md` (regras permanentes) não tenta ser.
+
+**Consequência**: qualquer tarefa futura que mexer na Home deve (a) identificar qual componente único está em escopo consultando `HOME_COMPONENTS.md`, (b) seguir a sequência de 8 passos da Decisão 2 sem pular etapas, e (c) atualizar `HOME_COMPONENTS.md` ao final. Pedidos que impliquem alterar 2+ componentes ao mesmo tempo devem ser recusados ou fatiados em Sprints separadas, nunca executados de uma vez sem aprovação explícita nomeando a exceção.
+
+**Alternativas descartadas**:
+- Continuar aceitando Waves multi-componente com aprovação genérica no início da tarefa — descartada: foi exatamente esse padrão (RC-5/RC-6) que, mesmo bem-sucedido, tornou difícil isolar regressões a um componente específico; a nova regra troca velocidade por rastreabilidade componente-a-componente.
+- Registrar o inventário de componentes apenas em `PREMIUM_HOME_EXPERIENCE.md` — descartada: esse documento descreve arquitetura técnica viva, não status de congelamento/Sprint por componente; misturaria as duas categorias de informação no mesmo arquivo.

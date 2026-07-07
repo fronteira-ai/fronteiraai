@@ -1,21 +1,31 @@
 import { Suspense } from "react";
 import type { Metadata } from "next";
+import { Sora, Inter } from "next/font/google";
 import { SITE_URL } from "@/constants/routes";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import SectionSkeleton from "@/components/ui/SectionSkeleton";
 import Hero from "@/components/home/Hero";
+import SearchBar from "@/components/home/SearchBar";
+import HeroCTAs from "@/components/home/HeroCTAs";
 import DashboardStrip from "@/components/home/DashboardStrip";
 import Offers from "@/components/home/Offers";
 import EconomiaDoDia from "@/components/home/EconomiaDoDia";
 import AIShowcase from "@/components/home/AIShowcase";
-import LiveCameras from "@/components/home/LiveCameras";
 import Benefits from "@/components/home/Benefits";
 import HowItWorks from "@/components/home/HowItWorks";
 import Brands from "@/components/home/Brands";
 import ForLojistasSection from "@/components/home/ForLojistasSection";
 import CTASection from "@/components/home/CTASection";
 import { getBrands } from "@/services/brand.service";
+
+// Release 1.9 — Program F — Wave 2 (v0 realignment, ADR-050 v1.1). Loaded
+// here (not in the root layout) and applied only to this page's <main> below
+// — the CSS variables these generate are scoped to that subtree via
+// --font-home-display/--font-home-sans (app/globals.css), so the rest of the
+// site keeps Geist untouched.
+const sora = Sora({ subsets: ["latin"], variable: "--font-home-display", display: "swap" });
+const inter = Inter({ subsets: ["latin"], variable: "--font-home-sans", display: "swap" });
 
 // Release 1.9 — Program F — Wave 1 (Premium Home Experience), revised after
 // the CTO's denser dashboard-style reference. ISR instead of the previous
@@ -56,18 +66,28 @@ export default async function Home() {
   const brands = await getBrands();
 
   return (
-    <main className="min-h-screen bg-[#050816] text-white">
+    <main className={`min-h-screen bg-[oklch(0.14_0.03_265)] text-white ${sora.variable} ${inter.variable}`}>
       <Navbar />
 
-      {/* Hero — headline, search, "Perguntar à IA", globe, store carousel,
-          real stats row (all self-fetched inside Hero.tsx). */}
-      <Suspense fallback={<SectionSkeleton minHeight={760} />}>
+      {/* Hero — photographic backdrop + real stats (Release 1.9 — Program F —
+          Wave 2, v0 realignment, ADR-050 v1.1). Search and the "Comparar
+          preços"/"Sou Lojista" CTAs are now separate sections below it,
+          matching the approved v0 layout. */}
+      <Suspense fallback={<SectionSkeleton minHeight={640} />}>
         <Hero />
       </Suspense>
 
-      {/* Dense dashboard strip: Ofertas Relâmpago | Market Pulse | Câmbio ao
-          Vivo | Live Marketplace | Categorias Principais — each card
-          streams independently (see DashboardStrip.tsx). */}
+      <div className="relative z-10 mx-auto max-w-[1600px] px-6 pt-10 lg:px-10">
+        <SearchBar />
+        <div className="mt-6">
+          <HeroCTAs />
+        </div>
+      </div>
+
+      {/* Dense dashboard: 4-card info row (Economia do dia | Market Pulse |
+          Câmbio ao Vivo | Live Marketplace), a 3-column row (Lojas em
+          destaque | Categorias | Câmeras ao vivo) and the trust-strip/lojista
+          banner — each card streams independently (see DashboardStrip.tsx). */}
       <DashboardStrip />
 
       {/* Produtos Mais Buscados */}
@@ -76,16 +96,13 @@ export default async function Home() {
       </Suspense>
 
       {/* Economia do Dia — a single spotlighted deal, distinct from the
-          dashboard strip's rotating "Ofertas Relâmpago" card. */}
+          dashboard strip's "Economia do dia" card. */}
       <Suspense fallback={<SectionSkeleton minHeight={280} />}>
         <EconomiaDoDia />
       </Suspense>
 
       {/* Inteligência da IA — chat not implemented this Wave, per mandate */}
       <AIShowcase />
-
-      {/* Câmeras ao vivo — architecture only, no integration yet */}
-      <LiveCameras />
 
       <Benefits />
       <HowItWorks />

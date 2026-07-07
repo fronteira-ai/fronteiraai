@@ -5,11 +5,42 @@
   --foreground: #171717;
 }
 
+/* Release 1.9 — Program F — Wave 2 (v0 realignment, ADR-050 v1.1). Named
+   brand tokens ported verbatim from the approved v0 export's own `@theme`
+   block (plain @theme, not @theme inline — these are fixed compile-time
+   constants, not runtime-switchable like light/dark). Additive only: the
+   sitewide --background/--foreground above are untouched, so no other page
+   shifts. Only Home components (and anything that opts in) reference these. */
+@theme {
+  --color-brand-blue: oklch(0.62 0.2 258);
+  --color-brand-cyan: oklch(0.75 0.15 220);
+  --color-brand-purple: oklch(0.58 0.22 300);
+  --color-positive: oklch(0.72 0.18 155);
+  --color-negative: oklch(0.65 0.22 20);
+  --color-amber: oklch(0.78 0.16 70);
+}
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+
+  /* Home-scoped display/sans faces (Sora + Inter) — the variables are only
+     ever set by app/page.tsx on its own <main> wrapper, so font-home-* only
+     resolves inside the Home subtree; every other page keeps Geist. */
+  --font-home-display: var(--font-home-display);
+  --font-home-sans: var(--font-home-sans);
+}
+
+@utility glass-card {
+  background: linear-gradient(
+    180deg,
+    oklch(0.22 0.04 265 / 0.28),
+    oklch(0.16 0.035 265 / 0.28)
+  );
+  border: 1px solid oklch(0.5 0.06 265 / 0.16);
+  backdrop-filter: blur(16px);
 }
 
 @media (prefers-color-scheme: dark) {

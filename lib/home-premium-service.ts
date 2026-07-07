@@ -255,6 +255,10 @@ export interface ExchangeSnapshot {
   usdPyg: ExchangeRatePoint | null;
   usingFallback: boolean;
   history: ExchangeRatePoint[];
+  /** Release 1.9 — Program F — Wave 2 (v0 realignment): the v0 ExchangeCard
+   * shows two rate columns, each with its own sparkline/trend — added
+   * symmetrically to the existing USD/BRL history fetch, never fabricated. */
+  usdPygHistory: ExchangeRatePoint[];
 }
 
 const EXCHANGE_HISTORY_DAYS = 7;
@@ -265,10 +269,11 @@ export async function getExchangeSnapshot(client: SupabaseClient): Promise<Excha
   const to = new Date();
   const from = new Date(to.getTime() - EXCHANGE_HISTORY_DAYS * 24 * 60 * 60 * 1000);
 
-  const [usdBrl, usdPyg, history] = await Promise.all([
+  const [usdBrl, usdPyg, history, usdPygHistory] = await Promise.all([
     rateService.getCurrentRate(CurrencyPair.UsdBrl),
     rateService.getCurrentRate(CurrencyPair.UsdPyg),
     historyService.getRange(CurrencyPair.UsdBrl, from, to),
+    historyService.getRange(CurrencyPair.UsdPyg, from, to),
   ]);
 
   return {
@@ -276,6 +281,7 @@ export async function getExchangeSnapshot(client: SupabaseClient): Promise<Excha
     usdPyg: usdPyg ? { rate: usdPyg.rate, capturedAt: usdPyg.capturedAt } : null,
     usingFallback: false,
     history: history.map((h) => ({ rate: h.rate, capturedAt: h.capturedAt })),
+    usdPygHistory: usdPygHistory.map((h) => ({ rate: h.rate, capturedAt: h.capturedAt })),
   };
 }
 
@@ -316,6 +322,7 @@ export interface FeaturedStoreHighlight {
   offerCount: number;
   qualityScore: number | null;
   lastSyncAt: string | null;
+  rating: number;
 }
 
 const FEATURED_STORES_LIMIT = 6;
@@ -348,6 +355,10 @@ export async function getFeaturedStores(client: SupabaseClient): Promise<Feature
         offerCount: count ?? 0,
         qualityScore: connector?.healthScore ?? null,
         lastSyncAt: connector?.lastSyncAt ?? null,
+        // Release 1.9 — Program F — Wave 2 (v0 realignment): exposed here so
+        // StoreCarousel.tsx no longer needs its own getStoreBySlug() call per
+        // store just to read this one field (HOME_AUDIT_2026_07_06.md §2).
+        rating: store?.rating ?? 0,
       };
     })
   );
@@ -408,7 +419,10 @@ async function getCategoriesWithCounts(client: SupabaseClient): Promise<Category
     .sort((a, b) => b.productCount - a.productCount);
 }
 
-const HOME_CATEGORIES_LIMIT = 8;
+// Release 1.9 — Program F — Wave 2 (v0 realignment): the v0 CategoriesCard
+// is a 5-column grid (9 real categories + a "Mais" link tile) rather than
+// the previous 4-column/8-item layout.
+const HOME_CATEGORIES_LIMIT = 9;
 
 export async function getTopCategories(client: SupabaseClient): Promise<CategoryWithCount[]> {
   const all = await getCategoriesWithCounts(client);

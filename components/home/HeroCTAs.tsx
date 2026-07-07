@@ -40,10 +40,10 @@ export default function HeroCTAs() {
 
   return (
     <>
-      <div className="mt-8 flex flex-wrap items-center justify-center gap-4">
+      <div className="flex w-full flex-wrap items-center justify-center gap-4">
         <Link
           href="/products"
-          className="flex items-center gap-2.5 rounded-full bg-gradient-to-r from-blue-600 to-cyan-500 px-8 py-4 text-sm font-bold text-white shadow-lg shadow-blue-500/25 transition-all duration-300 hover:scale-[1.03] hover:shadow-blue-500/40 active:scale-95"
+          className="flex items-center gap-2.5 rounded-full bg-gradient-to-r from-brand-blue to-brand-purple px-8 py-4 text-sm font-bold text-white shadow-[0_0_24px_-6px_var(--color-brand-blue)] transition-all duration-300 hover:scale-[1.03] active:scale-95"
         >
           <Search size={17} />
           Comparar preços
@@ -52,7 +52,7 @@ export default function HeroCTAs() {
         <button
           onClick={handleLojistaClick}
           disabled={authState === "loading"}
-          className="flex items-center gap-2.5 rounded-full border border-slate-600/80 bg-slate-900/50 px-8 py-4 text-sm font-semibold text-slate-200 backdrop-blur-sm transition-all duration-300 hover:border-emerald-500/60 hover:bg-slate-800/60 hover:text-white disabled:cursor-wait disabled:opacity-40 active:scale-95"
+          className="glass-card flex items-center gap-2.5 rounded-full px-8 py-4 text-sm font-semibold text-slate-200 transition-all duration-300 hover:text-white disabled:cursor-wait disabled:opacity-40 active:scale-95"
         >
           <Store size={17} />
           {authState === "loading" ? "..." : lojistaLabel}

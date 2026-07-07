@@ -1,53 +1,52 @@
 import Link from "next/link";
-import { Zap } from "lucide-react";
+import { Tag, Coins } from "lucide-react";
 import DashboardCardShell from "./DashboardCardShell";
 import { getSupabaseServiceClient } from "@/lib/supabase/service";
 import { getFlashOffers } from "@/lib/home-premium-service";
 
-const CARD_LIMIT = 4;
-
-// Compact strip version of the flash offers concept — same
-// PriceIntelligenceService.getSavingsOpportunity computation as
-// EconomiaDoDia.tsx/FlashOffers.tsx, just the top result surfaced densely
-// with dot indicators for how many more real deals exist.
+// Release 1.9 — Program F — Wave 2 (v0 realignment). Same
+// PriceIntelligenceService.getSavingsOpportunity computation as before — the
+// v0 "Deal of Day" card adds a product photo, which no real field backs here
+// (SavingsHighlight has no image URL), so a plain icon tile stands in rather
+// than fabricating a picture for a real product.
 export default async function FlashOffersCard() {
   const client = getSupabaseServiceClient();
   const offers = await getFlashOffers(client);
-  const top = offers.slice(0, CARD_LIMIT);
-  const best = top[0];
+  const best = offers[0];
 
   return (
-    <DashboardCardShell icon={<Zap size={16} />} title="Ofertas relâmpago" href="/products?sort=savings">
+    <DashboardCardShell icon={<Tag size={16} />} title="Economia do dia" href="/products?sort=savings">
       {!best ? (
         <p className="text-sm text-slate-500">Nenhuma economia real disponível no momento.</p>
       ) : (
-        <div>
-          {best.productSlug ? (
-            <Link href={`/product/${best.productSlug}`} className="block">
-              <p className="line-clamp-2 text-sm font-bold text-white">{best.productName}</p>
-            </Link>
-          ) : (
-            <p className="line-clamp-2 text-sm font-bold text-white">{best.productName}</p>
-          )}
-
-          <div className="mt-3 flex items-end gap-2">
-            <span className="rounded-lg bg-red-500/15 px-2 py-1 text-xs font-bold text-red-400">
-              -{best.savingsPercent.toFixed(0)}%
-            </span>
-            <span className="text-xs text-slate-500 line-through">US$ {best.oldPriceUSD.toFixed(0)}</span>
-          </div>
-          <p className="mt-1 text-xl font-black text-white">US$ {best.newPriceUSD.toFixed(2)}</p>
-          <p className="mt-1 text-xs text-emerald-400">Economize US$ {best.savingsUSD.toFixed(2)}</p>
-          <p className="mt-2 text-xs text-slate-500">{best.cheapestStoreName}</p>
-
-          {top.length > 1 ? (
-            <div className="mt-3 flex gap-1.5" aria-hidden="true">
-              {top.map((_, i) => (
-                <span key={i} className={`h-1.5 w-1.5 rounded-full ${i === 0 ? "bg-blue-400" : "bg-slate-700"}`} />
-              ))}
+        <>
+          <div className="flex gap-4">
+            <div className="flex h-28 w-24 shrink-0 items-center justify-center rounded-2xl bg-white/5 text-brand-cyan">
+              <Tag size={28} />
             </div>
-          ) : null}
-        </div>
+            <div className="min-w-0 flex-1">
+              <div className="flex items-start justify-between gap-2">
+                {best.productSlug ? (
+                  <Link href={`/product/${best.productSlug}`} className="min-w-0">
+                    <p className="line-clamp-2 text-[15px] font-semibold leading-tight text-white">{best.productName}</p>
+                  </Link>
+                ) : (
+                  <p className="line-clamp-2 min-w-0 text-[15px] font-semibold leading-tight text-white">{best.productName}</p>
+                )}
+                <span className="shrink-0 rounded-lg bg-positive/15 px-2 py-1 text-sm font-bold text-positive">
+                  -{best.savingsPercent.toFixed(0)}%
+                </span>
+              </div>
+              <p className="mt-3 text-xs text-slate-500 line-through">US$ {best.oldPriceUSD.toFixed(2)}</p>
+              <p className="font-home-display text-2xl font-bold text-positive">US$ {best.newPriceUSD.toFixed(2)}</p>
+              <p className="mt-1 text-xs text-slate-500">{best.cheapestStoreName}</p>
+            </div>
+          </div>
+          <div className="mt-4 flex items-center gap-2 border-t border-white/10 pt-3 text-sm font-medium text-amber">
+            <Coins size={16} />
+            Economize: US$ {best.savingsUSD.toFixed(2)}
+          </div>
+        </>
       )}
     </DashboardCardShell>
   );
