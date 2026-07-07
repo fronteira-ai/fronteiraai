@@ -15,7 +15,7 @@ const TRUST: { icon: LucideIcon; title: string; sub: string; color: string }[] =
 // as-is.
 export default function BottomCta() {
   return (
-    <div className="mt-5 grid grid-cols-1 gap-5 lg:grid-cols-12">
+    <div className="mt-4 grid grid-cols-1 gap-5 lg:grid-cols-12">
       <div className="glass-card grid grid-cols-1 gap-4 rounded-2xl p-5 sm:grid-cols-2 lg:col-span-8 xl:grid-cols-4">
         {TRUST.map((t) => (
           <div key={t.title} className="flex items-center gap-3">

@@ -23,7 +23,7 @@ export default async function Hero() {
   const stats = await getHomeStats(client);
 
   return (
-    <section className="relative overflow-hidden bg-[oklch(0.14_0.03_265)] pt-28">
+    <section className="relative overflow-hidden bg-[oklch(0.14_0.03_265)] pt-[103px]">
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
         <Image
           src="/hero-bridge.png"

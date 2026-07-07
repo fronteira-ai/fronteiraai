@@ -20,7 +20,7 @@ function CardSkeleton() {
 export default function DashboardStrip() {
   return (
     <div id="dashboard" className="mx-auto max-w-[1600px] px-6 lg:px-10">
-      <div className="mt-8 grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-4">
+      <div className="mt-6 grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-4">
         <Suspense fallback={<CardSkeleton />}>
           <MarketPulseCard />
         </Suspense>
@@ -35,7 +35,7 @@ export default function DashboardStrip() {
         </Suspense>
       </div>
 
-      <div className="mt-5 grid grid-cols-1 gap-5 lg:grid-cols-12">
+      <div className="mt-4 grid grid-cols-1 gap-5 lg:grid-cols-12">
         <div className="lg:col-span-5">
           <Suspense fallback={<CardSkeleton />}>
             <StoreCarousel />

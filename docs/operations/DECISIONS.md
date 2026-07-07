@@ -1013,3 +1013,24 @@ Se qualquer uma das cinco não puder ser cumprida no momento em que a Wave termi
 **Alternativas descartadas**:
 - Continuar aceitando Waves multi-componente com aprovação genérica no início da tarefa — descartada: foi exatamente esse padrão (RC-5/RC-6) que, mesmo bem-sucedido, tornou difícil isolar regressões a um componente específico; a nova regra troca velocidade por rastreabilidade componente-a-componente.
 - Registrar o inventário de componentes apenas em `PREMIUM_HOME_EXPERIENCE.md` — descartada: esse documento descreve arquitetura técnica viva, não status de congelamento/Sprint por componente; misturaria as duas categorias de informação no mesmo arquivo.
+
+---
+
+## ADR-054 — RC-8: exceção pontual explícita ao processo de Sprint isolada (ADR-053) para um UI Polish sitewide-em-Home
+
+**Data**: 2026-07-07 (RC-8)
+**Status**: Aceita
+
+**Contexto**: o CTO solicitou uma missão de "UI Polish" (RC-8) cobrindo simultaneamente ritmo vertical, Hero, Produtos em Destaque, Economia do Dia, Assistente IA, Como Funciona, Para Lojistas, CTA Final e uma auditoria de tipografia/espaçamento/bordas/sombras/ícones/botões em toda a Home — por definição, uma mudança multi-componente na mesma sessão, o padrão que a Decisão 2 do ADR-053 existe para impedir sem autorização nomeada. A missão nomeia explicitamente uma exceção crítica (`MarketPulseCard` permanece bit-a-bit idêntico) e é estruturada no mesmo formato de "o que pode/não pode mudar" do próprio `DESIGN_CONSTITUTION.md`, servindo como o pedido de exceção previsto no §5 daquele documento.
+
+**Decisão**: conceder a exceção pontual solicitada, escopada estritamente a **espaçamento vertical/padding e consistência tipográfica de heading** — nunca cor, paleta, estrutura de card, ordem de seção, Navbar ou Footer. Regras de execução aplicadas para conter o blast radius:
+1. `MarketPulseCard.tsx` e `DashboardCardShell.tsx` não são tocados — o segundo é compartilhado com o Market Pulse, então qualquer ajuste de padding do shell vazaria para o card proibido.
+2. Componentes de UI compartilhados **fora** de Home (`Button.tsx`, `Chip.tsx`, `Container.tsx`, `ProductCard.tsx`) não são tocados — evita side effect sitewide (Navbar, `/products`, `/search`, `/lojas`). Só foram editados componentes de `components/ui/*` cujo uso, confirmado por grep, é 100% exclusivo de Home (`Section.tsx`, `SectionTitle.tsx`, `Badge.tsx`, `GradientCard.tsx`, `FeatureCard.tsx`).
+3. Hero: apenas `pt-28` → `pt-[103px]` (redução de altura de ~8% via padding-top; nenhuma outra propriedade tocada, conforme mandato).
+4. Tipografia: H2 de seção unificado para `text-3xl font-bold sm:text-4xl` (escala que `SectionTitle`/`AIShowcase` já usavam) — `ForLojistasSection`/`CTASection` usavam `text-4xl font-black sm:text-5xl`, divergente sem motivo funcional.
+
+**Consequência**: esta é uma exceção de escopo único para RC-8, não uma revogação do ADR-053 — a próxima mudança visual da Home volta a exigir Sprint isolada de componente único. `docs/design/DESIGN_CONSTITUTION.md` sobe para v1.3, registrando o resultado do RC-8 sem reabrir o congelamento geral. `docs/design/HOME_COMPONENTS.md` é atualizado com "Última alteração" em cada componente tocado.
+
+**Alternativas descartadas**:
+- Fatiar RC-8 em ~10 Sprints sequenciais, uma por componente — rejeitada explicitamente pelo CTO ao escolher "Explicit one-time exception" quando questionado, por ser o objetivo declarado da missão (ritmo vertical consistente exige mudança coordenada entre seções, não isolada).
+- Aplicar a mesma exceção a `Button.tsx`/`Chip.tsx`/`ProductCard.tsx` para padronização total de botões/ícones pedida no brief — descartada: esses três arquivos são consumidos fora de Home (Navbar, `/products`, `/search`), e o brief não nomeou esses caminhos como dentro do escopo da exceção; padronizá-los exigiria uma Sprint própria com blast radius sitewide, nomeada e aprovada separadamente.

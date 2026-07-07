@@ -8,7 +8,7 @@ export default function CTASection() {
     <Section>
       <Reveal direction="up">
         <GradientCard className="flex flex-col items-center text-center">
-          <h2 className="mx-auto max-w-2xl text-4xl font-black text-white sm:text-5xl">
+          <h2 className="mx-auto max-w-2xl text-3xl font-bold text-white sm:text-4xl">
             Pronto para comprar com inteligência?
           </h2>
 
@@ -17,7 +17,7 @@ export default function CTASection() {
             no Paraguai.
           </p>
 
-          <Button href="/search" variant="primary" className="mt-10">
+          <Button href="/search" variant="primary" className="mt-8">
             Pesquisar agora
           </Button>
         </GradientCard>

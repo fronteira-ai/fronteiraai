@@ -33,13 +33,13 @@ export default function AIShowcase() {
             comparar preços, lojas e especificações por você.
           </p>
 
-          <div className="mt-8 flex flex-wrap justify-center gap-3">
+          <div className="mt-6 flex flex-wrap justify-center gap-3">
             {examples.map((example) => (
               <Chip key={example}>{example}</Chip>
             ))}
           </div>
 
-          <Button href="/search" variant="primary" className="mt-10">
+          <Button href="/search" variant="primary" className="mt-8">
             Perguntar para a IA
           </Button>
         </GradientCard>

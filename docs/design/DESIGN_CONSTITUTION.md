@@ -1,7 +1,7 @@
 # DESIGN_CONSTITUTION.md
 
-**Versão**: 1.2
-**Data**: 2026-07-06 (PROGRAM Z — RC-7 — Home Freeze + desenvolvimento por componentes)
+**Versão**: 1.3
+**Data**: 2026-07-07 (RC-8 — UI Polish, exceção pontual ao ADR-053)
 **Status**: LOCKED — congelamento visual aprovado pelo CTO como artefato de produção
 **Categoria**: `docs/design/` (11ª categoria oficial, ADR-050)
 
@@ -14,6 +14,7 @@
 - **v1.0** (2026-07-06, Program F Wave 1): primeiro congelamento, sobre a Premium Home Experience original.
 - **v1.1** (2026-07-06, Program F Wave 2): **realinhamento contra o export oficial do v0.app** (`premium-home-interface-mRmShqDN4kh`), aprovado explicitamente pelo CTO como nova referência — não uma correção pontual, mas a substituição do visual congelado (nova paleta OKLCH, par tipográfico Sora+Inter, hero fotográfico, dashboard reestruturado em duas fileiras + faixa de confiança/CTA de lojista). Ver `docs/operations/CHANGELOG.md` (entrada "Program F — Premium Home Experience, Wave 2") para o detalhe do que mudou e por quê. O card de Câmeras ao Vivo manteve deliberadamente o estado honesto "Em breve" mesmo onde o export do v0 mostrava um badge permanente "Ao vivo" sem feed real — exceção explícita, registrada aqui por transparência, não um desvio do export.
 - **v1.2** (2026-07-06, RC-7): reafirmação do congelamento como **artefato de produção** após duas rodadas de correção explicitamente autorizadas (RC-5: realinhamento de tokens/imagem contra um novo export do v0; RC-6: sistema de largura/containers restaurado para 1600px, incluindo `Navbar`, e preenchimento vertical de `StoreCarousel`/`CategoriesCard` corrigido). A partir desta versão, **toda evolução visual futura ocorre exclusivamente por Sprint isolada de um único componente** (ver §7) — nunca mais de um componente por Sprint sem autorização explícita do CTO. Ver ADR-053 (`docs/operations/DECISIONS.md`).
+- **v1.3** (2026-07-07, RC-8): **exceção pontual e nomeada** ao processo de Sprint isolada (§7/ADR-053), concedida pelo CTO para um único UI Polish coordenado de ritmo vertical e tipografia — não uma revogação do processo, que volta a valer na próxima mudança. Escopo estrito: espaçamento (padding/margin) e escala tipográfica de heading, nunca cor/estrutura/ordem. `MarketPulseCard.tsx` e `DashboardCardShell.tsx` explicitamente preservados bit-a-bit; componentes de UI compartilhados fora de Home (`Button`, `Chip`, `Container`, `ProductCard`) não tocados para conter o blast radius a Home. Ver ADR-054 (`docs/operations/DECISIONS.md`) para o registro completo e `docs/design/HOME_COMPONENTS.md` para o que mudou em cada componente.
 
 ## 1. Declaração
 

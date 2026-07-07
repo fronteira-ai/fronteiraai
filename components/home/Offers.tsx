@@ -30,7 +30,7 @@ export default async function Offers() {
         description="As melhores ofertas encontradas pelo ParaguAI nas últimas horas."
       />
 
-      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
         {products.map((product, index) => (
           <Reveal key={product.id} direction="up" delay={index * 70}>
             <ProductCard
@@ -46,7 +46,7 @@ export default async function Offers() {
         ))}
       </div>
 
-      <div className="mt-12 flex justify-center">
+      <div className="mt-9 flex justify-center">
         <Button href="/products" variant="secondary">
           Ver todos os produtos
         </Button>
