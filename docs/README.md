@@ -40,39 +40,49 @@ docs/
 │   ├── README.md
 │   ├── CONVENTIONS.md          Convenções de nomenclatura e estilo
 │   ├── GLOSSARY.md             Terminologia oficial do projeto
+│   ├── AGENTS.md                Avisos críticos para agentes IA
 │   ├── TECH_DEBT.md            Dívida técnica identificada e seu status
-│   ├── DATABASE_ENGINEERING.md Database Migration System V2 — padrão, runbook, governança
 │   ├── ACQUISITION.md          Documentação do Acquisition Engine
 │   ├── CONNECTOR_GUIDE.md      Como criar novos Connectors
 │   ├── CONNECTOR_PLATFORM_ARCHITECTURE_REVIEW.md  Fotografia real da Connector Platform (Wave 4)
 │   ├── CONNECTOR_PLATFORM_V2.md                   Industrialização — SDK, Certification, Observability (Wave 5-6)
 │   ├── SOURCE_DISCOVERY_POLICY.md                 Política permanente de escolha de fonte de dado
+│   ├── DATABASE_ENGINEERING.md Database Migration System V2 — padrão, runbook, governança
+│   ├── CRON_INFRASTRUCTURE.md                     Agendamento decoupled da Vercel (RC-3)
+│   ├── EXCHANGE_FOUNDATION_FOR_LIVE_PRICING.md    Fundação de câmbio para preços ao vivo
 │   ├── MARKET_INTELLIGENCE_ENGINE.md              Núcleo de inteligência de preços (Release 1.8 — Program C)
-│   ├── PREMIUM_HOME_EXPERIENCE.md                 Arquitetura da Home Premium + /categorias (Release 1.9 — Program F)
-│   └── AGENTS.md               Avisos críticos para agentes IA
+│   ├── MARKETPLACE_FOUNDATION_SCALE_AUDIT.md      Auditoria de escala da fundação de marketplace
+│   └── PREMIUM_HOME_EXPERIENCE.md                 Arquitetura da Home Premium + /categorias (Release 1.9 — Program F)
 │
 ├── product/          O que o produto faz e para onde vai
 │   ├── README.md
 │   ├── FEATURES.md             Inventário de funcionalidades por estado real
-│   ├── MASTER_ROADMAP.md       Roadmap estratégico de 4 Fases
+│   ├── MASTER_ROADMAP.md       Roadmap estratégico de 4 Fases (horizonte de longo prazo)
+│   ├── ROADMAP_1_8.md · ROADMAP_1_9.md · ROADMAP_2_0.md   Roadmaps operacionais por Release (Program/Wave)
+│   ├── KPIS.md                  Indicadores-chave de produto
 │   ├── STRATEGIC_ASSETS.md     Catálogo oficial de Ativos Estratégicos (Core/Supporting/Future)
 │   ├── MOAT_STRATEGY.md        Os 8 Moats permanentes do ParaguAI
+│   ├── MARKETPLACE_STRATEGY.md · MARKETPLACE_VISION.md    Estratégia e visão de expansão do marketplace
 │   ├── PARAGUAI_BRAIN.md       A camada de inteligência — visão e arquitetura conceitual
+│   ├── PRODUCT_POLICY.md       Políticas permanentes de produto
+│   ├── VISION_ALIGNMENT_AUDIT.md · STRATEGIC_GAP_MAP.md · VISION_SCORECARD.md · RELEASE_ALIGNMENT.md
+│   │       Auditoria de alinhamento estratégico (PROGRAM Ω) — origem do Program Ω, Release 2.0
 │   ├── RELEASE_PLAYBOOK.md     Como uma Release é planejada e executada
-│   └── releases/                Blueprints e planos de execução por Release/Wave
+│   └── releases/                Blueprints, planos de execução e relatórios por Release/Wave — ver releases/README.md
 │       ├── RELEASE_1_5_BLUEPRINT.md · RELEASE_1_5_EXECUTION_PLAN.md
 │       ├── RELEASE_1_6_BLUEPRINT.md
-│       ├── RELEASE_1_7_BLUEPRINT.md · RELEASE_1_7_EXECUTION_PLAN.md
-│       ├── RELEASE_1_7_WAVE_{2,3,4,5}_EXECUTION_PLAN.md
-│       ├── RELEASE_1_8_BLUEPRINT.md
-│       └── RELEASE_1_8_BUYER_IDENTITY_MODEL.md
+│       ├── RELEASE_1_7_BLUEPRINT.md · RELEASE_1_7_EXECUTION_PLAN.md · RELEASE_1_7_WAVE_{2,3,4,5}_EXECUTION_PLAN.md
+│       ├── RELEASE_1_8_BLUEPRINT.md · RELEASE_1_8_BUYER_IDENTITY_MODEL.md · RELEASE_1_8_SPRINT_ZERO_REPORT.md
+│       │       · RELEASE_1_8_SPRINT_01_REPORT.md · RELEASE_1_8_PROGRAM_0_WAVE_0_REPORT.md
+│       └── RELEASE_2_0_PREVIEW.md
 │
 ├── operations/       Evolução do projeto — estado atual, história, decisões
 │   ├── README.md
 │   ├── PROJECT_STATUS.md       Fotografia do presente
 │   ├── CHANGELOG.md            História completa de cada Release
 │   ├── NEXT_STEPS.md           Próximos passos imediatos
-│   ├── DECISIONS.md            ADR-001 a ADR-046 (decisões arquiteturais; alguns números reservados/ainda não escritos, ex. ADR-041, ADR-044)
+│   ├── DECISIONS.md            ADR-001 a ADR-055+ (decisões arquiteturais; alguns números reservados/ainda não escritos)
+│   ├── PRODUCTION_BASELINE_1.9.md   Baseline oficial de produção (Release 1.9)
 │   ├── RELEASE_CERTIFICATION_1.5.md
 │   └── RELEASE_CERTIFICATION_1.7.md
 │
@@ -97,7 +107,9 @@ docs/
 │
 ├── design/           Superfícies visuais congeladas — o que é READ-ONLY e o que continua permitido mudar (ADR-050)
 │   ├── README.md
-│   └── DESIGN_CONSTITUTION.md  Congelamento da Premium Home Experience (Home + /categorias)
+│   ├── DESIGN_CONSTITUTION.md  Congelamento da Premium Home Experience (Home + /categorias)
+│   ├── HOME_COMPONENTS.md      Registro vivo de status/dono/dependências por componente da Home (ADR-053)
+│   └── HOME_AUDIT_2026_07_06.md  Auditoria pontual da Home congelada
 │
 └── archive/          Documentos obsoletos preservados por contexto histórico
     ├── README.md
@@ -192,4 +204,4 @@ Estas regras são permanentes — valem para toda contribuição futura:
 
 Este Knowledge System é mantido pelo CTO do ParaguAI. Sugestões de melhoria seguem o mesmo processo que qualquer decisão Tipo 1: `foundation/DECISION_FILTER.md`.
 
-Última atualização: **2026-07-06 — 11ª categoria `design/` adicionada (ADR-050, congelamento visual da Premium Home Experience); 10ª categoria `business/` adicionada (ADR-049, Release 1.8 Program C Wave 0); 9ª categoria `marketplace/` adicionada (ADR-048, Release 1.8 Program A Wave 3); árvore de `product/` e `operations/` corrigida para refletir o estado real (Sprint Zero, Fase 2 — Foundation Consistency); Knowledge System v1.0 implementado em 2026-06-28**
+Última atualização: **2026-07-08 (RC-12, Documentation Information Architecture) — árvore de `engineering/`, `product/`, `operations/` e `design/` corrigida para refletir o estado real; `product/releases/` ganhou índice próprio (`releases/README.md`); contagem de ADR atualizada para 55+.** Histórico: 2026-07-06 — 11ª categoria `design/` adicionada (ADR-050, congelamento visual da Premium Home Experience); 10ª categoria `business/` adicionada (ADR-049, Release 1.8 Program C Wave 0); 9ª categoria `marketplace/` adicionada (ADR-048, Release 1.8 Program A Wave 3); Knowledge System v1.0 implementado em 2026-06-28

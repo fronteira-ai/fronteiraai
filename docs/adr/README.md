@@ -4,7 +4,7 @@ Pasta reservada para Architectural Decision Records individuais. Futura home de 
 
 ## Estado atual
 
-Os ADRs (ADR-001 a ADR-039+) estão atualmente consolidados em um único arquivo: `docs/operations/DECISIONS.md`.
+Os ADRs (ADR-001 a ADR-055+) estão atualmente consolidados em um único arquivo: `docs/operations/DECISIONS.md`.
 
 Esta pasta será populada quando os ADRs migrarem para arquivos individuais no formato `ADR-XXX-titulo.md`. Essa migração será feita em um Release específico com ADR correspondente documentando a transição.
 

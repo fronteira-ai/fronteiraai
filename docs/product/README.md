@@ -8,10 +8,45 @@ Dar visibilidade ao estado funcional do produto (o que está pronto, em desenvol
 
 ## Documentos desta pasta
 
+Agrupados por propósito, não por data de criação. Ordem de leitura recomendada dentro de cada grupo: de cima para baixo.
+
+### Estado e roadmap
+
 | Documento | Responde |
 |---|---|
 | `FEATURES.md` | Inventário de todas as funcionalidades por estado real — concluído, em desenvolvimento, planejado |
-| `MASTER_ROADMAP.md` | Roadmap estratégico de 4 Fases — Discovery Platform, Trust & Reputation, Intelligence Layer, Scale & Expansion |
+| `MASTER_ROADMAP.md` | Roadmap estratégico de 4 Fases (visão de longo prazo) — Discovery Platform, Trust & Reputation, Intelligence Layer, Scale & Expansion. **Não confundir com os roadmaps por Release abaixo** — este é o horizonte estratégico, aqueles são execução Release a Release |
+| `ROADMAP_1_8.md` | Roadmap operacional da Release 1.8, organizado por Program/Wave |
+| `ROADMAP_1_9.md` | Roadmap operacional da Release 1.9, organizado por Program |
+| `ROADMAP_2_0.md` | Roadmap operacional da Release 2.0, organizado por Program/Wave em ordem de execução — **Program Ω primeiro** (ver `RELEASE_ALIGNMENT.md`) |
+| `KPIS.md` | Indicadores-chave de produto |
+
+### Estratégia e visão
+
+| Documento | Responde |
+|---|---|
+| `STRATEGIC_ASSETS.md` | Catálogo oficial de Ativos Estratégicos (Core/Supporting/Future) |
+| `MOAT_STRATEGY.md` | Os 8 Moats permanentes do ParaguAI |
+| `MARKETPLACE_STRATEGY.md` | Estratégia de expansão e cobertura do marketplace |
+| `MARKETPLACE_VISION.md` | Visão de longo prazo do marketplace |
+| `PARAGUAI_BRAIN.md` | A camada de inteligência — visão e arquitetura conceitual |
+| `PRODUCT_POLICY.md` | Políticas permanentes de produto |
+
+### Auditoria de alinhamento estratégico (PROGRAM Ω, 2026-07-08)
+
+| Documento | Responde |
+|---|---|
+| `VISION_ALIGNMENT_AUDIT.md` | Auditoria estratégica (não técnica) de 8 domínios contra `foundation/VISION_2035.md` — origem do Program Ω |
+| `STRATEGIC_GAP_MAP.md` | Mapa de maturidade atual vs. esperada por domínio |
+| `VISION_SCORECARD.md` | Vision Alignment Score (0–100) e metodologia |
+| `RELEASE_ALIGNMENT.md` | Justificativa da reordenação do `ROADMAP_2_0.md` por impacto estratégico — companion do Program Ω |
+
+### Processo
+
+| Documento | Responde |
+|---|---|
+| `RELEASE_PLAYBOOK.md` | Como uma Release é planejada e executada |
+| `releases/` | Blueprints, planos de execução e relatórios por Release/Wave específica — ver `releases/README.md` |
 
 ## Quando criar um novo documento aqui
 

@@ -8,14 +8,35 @@ Garantir consistência de linguagem, padrões e qualidade entre todos os contrib
 
 ## Documentos desta pasta
 
+### Convenções e terminologia (leitura obrigatória, qualquer tarefa)
+
 | Documento | Responde |
 |---|---|
 | `CONVENTIONS.md` | Como nomear, estruturar e escrever código neste projeto |
 | `GLOSSARY.md` | Terminologia oficial — o único dicionário do projeto |
-| `TECH_DEBT.md` | Dívida técnica identificada e seu status de resolução |
-| `ACQUISITION.md` | Como funciona o Acquisition Engine (pipeline de dados) |
-| `CONNECTOR_GUIDE.md` | Como criar um novo Conector para o Acquisition Engine |
 | `AGENTS.md` | Avisos críticos para agentes IA sobre Next.js neste projeto |
+| `TECH_DEBT.md` | Dívida técnica identificada e seu status de resolução |
+
+### Connector Platform
+
+| Documento | Responde |
+|---|---|
+| `ACQUISITION.md` | Como funciona o Acquisition Engine (pipeline de dados) |
+| `CONNECTOR_GUIDE.md` | Como criar um novo Conector |
+| `CONNECTOR_PLATFORM_ARCHITECTURE_REVIEW.md` | Fotografia real da Connector Platform (Release 1.8 — Wave 4) |
+| `CONNECTOR_PLATFORM_V2.md` | Industrialização — SDK, Certification, Observability (Release 1.8 — Wave 5-6) |
+| `SOURCE_DISCOVERY_POLICY.md` | Política permanente de escolha de fonte de dado |
+
+### Domínios de inteligência e infraestrutura
+
+| Documento | Responde |
+|---|---|
+| `DATABASE_ENGINEERING.md` | Database Migration System V2 — padrão, runbook, governança |
+| `CRON_INFRASTRUCTURE.md` | Infraestrutura de agendamento — decoupled da Vercel (RC-3) |
+| `EXCHANGE_FOUNDATION_FOR_LIVE_PRICING.md` | Fundação de câmbio para preços ao vivo (Release 1.8 — Program A Wave 1) |
+| `MARKET_INTELLIGENCE_ENGINE.md` | Núcleo de inteligência de preços (Release 1.8 — Program C) |
+| `MARKETPLACE_FOUNDATION_SCALE_AUDIT.md` | Auditoria de escala da fundação de marketplace |
+| `PREMIUM_HOME_EXPERIENCE.md` | Arquitetura da Home Premium + `/categorias` (Release 1.9 — Program F) |
 
 ## Quando criar um novo documento aqui
 

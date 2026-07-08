@@ -8,12 +8,22 @@ Garantir rastreabilidade completa: qualquer pessoa pode reconstruir o contexto d
 
 ## Documentos desta pasta
 
+### Estado vivo
+
 | Documento | Responde | Atualiza quando |
 |---|---|---|
 | `PROJECT_STATUS.md` | Fotografia do presente — o que está implementado, qual a Release atual, qual o build state | Ao final de cada Release |
 | `CHANGELOG.md` | História completa de cada Release — o que mudou e por quê | Ao final de cada Release |
 | `NEXT_STEPS.md` | Próximos passos imediatos — o que fazer depois desta Release | Ao final de cada Release |
-| `DECISIONS.md` | Registro de todas as decisões arquiteturais (ADR-001 a ADR-039+) | A cada decisão Tipo 1 tomada |
+| `DECISIONS.md` | Registro de todas as decisões arquiteturais (ADR-001 a ADR-055+) | A cada decisão Tipo 1 tomada |
+
+### Baseline e certificação (registro permanente, não append-only)
+
+| Documento | Responde |
+|---|---|
+| `PRODUCTION_BASELINE_1.9.md` | Baseline oficial de produção ao final da Release 1.9 — referência permanente para Releases futuras |
+| `RELEASE_CERTIFICATION_1.7.md` | Certificação formal da Release 1.7 |
+| `RELEASE_CERTIFICATION_1.5.md` | Certificação formal da Release 1.5 |
 
 ## Quando criar um novo documento aqui
 
