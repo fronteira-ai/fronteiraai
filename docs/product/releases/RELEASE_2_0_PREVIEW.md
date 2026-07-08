@@ -3,6 +3,7 @@
 
 **Categoria**: `docs/product/releases/` (mesma família de `RELEASE_1_5_BLUEPRINT.md`.../`RELEASE_1_8_BLUEPRINT.md`)
 **Criado**: 2026-07-08 (PROGRAM Z — RC-10, a partir do baseline de `docs/operations/PRODUCTION_BASELINE_1.9.md`)
+**Atualizado**: 2026-07-08 (PROGRAM Ω — Mission Ω-1/Ω-3) — Program Ω adicionado como maior prioridade do Release, aprovado pelo CTO; precede os cinco domínios abaixo. Ver `docs/product/VISION_ALIGNMENT_AUDIT.md` para a auditoria que o originou.
 **Status**: Preview — objetivos e escopo, sem Blueprint de execução, sem código
 
 ---
@@ -25,13 +26,15 @@ A Release 2.0 é o primeiro Release cujo mandato central deixa de ser "existe a 
 
 ## Escopo
 
-Cinco grandes domínios, sequenciados como Waves em `docs/product/ROADMAP_2_0.md`:
+**Program Ω — Marketplace Density & Merchant Activation** precede todo o resto: dono exclusivo de crescer cobertura real de catálogo e converter o funil claim→cliente em lojas reivindicadas reais, sem código de plataforma novo. Identificado pela Mission Ω-1 (Vision Alignment Audit, `docs/product/VISION_ALIGNMENT_AUDIT.md`) como o substrato do qual os cinco domínios abaixo dependem para gerar valor real, não apenas valor técnico.
 
-- **Marketplace Intelligence** — elevar Market Intelligence/Marketplace Operations (hoje compute-on-read, cobertura ainda baixa) a um nível de confiabilidade e escala que sustente as Waves seguintes.
+Cinco grandes domínios técnicos, sequenciados como Waves em `docs/product/ROADMAP_2_0.md` (ordem de execução real, não apenas dependência técnica — Program Ω primeiro):
+
+- **Marketplace Intelligence** — hardening de Market Intelligence/Marketplace Operations (hoje compute-on-read) a um nível de confiabilidade e escala que sustente as Waves seguintes; cobertura em si é escopo exclusivo de Program Ω, não desta Wave.
 - **Recommendation Engine** — primeiro motor de recomendação real do ParaguAI, construído sobre Canonical Catalog + Market Intelligence + Trust, não um domínio isolado.
 - **Buyer Platform** — identidade e experiência do comprador além da Home (favoritos sincronizados, histórico, alertas reais usando o `BuyerAlertEngine` já existente em fundação).
-- **Merchant Platform** — evolução do painel para recomendações de crescimento acionáveis, consumindo Decision Engine/Growth Engine já existentes.
-- **ParaguAI Brain** — primeiros consumidores de produto reais do Knowledge Graph/Trust, hoje só instrumentado internamente.
+- **Merchant Platform** — hardening de plataforma (dedupe de widgets, billing); ativação de lojas reais é escopo exclusivo de Program Ω, não desta Wave.
+- **ParaguAI Brain** — primeiros consumidores de produto reais do Knowledge Graph/Trust, hoje só instrumentado internamente; dividido em mapeamento de eventos (sem dependência, pode rodar cedo) e primeiro consumidor real (depende de Recommendation Engine).
 
 ### Fora de escopo desta preview
 
@@ -41,4 +44,4 @@ Blueprint de execução por Epic, cronograma, alocação de Waves a datas, e qua
 
 Mesma disciplina usada em toda Wave da Release 1.8/1.9: auditoria de sobreposição antes de qualquer código (o que já existe e faz isso?), preferência por estender um serviço existente a criar um novo domínio, gaps documentados em vez de mascarados por dado fabricado, e Quality Gate completo (lint/typecheck/testes/build) antes de qualquer Wave ser considerada concluída (ADR-051).
 
-Ver `docs/product/ROADMAP_2_0.md` para o detalhamento Wave a Wave (objetivo, escopo, dependências, critérios de aceite, riscos).
+Ver `docs/product/ROADMAP_2_0.md` para o detalhamento Program/Wave a Wave (objetivo, escopo, dependências, critérios de aceite, riscos) — Program Ω primeiro, na ordem de execução real.
