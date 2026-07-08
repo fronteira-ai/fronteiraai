@@ -1034,3 +1034,28 @@ Se qualquer uma das cinco não puder ser cumprida no momento em que a Wave termi
 **Alternativas descartadas**:
 - Fatiar RC-8 em ~10 Sprints sequenciais, uma por componente — rejeitada explicitamente pelo CTO ao escolher "Explicit one-time exception" quando questionado, por ser o objetivo declarado da missão (ritmo vertical consistente exige mudança coordenada entre seções, não isolada).
 - Aplicar a mesma exceção a `Button.tsx`/`Chip.tsx`/`ProductCard.tsx` para padronização total de botões/ícones pedida no brief — descartada: esses três arquivos são consumidos fora de Home (Navbar, `/products`, `/search`), e o brief não nomeou esses caminhos como dentro do escopo da exceção; padronizá-los exigiria uma Sprint própria com blast radius sitewide, nomeada e aprovada separadamente.
+
+---
+
+## ADR-055 — Release 1.9 Production Baseline
+
+**Data**: 2026-07-08 (PROGRAM Z — RC-10)
+**Status**: Aceita
+
+**Contexto**: RC-9 (mesma data) auditou uma suspeita de divergência entre Home local e produção e confirmou, por comparação literal de HTML ao vivo contra o código-fonte, que não havia nenhuma — o código em `main` é exatamente o que serve `www.fronteiraai.com`. Com essa confirmação e com a Release 1.9 (Program F — Premium Home Experience, mais o encerramento de governança PROGRAM Z RC-1 a RC-8) concluída, o CTO mandatou RC-10: uma auditoria completa de 18 áreas da plataforma (git/GitHub, Vercel, domínio, Home, Design Constitution, Connector Platform, Canonical Catalog, Market Intelligence, Marketplace Operations, Merchant Platform, Exchange, Supabase, Cron, CI/CD, Quality Gate) seguida da criação de um documento de baseline permanente. A missão pediu explicitamente a criação de `docs/release-1.9/` e `docs/release-2.0/` como novas categorias do Knowledge System — conflito real com a regra existente (`docs/README.md`/`CLAUDE.md`: só 11 categorias aprovadas, categoria nova exige ADR própria) e com o precedente já estabelecido de que documentos por Release vivem em `docs/product/releases/` (`RELEASE_1_5_BLUEPRINT.md` até `RELEASE_1_8_*`) e que o roadmap vivo é `docs/product/MASTER_ROADMAP.md`/`ROADMAP_1_8.md`/`ROADMAP_1_9.md`. Flagado ao CTO antes de qualquer arquivo ser criado; resolvido a favor de reaproveitar as categorias existentes.
+
+**Decisão 1 — nenhuma categoria nova do Knowledge System criada**: `docs/operations/PRODUCTION_BASELINE_1.9.md` (mesma família de `PROJECT_STATUS.md`/`RELEASE_CERTIFICATION_1.7.md`), `docs/product/releases/RELEASE_2_0_PREVIEW.md` (mesma convenção de nomenclatura de `RELEASE_1_8_BLUEPRINT.md`) e `docs/product/ROADMAP_2_0.md` (mesmo padrão de `ROADMAP_1_8.md`/`ROADMAP_1_9.md`). O Knowledge System permanece com 11 categorias.
+
+**Decisão 2 — Release 1.9 declarada baseline oficial de produção**: `docs/operations/PRODUCTION_BASELINE_1.9.md` é o corte transversal permanente do estado da plataforma ao final da Release 1.9 — infraestrutura consolidada (14 domínios em `src/domains/`, Quality Gate 100% verde reexecutado nesta auditoria: lint 0, typecheck 0, 524/524 testes, build OK), Home Premium publicada e verificada ao vivo, governança madura (55 ADRs, Knowledge System estável). Este documento é a referência que toda Release futura consulta para saber "o que já existe e está provado", em vez de cada Release reconstruir esse contexto do zero.
+
+**Decisão 3 — Home Premium permanece congelada**: nenhuma mudança nesta ADR ao regime estabelecido pelo ADR-053/054 (`DESIGN_CONSTITUTION.md` v1.3) — Sprint isolada de componente único continua o único caminho de evolução visual da Home. RC-10 é auditoria e documentação, não uma Wave de produto; não altera, não reabre e não estende o congelamento.
+
+**Decisão 4 — foco das próximas Releases passa a ser produto e inteligência, não infraestrutura**: `docs/product/releases/RELEASE_2_0_PREVIEW.md` e `docs/product/ROADMAP_2_0.md` registram a intenção (Marketplace Intelligence, Recommendation Engine, Buyer Platform, Merchant Platform, ParaguAI Brain) sem abrir nenhuma Wave — abertura formal de cada uma continua exigindo mandato próprio do CTO.
+
+**Decisão 5 — mudanças de arquitetura de blast radius maior exigem nova ADR**: esta ADR não é uma licença geral para expandir domínios, schema ou categorias de `docs/` — qualquer decisão estrutural (novo domínio top-level, nova categoria do Knowledge System, mudança de schema que atravesse múltiplos domínios) continua exigindo sua própria ADR antes do início, mesma disciplina de toda decisão estrutural já registrada neste documento.
+
+**Consequência**: nenhum código de aplicação, componente, layout, API, banco, build ou configuração foi alterado por esta ADR — só três documentos novos e esta entrada. `local.html`/`prod.html` (não rastreados) e `.gitignore` modificado, encontrados durante a auditoria, não foram tocados nem incluídos no commit desta missão — aguardam triagem própria do CTO, nomeados em `PRODUCTION_BASELINE_1.9.md` §9.
+
+**Alternativas descartadas**:
+- Criar `docs/release-1.9/` e `docs/release-2.0/` como pedido literalmente no brief — descartada: exigiria uma ADR própria só para autorizar 2 categorias novas, uma mudança de governança maior que o baseline em si, e colidiria com o `MASTER_ROADMAP.md`/`ROADMAP_1_9.md` já existentes em `docs/product/`.
+- Registrar esta decisão como arquivo standalone em `docs/adr/` — descartada: `docs/adr/README.md` descreve esse formato como convenção futura, ainda não ativada; toda ADR até hoje (ADR-001 a ADR-054) é uma entrada numerada neste documento, e mudar o formato justamente na ADR que declara um baseline de estabilidade seria inconsistente com o próprio espírito da decisão.
