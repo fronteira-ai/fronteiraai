@@ -11,6 +11,7 @@ import "./shoppingchina/index";
 import "./megaeletronicos/index";
 import "./romashopping/index";
 import "./atacadoconnect/index";
+import "./mobilezone/index";
 
 let bootstrapped = false;
 

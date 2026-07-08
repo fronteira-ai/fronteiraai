@@ -24,14 +24,14 @@
 | 1 | **Nissei** | Idem — distribuidor oficial Apple/Sony/Canon/Nikon, alto valor de catálogo, mesmo bloqueio técnico |
 | 2 | **New Zone** | Bloqueado tecnicamente; auto-descrita como "plataforma de atacado" — B2B-minded, bom encaixe cultural para uma conversa de parceria de dado |
 | 3 | **Casa Americana** | Bloqueado tecnicamente; loja tradicional relevante, mas prioridade ligeiramente menor que os 3 acima por menor volume de citação estratégica |
-| 4 | **Mobile Zone** | Não bloqueado por política, mas viabilidade técnica incerta (SPA/JS) — uma conversa de parceria pode ser mais rápida que o spike técnico |
-| 4 | **Visão VIP** | Idem — mesma incerteza técnica (possível CSR) |
+| 3 | **Visão VIP** | **Revisado (Wave Ξ-1)**: `robots.txt` bloqueia ClaudeBot nomeadamente — mesma categoria de Cellshop/Nissei/New Zone/Casa Americana, não mais "incerteza técnica" |
 | 5 | **Shopping China** | Connector já existe — parceria é upside (selo, dashboard), não bloqueio; contatar depois de recertificar o Connector existente |
 | 5 | **Mega Eletrônicos** | Tecnicamente pronta para Connector — parceria é upside, não caminho único |
 | 5 | **Roma Shopping** | Idem — maior catálogo potencial, parceria formalizaria uma relação já tecnicamente viável |
 | 5 | **Atacado Connect** | Idem |
+| 5 | **Mobile Zone** | **Conectado (Wave Ξ-1, 2026-07-08)** — spike técnico confirmou API pública explorável; connector implementado e sincronizando, sem headless browser. Parceria é upside, não caminho único — mesmo status de Shopping China/Mega Eletrônicos/Roma Shopping/Atacado Connect |
 
-**Racional**: contatar primeiro quem só tem o caminho comercial (prioridade 1-3), depois quem tem incerteza técnica que uma parceria resolveria mais rápido que um spike de engenharia (prioridade 4), e por último quem já é tecnicamente integrável — ali a parceria fortalece a relação, mas não é a única porta de entrada de dado.
+**Racional**: contatar primeiro quem só tem o caminho comercial (prioridade 1-3), e por último quem já é tecnicamente integrável — ali a parceria fortalece a relação, mas não é a única porta de entrada de dado. A categoria "incerteza técnica" (antiga prioridade 4) foi eliminada nesta revisão: Mobile Zone resolveu para Connector técnico, Visão VIP resolveu para bloqueio de política — nenhum caso de incerteza real permanece nos 10 merchants Tier 1.
 
 ---
 
@@ -43,8 +43,8 @@
 | Nissei | nissei.com/py | Informática/Eletrodomésticos | Restricted — Commercial Partnership Recommended | Data Partnership | A identificar | A identificar | Not Contacted | — | — | 1. Contato inicial (pendente) | Prioridade máxima — distribuidor oficial de marcas de peso, alto valor de catálogo se viabilizado. |
 | Casa Americana | casaamericana.com.py | Eletrônicos/Geral | Restricted — Commercial Partnership Recommended | Data Partnership | A identificar | A identificar | Not Contacted | — | — | 1. Contato inicial (pendente) | `Disallow: /catalogo` sugere que o operador já pensa em proteção de catálogo — abordar com transparência sobre o modelo de parceria. |
 | New Zone | newzone.com.py | Importados/Atacado | Restricted — Commercial Partnership Recommended | Data Partnership | A identificar | A identificar | Not Contacted | — | — | 1. Contato inicial (pendente) | Auto-descrita como "plataforma de atacado" — pode já ter um feed B2B pronto para oferecer. |
-| Mobile Zone | mobilezone.com.py | Celulares/Eletrônicos | Needs Technical Spike | Pending Decision | A identificar | A identificar | Not Contacted | — | — | 1. Contato inicial (pendente) | Sem bloqueio de política — parceria pode ser mais rápida que resolver a suspeita de renderização client-side via engenharia. |
-| Visão VIP | visaovip.com | Informática | Needs Technical Spike | Pending Decision | A identificar | A identificar | Not Contacted | — | — | 1. Contato inicial (pendente) | Mesma lógica de Mobile Zone — sitemap não cobre catálogo, spike ou parceria resolvem o mesmo problema por caminhos diferentes. |
+| Mobile Zone | mobilezone.com.py | Celulares/Eletrônicos | Certified (2026-07-08) | Public Connector | N/A | N/A | N/A | — | — | Conectado tecnicamente — não é mais candidato a parceria comercial | Spike técnico (Wave Ξ-1) confirmou API pública explorável sem headless browser; connector já implementado e sincronizando. Removido do pipeline de contato comercial. |
+| Visão VIP | visaovip.com | Informática | Restricted — Commercial Partnership Recommended | Data Partnership | A identificar | A identificar | Not Contacted | — | — | 1. Contato inicial (pendente) | **Revisado (Wave Ξ-1, 2026-07-08)**: `robots.txt` bloqueia ClaudeBot nomeadamente — mesma categoria dos demais bloqueados, não mais "spike técnico". Prioridade de contato deve subir para o mesmo nível de Cellshop/Nissei/New Zone/Casa Americana. |
 | Shopping China | shoppingchina.com.py | Importados/Geral | In Progress (connector existe, não certificado) | Public Connector | A identificar | A identificar | Not Contacted | — | — | 1. Contato inicial (pendente) | Recertificar o Connector existente primeiro (usar sitemap real); parceria formaliza depois, não bloqueia o Connector. |
 | Mega Eletrônicos | megaeletronicos.com | Eletrônicos | Ready for Connector Build | Public Connector | A identificar | A identificar | Not Contacted | — | — | 1. Contato inicial (pendente) | Maior loja de eletrônicos de CDE — parceria é upside após o Connector técnico já estar rodando. |
 | Roma Shopping | romapy.com | Geral (7 departamentos) | Ready for Connector Build | Public Connector | A identificar | A identificar | Not Contacted | — | — | 1. Contato inicial (pendente) | Maior catálogo potencial (~50k) — parceria oficial valeria a pena pelo volume, mesmo já sendo tecnicamente integrável. |

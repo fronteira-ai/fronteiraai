@@ -36,6 +36,8 @@
     "sync:romashopping:execute": "tsx scripts/sync-romashopping.ts --execute",
     "sync:atacadoconnect": "tsx scripts/sync-atacadoconnect.ts",
     "sync:atacadoconnect:execute": "tsx scripts/sync-atacadoconnect.ts --execute",
+    "sync:mobilezone": "tsx scripts/sync-mobilezone.ts",
+    "sync:mobilezone:execute": "tsx scripts/sync-mobilezone.ts --execute",
     "canonical-catalog:bootstrap": "tsx scripts/canonical-catalog-bootstrap.ts",
     "canonical-catalog:bootstrap:execute": "tsx scripts/canonical-catalog-bootstrap.ts --execute",
     "db:push": "supabase db push",
