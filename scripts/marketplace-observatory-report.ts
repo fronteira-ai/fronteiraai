@@ -18,12 +18,18 @@ import { createMarketplaceOperationsServices } from "../lib/marketplace-operatio
 const STRATEGIC_PRODUCTS: { label: string; pattern: string; exclude?: string }[] = [
   { label: "iPhone 17 Pro Max", pattern: "%iphone%17%pro%max%" },
   { label: "iPhone 17 Pro", pattern: "%iphone%17%pro%", exclude: "max" },
+  { label: "Samsung Galaxy (geral)", pattern: "%galaxy%" },
   { label: "Galaxy Ultra (topo de linha Samsung)", pattern: "%galaxy%ultra%" },
   { label: "MacBook Air", pattern: "%macbook%air%" },
   { label: "MacBook Pro", pattern: "%macbook%pro%" },
+  { label: "Notebooks (geral, todas as marcas)", pattern: "%notebook%" },
   { label: "AirPods Pro", pattern: "%airpods%pro%" },
+  { label: "Apple Watch", pattern: "%apple%watch%" },
   { label: "PlayStation 5", pattern: "%playstation%5%" },
   { label: "Nintendo Switch", pattern: "%nintendo%switch%" },
+  { label: "Placa de vídeo — RTX", pattern: "%rtx%" },
+  { label: "Placa de vídeo — Radeon", pattern: "%radeon%" },
+  { label: "Smart TV", pattern: "%smart%tv%" },
 ];
 
 async function main() {
