@@ -1,7 +1,9 @@
 export { SitemapCrawler } from "./SitemapCrawler";
 export type { SitemapCrawlOptions, SitemapEntry } from "./SitemapCrawler";
-export { DeltaImportPlanner } from "./DeltaImportPlanner";
-export type { DeltaImportPlan } from "./DeltaImportPlanner";
+
+// Delta Import moved out of the Sitemap Engine (Program Σ, Mission Σ-2) —
+// it is now the platform-level Delta Engine, `src/domains/connectors/delta`,
+// independent of sitemap/URL vocabulary. Import it from `../../delta`.
 
 // Re-exported, not moved: SitemapParser is a pre-existing, already-tested
 // module (Release 1.7 — Wave 2, Discovery) with real consumers at its

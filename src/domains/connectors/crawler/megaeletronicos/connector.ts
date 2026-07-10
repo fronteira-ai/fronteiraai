@@ -1,9 +1,10 @@
 import type { IConnector, ConnectorMetadata, ConnectorFetchOptions } from "../../types/connector.types";
 import type { ConnectorBatch } from "../../types/raw.types";
 import { ConnectorType } from "../../types/enums";
-import { HttpFetchStrategy, RateLimitedFetchStrategy, SitemapCrawler, DeltaImportPlanner } from "../../sdk";
-import { SupabaseConnectorUrlSnapshotRepository } from "../../infrastructure/SupabaseConnectorUrlSnapshotRepository";
-import type { UrlSnapshotEntry } from "../../repositories/IConnectorUrlSnapshotRepository";
+import { HttpFetchStrategy, RateLimitedFetchStrategy, SitemapCrawler } from "../../sdk";
+import { DeltaEngine } from "../../delta";
+import { SupabaseDeltaStateRepository } from "../../infrastructure/SupabaseDeltaStateRepository";
+import type { DeltaStateEntry } from "../../repositories/IDeltaStateRepository";
 import { getSupabaseServiceClient } from "@/lib/supabase/service";
 import { isProductUrl, parseProductUrl } from "./listing-parser";
 import { parseDetailPage } from "./detail-parser";
@@ -14,6 +15,8 @@ import { CAPABILITIES } from "./capabilities";
 // ShoppingChinaConnector (sitemap-driven discovery + Delta Import, wired
 // from day one — not retrofitted later) — no new Connector Platform
 // component was introduced for this merchant, per the Wave's mandate.
+// Program Σ — Mission Σ-2 — Delta Import generalized to the platform-level
+// Delta Engine (`../../delta`); behavior unchanged.
 export class MegaEletronicosConnector implements IConnector {
   readonly metadata: ConnectorMetadata = {
     id: CFG.connectorId,
@@ -27,28 +30,29 @@ export class MegaEletronicosConnector implements IConnector {
 
   private readonly fetcher = new RateLimitedFetchStrategy(new HttpFetchStrategy(), CFG.requestDelayMs);
   private readonly sitemapCrawler = new SitemapCrawler(this.fetcher);
-  private readonly deltaPlanner = new DeltaImportPlanner();
+  private readonly deltaEngine = new DeltaEngine();
 
   async fetch(options: ConnectorFetchOptions = {}): Promise<ConnectorBatch> {
     const fetchedAt = new Date().toISOString();
     const allOffers: ConnectorBatch["items"] = [];
 
-    const snapshotRepo = new SupabaseConnectorUrlSnapshotRepository(getSupabaseServiceClient());
-    const previousSnapshots = await snapshotRepo.getSnapshotMap(CFG.connectorId);
+    const deltaStateRepo = new SupabaseDeltaStateRepository(getSupabaseServiceClient());
+    const previousCheckpoints = await deltaStateRepo.getCheckpoints(CFG.connectorId);
 
     const entries = await this.sitemapCrawler.collectEntries(CFG.sitemapUrl, {
       timeoutMs: CFG.timeoutMs,
       filter: isProductUrl,
     });
 
-    const plan = this.deltaPlanner.plan(entries, previousSnapshots);
+    const candidates = entries.map((e) => ({ key: e.url, checkpoint: e.lastmod }));
+    const plan = this.deltaEngine.plan(candidates, previousCheckpoints);
     console.log(
       `[MegaEletronicos] Sitemap yielded ${entries.length} product URLs — Delta Import: ${plan.toFetch.length} to fetch, ${plan.skipped.length} skipped (unchanged since last sync)`
     );
 
-    const lastmodByUrl = new Map(entries.map((e) => [e.url, e.lastmod]));
+    const checkpointByUrl = new Map(entries.map((e) => [e.url, e.lastmod]));
     const toFetch = plan.toFetch.slice(0, CFG.maxProducts);
-    const fetchedSnapshots: UrlSnapshotEntry[] = [];
+    const fetchedSnapshots: DeltaStateEntry[] = [];
 
     for (const url of toFetch) {
       const parsed = parseProductUrl(url);
@@ -64,19 +68,19 @@ export class MegaEletronicosConnector implements IConnector {
 
       if (offer) {
         allOffers.push(offer);
-        const lastmod = lastmodByUrl.get(url);
-        if (lastmod) fetchedSnapshots.push({ url, lastmod });
+        const checkpoint = checkpointByUrl.get(url);
+        if (checkpoint) fetchedSnapshots.push({ key: url, checkpoint });
       } else {
         console.warn(`[MegaEletronicos] Parse error for ${parsed.url}: ${error}`);
       }
     }
 
-    const skippedSnapshots: UrlSnapshotEntry[] = plan.skipped
-      .map((url) => ({ url, lastmod: lastmodByUrl.get(url) }))
-      .filter((e): e is UrlSnapshotEntry => !!e.lastmod);
+    const skippedSnapshots: DeltaStateEntry[] = plan.skipped
+      .map((url) => ({ key: url, checkpoint: checkpointByUrl.get(url) }))
+      .filter((e): e is DeltaStateEntry => !!e.checkpoint);
 
     if (!options.dryRun) {
-      await snapshotRepo.saveSnapshots(CFG.connectorId, [...fetchedSnapshots, ...skippedSnapshots]);
+      await deltaStateRepo.saveCheckpoints(CFG.connectorId, [...fetchedSnapshots, ...skippedSnapshots]);
     }
 
     return {

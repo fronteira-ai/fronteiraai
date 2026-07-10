@@ -28,9 +28,12 @@ export { CsvFileConnector } from "./crawler/reference/CsvFileConnector";
 export { ShoppingChinaConnector } from "./crawler/shoppingchina";
 export { HttpFetchStrategy, RateLimitedFetchStrategy } from "./sdk/fetch";
 export type { IFetchStrategy, FetchOptions, FetchResult } from "./sdk/fetch";
-export { SitemapCrawler, DeltaImportPlanner } from "./sdk/sitemap";
-export type { SitemapCrawlOptions, SitemapEntry, DeltaImportPlan } from "./sdk/sitemap";
+export { SitemapCrawler } from "./sdk/sitemap";
+export type { SitemapCrawlOptions, SitemapEntry } from "./sdk/sitemap";
 export { parseAmount, cleanText, findFirstCurrencyAmount } from "./sdk/parsing";
+
+export { DeltaEngine } from "./delta";
+export type { DeltaCandidate, DeltaPlan } from "./delta";
 
 export { ConnectorHealthService, buildConnectorHealthSummary } from "./services/ConnectorHealthService";
 export type { ConnectorHealthSummary } from "./services/ConnectorHealthService";
@@ -38,11 +41,11 @@ export type { ConnectorHealthSummary } from "./services/ConnectorHealthService";
 export { SupabaseConnectorRepository } from "./infrastructure/SupabaseConnectorRepository";
 export { SupabaseSyncRunRepository } from "./infrastructure/SupabaseSyncRunRepository";
 export { SupabaseCatalogRepository } from "./infrastructure/SupabaseCatalogRepository";
-export { SupabaseConnectorUrlSnapshotRepository } from "./infrastructure/SupabaseConnectorUrlSnapshotRepository";
+export { SupabaseDeltaStateRepository } from "./infrastructure/SupabaseDeltaStateRepository";
 export type { IConnectorRepository } from "./repositories/IConnectorRepository";
 export type { ISyncRunRepository } from "./repositories/ISyncRunRepository";
 export type { ICatalogRepository } from "./repositories/ICatalogRepository";
-export type { IConnectorUrlSnapshotRepository, UrlSnapshotEntry } from "./repositories/IConnectorUrlSnapshotRepository";
+export type { IDeltaStateRepository, DeltaStateEntry } from "./repositories/IDeltaStateRepository";
 
 export type { Connector } from "./domain/Connector";
 export type { SyncRun } from "./domain/SyncRun";
