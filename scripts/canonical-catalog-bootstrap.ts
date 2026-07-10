@@ -34,13 +34,26 @@ async function main() {
   const supabase = getServiceClient();
   const { catalogRepo, canonicalProductService, mergeSuggestionService } = createCanonicalCatalogServices(supabase);
 
-  const { data: products, error } = await supabase
-    .from("products")
-    .select("id, slug, name, brand_id, category_id, image_url, specifications");
+  // Paginated — a plain .select() is silently capped at PostgREST's default
+  // row limit (1000). Left unpaginated, this script would only ever process
+  // the first 1000 products regardless of real catalog size, understating
+  // "Products processed" without any error (found real during Wave Ξ-2,
+  // Program Ξ, once the catalog crossed 1000 rows).
+  const PAGE = 1000;
+  const products: ProductRow[] = [];
+  for (let from = 0; ; from += PAGE) {
+    const { data, error } = await supabase
+      .from("products")
+      .select("id, slug, name, brand_id, category_id, image_url, specifications")
+      .range(from, from + PAGE - 1);
 
-  if (error) {
-    console.error("[canonical-catalog-bootstrap] Failed to load products:", error.message);
-    process.exit(1);
+    if (error) {
+      console.error("[canonical-catalog-bootstrap] Failed to load products:", error.message);
+      process.exit(1);
+    }
+    if (!data || data.length === 0) break;
+    products.push(...(data as ProductRow[]));
+    if (data.length < PAGE) break;
   }
 
   let created = 0;

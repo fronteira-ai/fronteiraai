@@ -17,8 +17,11 @@ export const MOBILE_ZONE_CONFIG = {
   imageBaseUrl: "https://images.mobilezone.com.br/s3-images/image/",
 
   // Same convention as the other 4 connectors — real catalog is larger
-  // (API reports count: 6956); raise once certified and on a real schedule.
-  maxProducts: 200,
+  // (API reports count: 6956). Raised (Program Ξ, Wave Ξ-5) — Mobile Zone
+  // is in the same "Celulares/Eletrônicos gerais" cluster the only measured
+  // real overlap belongs to (COMPETITIVE_DENSITY_MATRIX.md); certified and
+  // on a real schedule since Wave Xi-1.
+  maxProducts: 1500,
 
   // Page size for the /products?offset=&limit= endpoint.
   pageSize: 100,

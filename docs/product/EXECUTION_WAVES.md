@@ -39,6 +39,14 @@
 - **Ganho esperado**: confirmar ou refutar as projeções desta missão com dado real — se as projeções de overlap alto (Cellshop/Mobile Zone/Nissei) não se confirmarem, a estratégia de categoria precisa ser revisada antes de prosseguir
 - **Critérios de aceite**: toda métrica de `CATEGORY_DOMINATION_PLAN.md` remedida; pelo menos 1 categoria efetivamente "dominada" pela definição formal do documento
 
+## Wave Ξ-5 — Catalog Depth + Comparable Product Coverage Measurement
+
+- **Objetivo**: elevar `maxProducts` dos 5 connectors com base em `MERCHANT_OVERLAP_MATRIX.md`/`COMPETITIVE_DENSITY_MATRIX.md`, corrigir bug de paginação em `canonical-catalog-bootstrap.ts`, e construir instrumentação read-only (`cpc-report.ts`, `marketplace-observatory-report.ts`) para medir Comparable Product Coverage e AI Readiness Score contra dado real. Não estava definida antes desta entrega — nomeada Ξ-5 para não colidir com Ξ-2 (Technical Spike Resolution, escopo diferente e já majoritariamente resolvido).
+- **Merchants envolvidos**: os 5 já ativos (Shopping China, Mega Eletrônicos, Roma Shopping, Atacado Connect, Mobile Zone)
+- **Categorias impactadas**: nenhuma nova — profundidade dentro das categorias já cobertas
+- **Ganho esperado vs. real**: esperava-se Comparable Product Coverage subir com o catálogo. **Não subiu proporcionalmente** — Offer Density e AI Readiness Score caíram frente a Δ-3/Ξ-1 (catálogo 5x menor). Ver `COMPARABLE_PRODUCT_COVERAGE_REPORT.md` para a medição completa e o achado real: bootstrap não processava catálogo >1000 linhas, e mesmo corrigido, canonical bootstrap é 1:1 por design — comparação entre merchants só nasce de `MergeCandidate`s revisadas e aprovadas por humano (Shadow Mode), não de importar mais produtos.
+- **Critérios de aceite**: quality gate verde (lint/typecheck/testes/build) — atendido; medição real documentada — atendido; ganho de CPC — **não atendido**, achado registrado como candidato a Wave Ξ-6 (revisão de merge candidates), não como pendência silenciosa.
+
 ## Ordem — não paralela entre Ξ-1 e Ξ-2/Ξ-3
 
 Ξ-1 precede as demais porque tem a maior evidência de impacto e nenhuma dependência técnica bloqueante (só comercial). Ξ-2 (spike técnico) pode rodar em paralelo com Ξ-1 sem competir por recursos (natureza de investigação, não de negociação comercial). Ξ-3 é deliberadamente última — menor evidência de ganho de densidade, não deve competir por atenção comercial com Ξ-1. Ξ-4 é sempre a última de cada ciclo — nunca simultânea com as demais, porque seu propósito é medir o resultado delas.

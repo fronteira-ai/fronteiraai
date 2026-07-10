@@ -45,7 +45,9 @@
     "db:diff": "supabase db diff",
     "db:status": "supabase migration list",
     "db:lint": "tsx scripts/db-migration-lint.ts",
-    "db:verify": "tsx scripts/db-verify.ts"
+    "db:verify": "tsx scripts/db-verify.ts",
+    "cpc:report": "tsx scripts/cpc-report.ts",
+    "observatory:report": "tsx scripts/marketplace-observatory-report.ts"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.0",

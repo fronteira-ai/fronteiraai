@@ -10,7 +10,10 @@ export const ATACADO_CONNECT_CONFIG = {
   // prior audit's "sitemap incomplete, needs category-page pagination"
   // finding (Tier1_Merchants.md §5.9, from 2026-07-03) no longer holds
   // against today's live fetch. Sitemap-only discovery is sufficient.
-  maxProducts: 200,
+  // Raised moderately (Program Ξ, Wave Ξ-5) — same reasoning as Roma
+  // Shopping: measured 0% overlap with any other connected merchant
+  // (MERCHANT_OVERLAP_MATRIX.md), grown for breadth, not prioritized for CPC.
+  maxProducts: 600,
 
   requestDelayMs: 500,
   timeoutMs: 15_000,

@@ -7,9 +7,13 @@ export const SHOPPING_CHINA_CONFIG = {
 
   // Maximum products per sync — the real sitemap has 20,000+ URLs (mixed
   // category + product); this caps how many /producto/ URLs are fetched in
-  // one run. Raise for a full crawl once the connector is certified and
-  // running on a real schedule.
-  maxProducts: 200,
+  // one run. Raised (Program Ξ, Wave Ξ-5 — Competitive Marketplace
+  // Expansion): Shopping China is part of the only merchant cluster with
+  // measured real overlap (COMPETITIVE_DENSITY_MATRIX.md), so going deeper
+  // into its catalog is the highest-evidence lever for Comparable Product
+  // Coverage. Delta Import (Program Σ) makes this safe — repeated runs
+  // advance progressively, never re-fetch what's unchanged.
+  maxProducts: 1500,
 
   // Milliseconds to wait between HTTP requests (be respectful)
   requestDelayMs: 500,
