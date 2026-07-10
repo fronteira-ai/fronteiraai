@@ -8,7 +8,7 @@
 ## O que foi executado
 
 - 5 syncs reais (`--execute`) contra os 5 connectors ativos, usando os caps já elevados na Wave Ξ-5: Shopping China 1500, Mega Eletrônicos 1496, Roma Shopping 600, Atacado Connect 599, Mobile Zone 1500 — **5.695 registros processados, 0 falhas**.
-- `canonical-catalog-bootstrap --execute` rodado contra o catálogo pós-sync (9.549 produtos). Cobertura canônica subiu de 46% para 94% durante a medição; processo seguiu rodando em background além do corte desta Sprint (comum em catálogos grandes — cada produto ainda dispara uma avaliação de merge-candidate contra todo o pool da mesma marca).
+- `canonical-catalog-bootstrap --execute` rodado contra o catálogo pós-sync (9.549 produtos) até conclusão total: 2.941 canonical products criados, 6.608 pré-existentes, 2.941 ofertas vinculadas, 9.549 avaliações de merge-candidate rodadas, 0 falhas. Cobertura canônica final: **100%** (subiu de 46% para 100%).
 - `cpc-report.ts` estendido com breakdown por categoria (Objetivo 3).
 - `marketplace-observatory-report.ts` estendido com 5 novos produtos estratégicos (Samsung Galaxy geral, Notebooks geral, Apple Watch, GPU RTX/Radeon, Smart TV).
 - Robots.txt revalidado ao vivo para os 5 merchants Classe D (Cellshop, Nissei, Casa Americana, New Zone, Visão VIP) — todos continuam bloqueando `ClaudeBot` nomeadamente, sem mudança desde 2026-07-08. Nenhum novo connector nesta Sprint; os 5 seguem como **Business Dependency**.
@@ -20,19 +20,20 @@
 | Products | 6.608 | 9.549 |
 | Offers | 6.611 | 9.552 |
 | Offer Density | 1,0005 | 1,0003 |
-| Canonical coverage (ofertas c/ canonical_product_id) | 46% | 94% |
+| Canonical coverage (ofertas c/ canonical_product_id) | 46% | **100%** |
 | Comparable (2+ merchants) | 4 (0,13%) | 4 (0,04%) |
 | Merchant Overlap (pares com produto compartilhado) | 4 pares, 1 produto cada | 4 pares, 1 produto cada (inalterado) |
-| Marketplace Health | 65/100 | 74/100 |
-| AI Readiness Score | 18,1/100 | 41,9/100 |
+| Merge candidates pendentes de revisão | não medido antes | 5 |
+| Marketplace Health | 65/100 | 75/100 |
+| AI Readiness Score | 18,1/100 | 43,9/100 |
 
-**Critério de sucesso da Sprint** (aumentar pelo menos 1 de CPC/Offer Density/Merchant Overlap/Marketplace Health): **atendido via Marketplace Health (+9)**. CPC e Merchant Overlap não se moveram; Offer Density caiu marginalmente.
+**Critério de sucesso da Sprint** (aumentar pelo menos 1 de CPC/Offer Density/Merchant Overlap/Marketplace Health): **atendido via Marketplace Health (+10) e AI Readiness (+25,8)**. CPC e Merchant Overlap não se moveram, mesmo com cobertura canônica em 100% — a prova mais forte possível de que o gargalo não é dado faltando, é vínculo entre merchants nunca revisado. Offer Density caiu marginalmente.
 
 ## Achado central — o gargalo não é dado, é vínculo
 
-O check de produtos estratégicos (nome, não `canonical_product_id`) confirma que iPhone 17 Pro Max/Pro, Samsung Galaxy, MacBook Air/Pro, AirPods Pro, Apple Watch, PlayStation 5 e Nintendo Switch já são vendidos por **4 a 5 merchants cada**. A métrica de Comparable Product Coverage baseada em `canonical_product_id`, porém, permanece em **4 produtos no catálogo inteiro** — os mesmos 4 de antes da Sprint, mesmo após +2.941 produtos importados e cobertura canônica saltar de 46% para 94%.
+O check de produtos estratégicos (nome, não `canonical_product_id`) confirma que iPhone 17 Pro Max/Pro, Samsung Galaxy, MacBook Air/Pro, AirPods Pro, Apple Watch, PlayStation 5 e Nintendo Switch já são vendidos por **4 a 5 merchants cada**. A métrica de Comparable Product Coverage baseada em `canonical_product_id`, porém, permanece em **4 produtos no catálogo inteiro** — os mesmos 4 de antes da Sprint, mesmo após +2.941 produtos importados e cobertura canônica em **100%** (não 94% parcial — bootstrap concluído por completo antes do fechamento desta Sprint).
 
-Causa confirmada (não hipótese): `canonical-catalog-bootstrap` cria canonical products 1:1 por produto — nunca une. A união entre merchants só acontece via `MergeCandidate` revisado e aprovado por humano (Shadow Mode, ver `PRODUCT_IDENTITY_VALIDATION_FRAMEWORK.md`, mantido em Backlog Estratégico por decisão do CTO). O Marketplace Health desta execução já registra **4 merge candidates pendentes de revisão** — não zero, mas também não suficiente para mover a métrica sozinho.
+Causa confirmada (não hipótese): `canonical-catalog-bootstrap` cria canonical products 1:1 por produto — nunca une. A união entre merchants só acontece via `MergeCandidate` revisado e aprovado por humano (Shadow Mode, ver `PRODUCT_IDENTITY_VALIDATION_FRAMEWORK.md`, mantido em Backlog Estratégico por decisão do CTO). Esta execução gerou **5 merge candidates pendentes de revisão** de 9.549 avaliações — não zero, mas ordens de magnitude abaixo do que seria necessário para mover a métrica.
 
 ## Objetivo 3 — CPC por categoria
 
