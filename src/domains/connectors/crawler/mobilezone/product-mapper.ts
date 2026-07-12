@@ -2,6 +2,22 @@ import type { RawOffer } from "../../types/raw.types";
 import { MOBILE_ZONE_CONFIG as CFG } from "./config";
 
 // Shape confirmed by live fetch of https://products-api-dns.mobilezone.com.py/api/products?offset=0&limit=1
+//
+// FASE 2 — Sprint 2.5 — Objetivo 2. `productHasDetails`/`productHasColors`
+// were present in every live response inspected during Sprint 2.4's audit
+// (docs/product/DATA_QUALITY_AUDIT.md §6) but never declared on this
+// interface — silently discarded. Adding them here requires zero new HTTP
+// requests: both fields already arrive in the same list/detail responses
+// this connector already fetches.
+interface ApiProductDetail {
+  name_py: string;
+  detail?: { name_py: string };
+}
+
+interface ApiProductColor {
+  name_py: string;
+}
+
 interface ApiProduct {
   id_product: number;
   stock: number;
@@ -10,6 +26,27 @@ interface ApiProduct {
   productHasCategories?: { id_category: number; name_py: string }[];
   productHasImages?: { url_image: string }[];
   productHasBrands?: { id_brand: number; name_py: string }[];
+  productHasDetails?: ApiProductDetail[];
+  productHasColors?: ApiProductColor[];
+}
+
+// Each entry pairs a label (`detail.name_py`, e.g. "Capacidad de
+// almacenamiento") with a value (`name_py`). Entries missing either half are
+// skipped rather than defaulted — a partial label/value pair is not usable
+// evidence for Product Identity's `specifications` comparison.
+function buildSpecifications(product: ApiProduct): Record<string, string> {
+  const specs: Record<string, string> = {};
+
+  for (const detail of product.productHasDetails ?? []) {
+    const label = detail.detail?.name_py?.trim();
+    const value = detail.name_py?.trim();
+    if (label && value) specs[label] = value;
+  }
+
+  const color = product.productHasColors?.[0]?.name_py?.trim();
+  if (color) specs["Color"] = color;
+
+  return specs;
 }
 
 export interface ParsedProduct {
@@ -35,6 +72,7 @@ export function mapApiProduct(p: ApiProduct): ParsedProduct {
   const imageUrl = imagePath ? `${CFG.imageBaseUrl}${imagePath}` : undefined;
 
   const brand = p.productHasBrands?.[0]?.name_py;
+  const specifications = buildSpecifications(p);
 
   const offer: RawOffer = {
     product: {
@@ -43,6 +81,7 @@ export function mapApiProduct(p: ApiProduct): ParsedProduct {
       brand: brand || undefined,
       category,
       imageUrl,
+      specifications: Object.keys(specifications).length > 0 ? specifications : undefined,
     },
     storeSlug: CFG.storeSlug,
     // Assumption, not independently verified against a second source (see

@@ -1,13 +1,14 @@
 import type { RawOffer } from "../types/raw.types";
 import type { NormalizedOffer } from "../types/pipeline.types";
 import { slugify } from "@/utils/slug";
+import { normalizeCategoryName } from "./CategoryNormalizer";
 
 const URL_RE = /^https?:\/\/.+/i;
 
 export function normalizeOffer(raw: RawOffer): NormalizedOffer {
   const productName = raw.product.name.trim();
   const brandName = raw.product.brand?.trim() || "Outros";
-  const categoryName = raw.product.category?.trim() || "Outros";
+  const categoryName = normalizeCategoryName(raw.product.category?.trim() || "Outros");
 
   const productSlug = slugify(productName);
   if (!productSlug) throw new Error(`Cannot slugify product name: "${productName}"`);

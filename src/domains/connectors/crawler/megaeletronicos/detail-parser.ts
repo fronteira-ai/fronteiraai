@@ -1,6 +1,7 @@
 import { parse } from "node-html-parser";
 import type { RawOffer } from "../../types/raw.types";
 import { parseAmountUSFormat, cleanText } from "../../sdk/parsing/textParsing";
+import { extractJsonArray } from "../../sdk/parsing/jsonBlock";
 
 export interface ParsedDetail {
   offer: RawOffer | null;
@@ -8,6 +9,31 @@ export interface ParsedDetail {
 }
 
 const FALLBACK_CATEGORY_NAME = "Geral";
+
+// FASE 2 — Sprint 2.5 — Objetivo 3. The page embeds a `feature_product`
+// array inside an inline <script> that mounts the product-detail Vue
+// component — not valid standalone JSON (it's a fragment of a larger JS
+// object literal), so `extractJsonArray` bracket-matches just this one
+// array instead of parsing the whole script. Confirmed live (Sprint 2.4
+// audit, docs/product/DATA_QUALITY_AUDIT.md §3) on 2/2 sampled products —
+// same page fetch the connector already makes, zero new HTTP requests.
+interface FeatureProductEntry {
+  feature_lang?: { name?: string };
+  feature_value_lang?: { name?: string };
+}
+
+function extractSpecifications(html: string): Record<string, string> {
+  const entries = extractJsonArray(html, "feature_product") as FeatureProductEntry[] | null;
+  if (!entries) return {};
+
+  const specs: Record<string, string> = {};
+  for (const entry of entries) {
+    const label = entry.feature_lang?.name?.trim();
+    const value = entry.feature_value_lang?.name?.trim();
+    if (label && value) specs[label] = value;
+  }
+  return specs;
+}
 
 /**
  * Live audit (Program D — Wave 1): megaeletronicos.com is a structured,
@@ -44,6 +70,8 @@ export function parseDetailPage(html: string, url: string, storeSlug: string, ex
     const imageEl = root.querySelector(".swiper_main .swiper-slide img");
     const imageUrl = imageEl?.getAttribute("src") ?? undefined;
 
+    const specifications = extractSpecifications(html);
+
     const offer: RawOffer = {
       product: {
         externalId,
@@ -51,6 +79,7 @@ export function parseDetailPage(html: string, url: string, storeSlug: string, ex
         brand,
         category,
         imageUrl,
+        specifications: Object.keys(specifications).length > 0 ? specifications : undefined,
       },
       storeSlug,
       priceUSD,

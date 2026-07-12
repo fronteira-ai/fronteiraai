@@ -4,13 +4,19 @@ import { makeRawOffer } from "./helpers";
 describe("normalizeOffer", () => {
   it("slugifies the product/brand/category names", () => {
     const normalized = normalizeOffer(
-      makeRawOffer({ product: { name: "Apple iPhone 16 Pro 256GB", brand: "Apple", category: "Celulares" } })
+      makeRawOffer({ product: { name: "Apple iPhone 16 Pro 256GB", brand: "Apple", category: "Fones de Ouvido" } })
     );
     expect(normalized.product.slug).toBe("apple-iphone-16-pro-256gb");
     expect(normalized.product.brandSlug).toBe("apple");
-    expect(normalized.product.categorySlug).toBe("celulares");
+    expect(normalized.product.categorySlug).toBe("fones-de-ouvido");
     expect(normalized.offer.priceUSD).toBe(99.99);
     expect(normalized.offer.inStock).toBe(true);
+  });
+
+  it("normalizes known category synonyms to a shared canonical category (Sprint 2.5)", () => {
+    const normalized = normalizeOffer(makeRawOffer({ product: { name: "Test", category: "Smartphones" } }));
+    expect(normalized.product.categoryName).toBe("Celulares e Smartphones");
+    expect(normalized.product.categorySlug).toBe("celulares-e-smartphones");
   });
 
   it("defaults brand/category to 'Outros' when missing", () => {
