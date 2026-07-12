@@ -21,7 +21,17 @@ export const MOBILE_ZONE_CONFIG = {
   // is in the same "Celulares/Eletrônicos gerais" cluster the only measured
   // real overlap belongs to (COMPETITIVE_DENSITY_MATRIX.md); certified and
   // on a real schedule since Wave Xi-1.
-  maxProducts: 1500,
+  //
+  // Raised again (Fase 2, Sprint 2.6 — Attribute Backfill): live API call
+  // during Sprint 2.4/2.5 reported `count: 7212` (up from the 6956 cited
+  // above — real catalog grows over time, not a discrepancy to chase).
+  // Sprint 2.5's parser fix (productHasDetails/productHasColors →
+  // specifications) only reaches items an --execute sync actually
+  // re-fetches; at maxProducts=1500 per run, ~90% of the catalog — including
+  // the exact cross-merchant strategic-product pairs Sprint 2.3 identified —
+  // was never touched. Raised to cover the full known catalog in one pass;
+  // a one-time coverage catch-up, not a standing operational cadence change.
+  maxProducts: 8000,
 
   // Page size for the /products?offset=&limit= endpoint.
   pageSize: 100,
