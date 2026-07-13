@@ -2,6 +2,7 @@ import type { CanonicalProduct } from "../domain/CanonicalProduct";
 import type {
   CanonicalOfferView,
   CanonicalProductInput,
+  CanonicalProductSyncFields,
   PaginatedResult,
   PaginationParams,
 } from "../types/canonical-catalog.types";
@@ -15,6 +16,13 @@ export interface ICanonicalCatalogRepository {
    * row exists; this method never updates an existing row's slug.
    */
   findOrCreateBySlug(canonicalSlug: string, input: CanonicalProductInput): Promise<CanonicalProduct>;
+  /** Fase 2 — Sprint 2.8 (Canonical Catalog Synchronization). Updates only
+   * the attributes that are allowed to drift back into sync with their
+   * source `products` row (specifications, category_id, brand_id,
+   * image_url) — never canonical_slug or name. Always stamps updated_at.
+   * Callers are expected to only invoke this when a real diff was found
+   * (CanonicalProductService.diffFromProduct) — it is not itself a diff. */
+  updateSyncedFields(id: string, fields: Partial<CanonicalProductSyncFields>): Promise<CanonicalProduct>;
   /** Candidate pool for merge suggestions — same brand-scoping used by product-identity's own candidate search. */
   findByBrandId(brandId: string): Promise<CanonicalProduct[]>;
   /** Release 1.8 — Program C — Market Intelligence Engine. Same shape as

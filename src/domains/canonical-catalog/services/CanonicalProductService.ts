@@ -11,6 +11,21 @@ export interface BootstrapProductInput {
   specifications: Record<string, string> | null;
 }
 
+// Fase 2 — Sprint 2.8. One entry per field that drifted between a
+// canonical product and its source `products` row.
+export interface CanonicalDrift {
+  field: "specifications" | "categoryId" | "brandId" | "imageUrl";
+  from: unknown;
+  to: unknown;
+}
+
+function specificationsEqual(a: Record<string, string> | null, b: Record<string, string> | null): boolean {
+  const aKeys = a ? Object.keys(a).sort() : [];
+  const bKeys = b ? Object.keys(b).sort() : [];
+  if (aKeys.length !== bKeys.length) return false;
+  return aKeys.every((key, i) => key === bKeys[i] && a![key] === b![key]);
+}
+
 export class CanonicalProductService {
   constructor(private readonly repo: ICanonicalCatalogRepository) {}
 
@@ -33,6 +48,52 @@ export class CanonicalProductService {
       imageUrl: product.imageUrl,
       specifications: product.specifications,
     });
+  }
+
+  // Fase 2 — Sprint 2.8 (Canonical Catalog Synchronization). Pure diff, no
+  // I/O — compares a canonical product's synced fields against its source
+  // product's *current* values. specifications/categoryId/imageUrl are a
+  // plain "products is the freshest source of truth" refresh (this is what
+  // closes the gap Sprint 2.7 found: bootstrapFromProduct never updates an
+  // existing row, so these fields can go stale forever). brandId is
+  // computed the same way but is expected to almost never drift post-
+  // creation (Sprint 2.3: brand extraction doesn't fragment) — callers
+  // should treat a brandId drift as a data-integrity signal worth
+  // surfacing on its own, not just a routine content refresh.
+  diffFromProduct(canonical: CanonicalProduct, product: BootstrapProductInput): CanonicalDrift[] {
+    const drifts: CanonicalDrift[] = [];
+    if (!specificationsEqual(canonical.specifications, product.specifications)) {
+      drifts.push({ field: "specifications", from: canonical.specifications, to: product.specifications });
+    }
+    if (canonical.categoryId !== product.categoryId) {
+      drifts.push({ field: "categoryId", from: canonical.categoryId, to: product.categoryId });
+    }
+    if (canonical.brandId !== product.brandId) {
+      drifts.push({ field: "brandId", from: canonical.brandId, to: product.brandId });
+    }
+    if (canonical.imageUrl !== product.imageUrl) {
+      drifts.push({ field: "imageUrl", from: canonical.imageUrl, to: product.imageUrl });
+    }
+    return drifts;
+  }
+
+  // Diffs, then writes only if something actually changed — never an
+  // unconditional update. Returns the drifts found so callers (the
+  // bootstrap script) can report exactly what moved, per field.
+  async syncFromProduct(
+    canonical: CanonicalProduct,
+    product: BootstrapProductInput
+  ): Promise<{ updated: boolean; drifts: CanonicalDrift[] }> {
+    const drifts = this.diffFromProduct(canonical, product);
+    if (drifts.length === 0) return { updated: false, drifts };
+
+    await this.repo.updateSyncedFields(canonical.id, {
+      specifications: product.specifications,
+      categoryId: product.categoryId,
+      brandId: product.brandId,
+      imageUrl: product.imageUrl,
+    });
+    return { updated: true, drifts };
   }
 
   // For future canonical products not born from a 1:1 product bootstrap

@@ -37,3 +37,9 @@ export interface CanonicalProductInput {
   imageUrl: string | null;
   specifications: Record<string, string> | null;
 }
+
+// Fase 2 — Sprint 2.8. The subset of CanonicalProductInput that is allowed
+// to drift back into sync with its source `products` row after creation.
+// Deliberately excludes canonicalSlug (immutable) and name (out of this
+// Sprint's scope — see docs/product/CANONICAL_SYNC_FIELD_MATRIX.md).
+export type CanonicalProductSyncFields = Pick<CanonicalProductInput, "brandId" | "categoryId" | "imageUrl" | "specifications">;

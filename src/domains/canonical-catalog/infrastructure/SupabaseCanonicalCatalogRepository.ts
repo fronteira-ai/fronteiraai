@@ -4,6 +4,7 @@ import type { ICanonicalCatalogRepository } from "../repositories/ICanonicalCata
 import type {
   CanonicalOfferView,
   CanonicalProductInput,
+  CanonicalProductSyncFields,
   PaginatedResult,
   PaginationParams,
 } from "../types/canonical-catalog.types";
@@ -74,6 +75,18 @@ export class SupabaseCanonicalCatalogRepository implements ICanonicalCatalogRepo
       throw new Error(`canonical product insert: ${error.message}`);
     }
 
+    return toCanonicalProduct(data);
+  }
+
+  async updateSyncedFields(id: string, fields: Partial<CanonicalProductSyncFields>): Promise<CanonicalProduct> {
+    const patch: Record<string, unknown> = { updated_at: new Date().toISOString() };
+    if ("brandId" in fields) patch.brand_id = fields.brandId;
+    if ("categoryId" in fields) patch.category_id = fields.categoryId;
+    if ("imageUrl" in fields) patch.image_url = fields.imageUrl;
+    if ("specifications" in fields) patch.specifications = fields.specifications;
+
+    const { data, error } = await this.client.from("canonical_products").update(patch).eq("id", id).select("*").single();
+    if (error) throw new Error(`canonical product sync update: ${error.message}`);
     return toCanonicalProduct(data);
   }
 

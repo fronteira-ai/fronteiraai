@@ -23,7 +23,7 @@ export { SupabaseMergeCandidateRepository } from "./infrastructure/SupabaseMerge
 export { SupabaseCanonicalPriceHistoryRepository } from "./infrastructure/SupabaseCanonicalPriceHistoryRepository";
 
 export { CanonicalProductService } from "./services/CanonicalProductService";
-export type { BootstrapProductInput } from "./services/CanonicalProductService";
+export type { BootstrapProductInput, CanonicalDrift } from "./services/CanonicalProductService";
 export { OfferRankingService } from "./services/OfferRankingService";
 export type { OfferRankInput, OfferRankFactor, RankedCanonicalOffer } from "./services/OfferRankingService";
 export { CanonicalPriceHistoryService, computePriceAggregation } from "./services/CanonicalPriceHistoryService";

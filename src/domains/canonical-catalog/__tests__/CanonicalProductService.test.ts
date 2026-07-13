@@ -22,6 +22,7 @@ function makeRepo(overrides: Partial<ICanonicalCatalogRepository> = {}): ICanoni
     findBySlug: jest.fn().mockResolvedValue(null),
     findById: jest.fn(),
     findOrCreateBySlug: jest.fn(),
+    updateSyncedFields: jest.fn(),
     findByBrandId: jest.fn(),
     findByCategoryId: jest.fn(),
     findCanonicalProductIdByProductId: jest.fn(),
@@ -109,5 +110,121 @@ describe("CanonicalProductService", () => {
     const slug = await service.generateCanonicalSlug("iPhone 15 Pro", "apple");
 
     expect(slug).toBe("apple-iphone-15-pro-3");
+  });
+
+  describe("diffFromProduct (Fase 2 — Sprint 2.8)", () => {
+    it("returns no drift when the canonical product already matches its source product", () => {
+      const service = new CanonicalProductService(makeRepo());
+      const canonical = makeCanonicalProduct({ specifications: { color: "black" } });
+
+      const drifts = service.diffFromProduct(canonical, {
+        slug: "iphone-15-pro",
+        name: "iPhone 15 Pro",
+        brandId: "brand-1",
+        categoryId: "category-1",
+        imageUrl: null,
+        specifications: { color: "black" },
+      });
+
+      expect(drifts).toEqual([]);
+    });
+
+    it("detects specifications drift regardless of key order", () => {
+      const service = new CanonicalProductService(makeRepo());
+      const canonical = makeCanonicalProduct({ specifications: { color: "black", storage: "256GB" } });
+
+      const drifts = service.diffFromProduct(canonical, {
+        slug: "iphone-15-pro",
+        name: "iPhone 15 Pro",
+        brandId: "brand-1",
+        categoryId: "category-1",
+        imageUrl: null,
+        specifications: { storage: "256GB", color: "black" },
+      });
+
+      expect(drifts).toEqual([]);
+    });
+
+    it("detects a canonical product with stale (empty) specifications versus an enriched product", () => {
+      const service = new CanonicalProductService(makeRepo());
+      const canonical = makeCanonicalProduct({ specifications: {} });
+
+      const drifts = service.diffFromProduct(canonical, {
+        slug: "iphone-15-pro",
+        name: "iPhone 15 Pro",
+        brandId: "brand-1",
+        categoryId: "category-1",
+        imageUrl: null,
+        specifications: { color: "black", storage: "256GB" },
+      });
+
+      expect(drifts).toEqual([
+        { field: "specifications", from: {}, to: { color: "black", storage: "256GB" } },
+      ]);
+    });
+
+    it("detects categoryId, brandId and imageUrl drift independently", () => {
+      const service = new CanonicalProductService(makeRepo());
+      const canonical = makeCanonicalProduct({
+        categoryId: "category-old",
+        brandId: "brand-old",
+        imageUrl: "https://old.example/img.jpg",
+      });
+
+      const drifts = service.diffFromProduct(canonical, {
+        slug: "iphone-15-pro",
+        name: "iPhone 15 Pro",
+        brandId: "brand-new",
+        categoryId: "category-new",
+        imageUrl: "https://new.example/img.jpg",
+        specifications: null,
+      });
+
+      expect(drifts.map((d) => d.field).sort()).toEqual(["brandId", "categoryId", "imageUrl"]);
+    });
+  });
+
+  describe("syncFromProduct (Fase 2 — Sprint 2.8)", () => {
+    it("does not call the repository when there is no drift", async () => {
+      const updateSyncedFields = jest.fn();
+      const service = new CanonicalProductService(makeRepo({ updateSyncedFields }));
+      const canonical = makeCanonicalProduct({ specifications: { color: "black" } });
+
+      const result = await service.syncFromProduct(canonical, {
+        slug: "iphone-15-pro",
+        name: "iPhone 15 Pro",
+        brandId: "brand-1",
+        categoryId: "category-1",
+        imageUrl: null,
+        specifications: { color: "black" },
+      });
+
+      expect(result).toEqual({ updated: false, drifts: [] });
+      expect(updateSyncedFields).not.toHaveBeenCalled();
+    });
+
+    it("writes only the synced fields (never canonicalSlug or name) when drift is found", async () => {
+      const updateSyncedFields = jest.fn().mockResolvedValue(makeCanonicalProduct());
+      const service = new CanonicalProductService(makeRepo({ updateSyncedFields }));
+      const canonical = makeCanonicalProduct({ specifications: {} });
+
+      const result = await service.syncFromProduct(canonical, {
+        slug: "iphone-15-pro",
+        name: "iPhone 15 Pro (renamed)",
+        brandId: "brand-1",
+        categoryId: "category-1",
+        imageUrl: null,
+        specifications: { color: "black" },
+      });
+
+      expect(result.updated).toBe(true);
+      expect(result.drifts).toEqual([{ field: "specifications", from: {}, to: { color: "black" } }]);
+      expect(updateSyncedFields).toHaveBeenCalledWith("canonical-1", {
+        specifications: { color: "black" },
+        categoryId: "category-1",
+        brandId: "brand-1",
+        imageUrl: null,
+      });
+    });
   });
 });

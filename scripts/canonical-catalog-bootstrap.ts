@@ -61,6 +61,11 @@ async function main() {
   let offersLinked = 0;
   let mergeSuggestionRuns = 0;
   let failed = 0;
+  // Fase 2 — Sprint 2.8 (Canonical Catalog Synchronization).
+  let synced = 0;
+  let driftCandidates = 0;
+  let brandDriftDetected = 0;
+  const driftByField: Record<string, number> = {};
 
   for (const product of (products ?? []) as ProductRow[]) {
     try {
@@ -69,6 +74,34 @@ async function main() {
 
       if (existing) {
         alreadyExisted++;
+        const drifts = canonicalProductService.diffFromProduct(existing, {
+          slug: product.slug,
+          name: product.name,
+          brandId: product.brand_id,
+          categoryId: product.category_id,
+          imageUrl: product.image_url,
+          specifications: product.specifications,
+        });
+        if (drifts.length > 0) {
+          driftCandidates++;
+          for (const d of drifts) {
+            driftByField[d.field] = (driftByField[d.field] ?? 0) + 1;
+            if (d.field === "brandId") brandDriftDetected++;
+          }
+          if (EXECUTE) {
+            const { updated } = await canonicalProductService.syncFromProduct(existing, {
+              slug: product.slug,
+              name: product.name,
+              brandId: product.brand_id,
+              categoryId: product.category_id,
+              imageUrl: product.image_url,
+              specifications: product.specifications,
+            });
+            if (updated) synced++;
+          } else {
+            console.log(`[dry-run] would sync ${drifts.map((d) => d.field).join(",")} for "${product.slug}"`);
+          }
+        }
       } else if (!EXECUTE) {
         console.log(`[dry-run] would create canonical product for "${product.slug}"`);
         created++;
@@ -115,6 +148,9 @@ async function main() {
   console.log(`  Canonical pre-existed : ${alreadyExisted}`);
   console.log(`  Offers linked         : ${offersLinked}`);
   console.log(`  Merge suggestion runs : ${mergeSuggestionRuns} (each may or may not have written a MergeCandidate — see logs)`);
+  console.log(`  Pre-existing w/ drift : ${driftCandidates} (${EXECUTE ? "synced" : "dry-run, not written"}: ${synced})`);
+  console.log(`  Drift by field        : ${JSON.stringify(driftByField)}`);
+  console.log(`  brand_id drift        : ${brandDriftDetected} (expected ~0 — Sprint 2.3 found brand extraction doesn't fragment; a nonzero count here is a data-integrity signal, not routine sync)`);
   console.log(`  Failed                : ${failed}`);
   console.log(`\n${EXECUTE ? "Data written to Supabase." : "No writes (dry-run). Use --execute to apply."}`);
 
