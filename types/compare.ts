@@ -2,7 +2,7 @@ import { ProductWithRelations } from "@/types/product";
 import { OfferWithStore } from "@/types/offer";
 import { OfferPriceMetrics } from "@/types/priceHistory";
 import type { OfferRankFactor } from "@/src/domains/canonical-catalog";
-import type { BestDealResult } from "@/src/domains/buyer-intelligence";
+import type { BestDealResult, PurchaseTimingResult } from "@/src/domains/buyer-intelligence";
 
 export interface RankedOffer {
   offer: OfferWithStore;
@@ -35,4 +35,7 @@ export interface CompareResult {
    * page, just resolved from data this service already fetched. */
   bestDeal: BestDealResult | null;
   bestDealStoreName: string | null;
+  /** Release 2.0 — Wave 3 (Should I Buy Now). Same null-when-no-canonical-
+   * link convention as bestDeal. */
+  purchaseTiming: PurchaseTimingResult | null;
 }

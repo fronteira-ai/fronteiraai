@@ -13,8 +13,9 @@ import FavoriteButton from "@/components/product/FavoriteButton";
 import ShareButton from "@/components/product/ShareButton";
 import ProductViewTracker from "@/components/product/ProductViewTracker";
 import BestDealCard from "@/components/product/BestDealCard";
+import ShouldIBuyNowCard from "@/components/product/ShouldIBuyNowCard";
 import { comparePath } from "@/constants/routes";
-import { getCachedProduct, getCachedOffers, getCachedRelatedProducts, getCachedIntelligence, getCachedBestDeal } from "./_cache";
+import { getCachedProduct, getCachedOffers, getCachedRelatedProducts, getCachedIntelligence, getCachedBestDeal, getCachedPurchaseTiming } from "./_cache";
 
 type Params = Promise<{ slug: string }>;
 
@@ -33,6 +34,7 @@ export default async function ProductPage({ params }: { params: Params }) {
     getCachedIntelligence(product.id),
   ]);
   const { bestDeal, storeName } = await getCachedBestDeal(intelligence.comparison);
+  const purchaseTiming = await getCachedPurchaseTiming(intelligence.comparison);
 
   return (
     <main className="min-h-screen bg-[#050816] text-white">
@@ -80,6 +82,7 @@ export default async function ProductPage({ params }: { params: Params }) {
 
         <div className="mt-12 flex flex-col gap-8">
           {bestDeal ? <BestDealCard bestDeal={bestDeal} storeName={storeName ?? ""} /> : null}
+          <ShouldIBuyNowCard timing={purchaseTiming} />
           <ProductSpecifications specifications={product.specifications} />
           <ProductOffers offers={offers} />
           <RelatedProducts products={relatedProducts} />

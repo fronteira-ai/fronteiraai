@@ -44,3 +44,16 @@ async function getProductBestDeal(comparison: ComparisonIntelligenceBundle | nul
 }
 
 export const getCachedBestDeal = cache(getProductBestDeal);
+
+// Release 2.0 — Wave 3 (Should I Buy Now). Same reuse discipline as
+// getProductBestDeal — takes the bundle getCachedIntelligence already
+// fetched, no duplicate query. `comparison === null` (no canonical link
+// yet, Shadow Mode) returns null here too — there is nothing to reason
+// about yet, same graceful-omission convention as every other card.
+async function getProductPurchaseTiming(comparison: ComparisonIntelligenceBundle | null) {
+  if (!comparison) return null;
+  const { purchaseTimingComposer } = createBuyerIntelligenceServices(getSupabaseServiceClient());
+  return purchaseTimingComposer.compose(comparison);
+}
+
+export const getCachedPurchaseTiming = cache(getProductPurchaseTiming);

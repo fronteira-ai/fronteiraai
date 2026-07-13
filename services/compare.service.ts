@@ -169,30 +169,31 @@ function buildSummary(rankedOffers: RankedOffer[]): CompareSummary {
 }
 
 async function buildCompareResult(productId: string, product: ProductWithRelations): Promise<CompareResult> {
-  const { productComposer, bestDealComposer } = createBuyerIntelligenceServices(getSupabaseServiceClient());
+  const { productComposer, bestDealComposer, purchaseTimingComposer } = createBuyerIntelligenceServices(getSupabaseServiceClient());
   const { comparison } = await productComposer.composeForProduct(productId);
 
   if (!comparison) {
     // No canonical link yet (Product Identity, Shadow Mode) — nothing to
     // compare across stores. Empty result, never an error.
-    return { product, offers: [], summary: buildSummary([]), bestDeal: null, bestDealStoreName: null };
+    return { product, offers: [], summary: buildSummary([]), bestDeal: null, bestDealStoreName: null, purchaseTiming: null };
   }
 
   const storeIds = [...new Set(comparison.offers.map((o) => o.offer.storeId))];
   const offerIds = comparison.offers.map((o) => o.offer.offerId);
 
-  // Release 2.0 — Wave 2 (Best Deal): bestDealComposer.compose() only reads
-  // `comparison`, already fetched above — no duplicate query.
-  const [storesById, offerExtrasById, metricsById, bestDeal] = await Promise.all([
+  // Release 2.0 — Wave 2/3 (Best Deal / Should I Buy Now): both composers
+  // only read `comparison`, already fetched above — no duplicate query.
+  const [storesById, offerExtrasById, metricsById, bestDeal, purchaseTiming] = await Promise.all([
     resolveStores(storeIds),
     resolveOfferExtras(offerIds),
     batchPriceMetrics(comparison.offers.map((o) => ({ id: o.offer.offerId, price_usd: o.offer.priceUSD }))),
     bestDealComposer.compose(comparison),
+    purchaseTimingComposer.compose(comparison),
   ]);
 
   const rankedOffers = toRankedOffers(comparison.offers, storesById, offerExtrasById, metricsById);
   const bestDealStoreName = bestDeal ? storesById.get(bestDeal.recommendedOffer.offer.storeId)?.name ?? bestDeal.recommendedOffer.offer.storeSlug : null;
-  return { product, offers: rankedOffers, summary: buildSummary(rankedOffers), bestDeal, bestDealStoreName };
+  return { product, offers: rankedOffers, summary: buildSummary(rankedOffers), bestDeal, bestDealStoreName, purchaseTiming };
 }
 
 // Primary entry point: compare by product slug.

@@ -1,5 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { ComparisonIntelligenceComposer, ProductIntelligenceComposer, SearchIntelligenceComposer, BestDealComposer } from "@/src/domains/buyer-intelligence";
+import { ComparisonIntelligenceComposer, ProductIntelligenceComposer, SearchIntelligenceComposer, BestDealComposer, PurchaseTimingComposer } from "@/src/domains/buyer-intelligence";
 import { createCanonicalCatalogServices } from "./canonical-catalog-factory";
 import { createMarketInsightsServices } from "./market-insights-factory";
 import { createRealtimeCommerceServices } from "./realtime-commerce-factory";
@@ -16,9 +16,9 @@ import { SupabaseBadgeRepository, SupabaseTrustRepository, SupabaseTrustEventRep
 // signals/route.ts) — mirrored here rather than introducing one repo-wide.
 export function createBuyerIntelligenceServices(client: SupabaseClient) {
   const { catalogRepo, compareFoundationService } = createCanonicalCatalogServices(client);
-  const { priceIntelligenceService } = createMarketInsightsServices(client);
+  const { priceIntelligenceService, volatilityRollupService } = createMarketInsightsServices(client);
   const { freshnessService } = createRealtimeCommerceServices(client);
-  const { rateService } = createExchangeServices(client);
+  const { rateService, historyService } = createExchangeServices(client);
 
   const merchantStoreLinkRepo = new SupabaseMerchantStoreLinkRepository(client);
   const badgeService = new BadgeService(
@@ -38,6 +38,7 @@ export function createBuyerIntelligenceServices(client: SupabaseClient) {
   const productComposer = new ProductIntelligenceComposer(catalogRepo, comparisonComposer);
   const searchComposer = new SearchIntelligenceComposer(catalogRepo, priceIntelligenceService);
   const bestDealComposer = new BestDealComposer(rateService);
+  const purchaseTimingComposer = new PurchaseTimingComposer(volatilityRollupService, historyService);
 
-  return { comparisonComposer, productComposer, searchComposer, bestDealComposer };
+  return { comparisonComposer, productComposer, searchComposer, bestDealComposer, purchaseTimingComposer };
 }

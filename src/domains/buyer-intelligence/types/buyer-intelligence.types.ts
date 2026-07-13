@@ -1,5 +1,5 @@
 import type { CanonicalProduct, CanonicalOfferView, OfferRankFactor, CanonicalPriceAggregation } from "@/src/domains/canonical-catalog";
-import type { PriceStatistics, SavingsOpportunity } from "@/src/domains/market-insights";
+import type { PriceStatistics, SavingsOpportunity, CanonicalVolatilityProfile } from "@/src/domains/market-insights";
 import type { FreshnessScore } from "@/src/domains/realtime-commerce";
 import type { ExchangeRate } from "@/src/domains/exchange";
 
@@ -103,4 +103,44 @@ export interface BestDealResult {
   nearTie: NearTieInfo | null;
   totalOffers: number;
   errors: Partial<Record<ComposerErrorKey | "exchangeRate", string>>;
+}
+
+// ── Release 2.0 — Wave 3 (Experience Iteration 3 — Should I Buy Now). ────
+// Every field below is read from CanonicalPriceHistoryService's already-
+// computed `trend`/`variationPercent` (via the bundle), PriceIntelligenceService's
+// already-computed median, VolatilityRollupService's already-computed
+// classification, ExchangeHistoryService's already-stored rate history, and
+// FreshnessService's already-computed classification. PurchaseTimingComposer
+// introduces no new price math anywhere — see docs/product/PURCHASE_TIMING_DECISION.md.
+
+export type PurchaseTimingVerdict = "buy_now" | "can_wait" | "better_wait" | "insufficient_data";
+
+/** Same shape/discipline as BestDealReason — every reason traces to one
+ * named existing signal, never free text invented at render time. */
+export interface PurchaseTimingReason {
+  factor: string;
+  label: string;
+  evidence: string;
+}
+
+export interface ExchangeTrendContext {
+  direction: "favorable" | "unfavorable" | "stable";
+  /** The oldest and newest ExchangeRate in the lookback window
+   * (ExchangeHistoryService.getRange — already-stored rows, no new fetch
+   * mechanism) — "favorable" means USD/BRL fell (fewer Reais per dollar)
+   * across that window, a plain first-vs-last comparison. */
+  fromRate: ExchangeRate;
+  toRate: ExchangeRate;
+  changePercent: number;
+}
+
+export interface PurchaseTimingResult {
+  canonicalProductId: string;
+  verdict: PurchaseTimingVerdict;
+  reasons: PurchaseTimingReason[];
+  priceAggregation: CanonicalPriceAggregation;
+  priceStatistics: PriceStatistics | null;
+  volatility: CanonicalVolatilityProfile | null;
+  exchangeTrend: ExchangeTrendContext | null;
+  errors: Partial<Record<ComposerErrorKey | "volatility" | "exchangeTrend", string>>;
 }
