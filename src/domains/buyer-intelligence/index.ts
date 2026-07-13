@@ -13,3 +13,4 @@ export { SearchIntelligenceComposer } from "./services/SearchIntelligenceCompose
 export type { SearchIntelligenceInput } from "./services/SearchIntelligenceComposer";
 export { BestDealComposer } from "./services/BestDealComposer";
 export { PurchaseTimingComposer } from "./services/PurchaseTimingComposer";
+export { TrustComposer } from "./services/TrustComposer";

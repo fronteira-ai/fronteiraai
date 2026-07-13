@@ -11,7 +11,7 @@ import { escapeLikePattern } from "@/utils/search";
 // Same offers!left join pattern already used by getProductsCatalog
 // (services/product.service.ts) — offers!left so a product without any
 // offer yet still appears (never hidden), just without a price badge.
-type SearchProductRow = ProductWithRelations & { offers: { price_usd: number; in_stock: boolean }[] };
+type SearchProductRow = ProductWithRelations & { offers: { price_usd: number; in_stock: boolean; store_id: string }[] };
 
 const RESULTS_PER_SECTION = 8;
 
@@ -41,7 +41,7 @@ export async function searchEverything(search: string): Promise<SearchResponse> 
     await Promise.all([
       supabase
         .from("products")
-        .select("*, brand:brands(*), category:categories(*), offers!left(price_usd, in_stock)")
+        .select("*, brand:brands(*), category:categories(*), offers!left(price_usd, in_stock, store_id)")
         .ilike("name", pattern)
         .limit(RESULTS_PER_SECTION),
 
@@ -79,13 +79,18 @@ export async function searchEverything(search: string): Promise<SearchResponse> 
   const productRows = (productsResult.data ?? []) as unknown as SearchProductRow[];
   const products: ProductCatalogItem[] = productRows.map((row) => {
     const { offers, ...product } = row;
-    const prices = (offers ?? [])
-      .map((offer) => offer.price_usd)
-      .filter((price): price is number => typeof price === "number");
+    const validOffers = (offers ?? []).filter((offer) => typeof offer.price_usd === "number");
+    const lowestOffer = validOffers.reduce<(typeof validOffers)[number] | null>(
+      (lowest, offer) => (!lowest || offer.price_usd < lowest.price_usd ? offer : lowest),
+      null
+    );
     return {
       ...product,
-      lowestPriceUSD: prices.length > 0 ? Math.min(...prices) : null,
+      lowestPriceUSD: lowestOffer?.price_usd ?? null,
       inStock: (offers ?? []).some((offer) => offer.in_stock),
+      // Release 2.0 — Wave 4 (Trust Experience) — the store behind the
+      // displayed price, for TrustComposer.composeCompactForStores.
+      lowestPriceStoreId: lowestOffer?.store_id ?? null,
     };
   });
   const stores = (storesResult.data ?? []) as Store[];

@@ -5,14 +5,17 @@ import CategoryCard from "@/components/ui/CategoryCard";
 import Chip from "@/components/ui/Chip";
 import EmptyState from "@/components/ui/EmptyState";
 import { SearchResponse } from "@/types/search";
-import type { SearchIntelligenceBadge } from "@/src/domains/buyer-intelligence";
+import type { SearchIntelligenceBadge, CompactTrustBadge } from "@/src/domains/buyer-intelligence";
 
 type Props = {
   results: SearchResponse;
   belowAveragePriceBadges?: Map<string, SearchIntelligenceBadge>;
+  /** Release 2.0 — Wave 4 (Trust Experience) — keyed by store id
+   * (product.lowestPriceStoreId), not product id. */
+  trustBadges?: Map<string, CompactTrustBadge>;
 };
 
-export default function SearchResults({ results, belowAveragePriceBadges }: Props) {
+export default function SearchResults({ results, belowAveragePriceBadges, trustBadges }: Props) {
   const { query, products, stores, brands, categories, total, durationMs } = results;
 
   if (!query) {
@@ -59,6 +62,7 @@ export default function SearchResults({ results, belowAveragePriceBadges }: Prop
                 inStock={product.inStock}
                 belowAveragePrice={belowAveragePriceBadges?.get(product.id)?.belowAveragePrice}
                 isBestDeal={belowAveragePriceBadges?.get(product.id)?.isBestDeal}
+                isVerifiedStore={product.lowestPriceStoreId ? trustBadges?.get(product.lowestPriceStoreId)?.isVerified : undefined}
               />
             ))}
           </div>

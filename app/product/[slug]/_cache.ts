@@ -3,7 +3,7 @@ import { getProductBySlug, getRelatedProducts } from "@/services/product.service
 import { getOffersByProduct } from "@/services/offer.service";
 import { getSupabaseServiceClient } from "@/lib/supabase/service";
 import { createBuyerIntelligenceServices } from "@/lib/buyer-intelligence-factory";
-import type { ComparisonIntelligenceBundle } from "@/src/domains/buyer-intelligence";
+import type { ComparisonIntelligenceBundle, BestDealResult } from "@/src/domains/buyer-intelligence";
 
 export const getCachedProduct = cache(getProductBySlug);
 export const getCachedOffers = cache(getOffersByProduct);
@@ -57,3 +57,16 @@ async function getProductPurchaseTiming(comparison: ComparisonIntelligenceBundle
 }
 
 export const getCachedPurchaseTiming = cache(getProductPurchaseTiming);
+
+// Release 2.0 — Wave 4 (Trust Experience). Composes trust for the
+// recommended offer's store — the same store BestDealCard already surfaces
+// as the buyer's actual next click — never a second ranking decision.
+// null bestDeal (no canonical link, or no offers at all) means there is no
+// single store to reason about trust for yet.
+async function getProductTrust(bestDeal: BestDealResult | null) {
+  if (!bestDeal) return null;
+  const { trustComposer } = createBuyerIntelligenceServices(getSupabaseServiceClient());
+  return trustComposer.composeForOffer(bestDeal.recommendedOffer);
+}
+
+export const getCachedTrust = cache(getProductTrust);

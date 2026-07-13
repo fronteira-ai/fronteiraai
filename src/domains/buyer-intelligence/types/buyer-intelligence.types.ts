@@ -2,6 +2,8 @@ import type { CanonicalProduct, CanonicalOfferView, OfferRankFactor, CanonicalPr
 import type { PriceStatistics, SavingsOpportunity, CanonicalVolatilityProfile } from "@/src/domains/market-insights";
 import type { FreshnessScore } from "@/src/domains/realtime-commerce";
 import type { ExchangeRate } from "@/src/domains/exchange";
+import type { MerchantBadgeRecord } from "@/src/domains/trust/types/trust.types";
+import type { TrustBadge } from "@/src/domains/trust/types/enums";
 
 // Release 2.0 — Wave 1 (Buyer Intelligence Layer). Deliberately a pure DTO
 // module: every field here is read, never computed, by the composers in
@@ -143,4 +145,59 @@ export interface PurchaseTimingResult {
   volatility: CanonicalVolatilityProfile | null;
   exchangeTrend: ExchangeTrendContext | null;
   errors: Partial<Record<ComposerErrorKey | "volatility" | "exchangeTrend", string>>;
+}
+
+// ── Release 2.0 — Wave 4 (Experience Iteration 4 — Trust Experience). ────
+// Every field below is read from BadgeService/MerchantProfileService/
+// TrustHistoryService (already-tested trust domain services) or from
+// RankedOfferIntelligence (isVerifiedStore/freshness, already resolved by
+// ComparisonIntelligenceComposer in Wave 1). TrustComposer introduces no new
+// trust score, no new badge rule, no new verification logic — see
+// docs/product/TRUST_DECISION_ARCHITECTURE.md.
+
+/** Same shape/discipline as BestDealReason/PurchaseTimingReason — every
+ * signal traces to one named existing value, never free text invented at
+ * render time. */
+export interface TrustSignalLine {
+  factor: string;
+  label: string;
+  evidence: string;
+}
+
+/** Built by comparing the oldest and newest of up to 30
+ * TrustHistoryService snapshots (a first-vs-last comparison, same
+ * discipline as PurchaseTimingComposer's price trend) — "unknown" when
+ * fewer than 2 snapshots exist, never guessed from a single data point. */
+export type TrustHistoryTrend = "improving" | "stable" | "declining" | "unknown";
+
+export interface TrustCardResult {
+  storeId: string;
+  /** null when this store has no merchant linked yet (IMerchantStoreLinkRepository) —
+   * every merchant-dependent field below is then null/empty and the card
+   * shows "Informação indisponível", never a fabricated status. */
+  merchantId: string | null;
+  /** Read directly from RankedOfferIntelligence.isVerifiedStore when composed
+   * from an offer — the exact same value already shown elsewhere in the app,
+   * never a second/competing definition of "verified". */
+  isVerified: boolean;
+  badgeLevel: TrustBadge | null;
+  trustScore: number | null;
+  activeBadges: MerchantBadgeRecord[];
+  freshness: FreshnessScore | null;
+  inStock: boolean | null;
+  historyTrend: TrustHistoryTrend;
+  signals: TrustSignalLine[];
+  /** Objetivo 3 — honest caveats, e.g. "loja não vinculada a um perfil de
+   * confiança", "histórico insuficiente para avaliar consistência". Never
+   * flips isVerified/badgeLevel/trustScore, only documents their absence. */
+  limitations: string[];
+  errors: Partial<Record<"profile" | "history", string>>;
+}
+
+/** Objetivo 5 — Search Results compact version: verification only, no
+ * profile/history fetch, same batched read pattern as
+ * ComparisonIntelligenceComposer's own store-verification resolution. */
+export interface CompactTrustBadge {
+  storeId: string;
+  isVerified: boolean;
 }

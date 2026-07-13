@@ -10,6 +10,7 @@ import CompareSummary from "@/components/compare/CompareSummary";
 import CompareOfferCard from "@/components/compare/CompareOfferCard";
 import BestDealCard from "@/components/product/BestDealCard";
 import ShouldIBuyNowCard from "@/components/product/ShouldIBuyNowCard";
+import TrustCard from "@/components/product/TrustCard";
 import { getProductComparisonBySlug } from "@/services/compare.service";
 import { getRelatedProducts } from "@/services/product.service";
 import { compareUrl, productPath } from "@/constants/routes";
@@ -46,7 +47,7 @@ export default async function ComparePage({ params }: Props) {
   const result = await getCachedComparison(slug);
   if (!result) notFound();
 
-  const { product, offers, summary, bestDeal, bestDealStoreName, purchaseTiming } = result;
+  const { product, offers, summary, bestDeal, bestDealStoreName, purchaseTiming, trust } = result;
 
   const relatedProducts = product.category_id
     ? await getRelatedProducts(product.category_id, product.id)
@@ -85,6 +86,13 @@ export default async function ComparePage({ params }: Props) {
         {purchaseTiming ? (
           <div className="mt-6">
             <ShouldIBuyNowCard timing={purchaseTiming} />
+          </div>
+        ) : null}
+
+        {/* Trust */}
+        {trust ? (
+          <div className="mt-6">
+            <TrustCard trust={trust} />
           </div>
         ) : null}
 

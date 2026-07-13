@@ -25,6 +25,12 @@ export interface ProductWithRelations extends Product {
 export interface ProductCatalogItem extends ProductWithRelations {
   lowestPriceUSD: number | null;
   inStock: boolean;
+  /** Release 2.0 — Wave 4 (Trust Experience). The store_id of the offer that
+   * produced lowestPriceUSD — only populated by services/search.service.ts
+   * today, for TrustComposer.composeCompactForStores. null when the product
+   * has no offers at all. Optional so other callers (getProductsCatalog)
+   * don't need to change. */
+  lowestPriceStoreId?: string | null;
 }
 
 // Forma resumida de produto + melhor oferta, usada em vitrines (ex: Home).

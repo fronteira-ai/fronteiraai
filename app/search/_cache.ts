@@ -14,3 +14,16 @@ async function getSearchIntelligenceBadges(products: ProductCatalogItem[]) {
 }
 
 export const getCachedSearchIntelligenceBadges = cache(getSearchIntelligenceBadges);
+
+// Release 2.0 — Wave 4 (Trust Experience, Objetivo 5 — Search Results
+// compact version). Batched by the store ids already resolved by
+// searchEverything (lowestPriceStoreId) — never a per-card query.
+async function getSearchTrustBadges(products: ProductCatalogItem[]) {
+  const { trustComposer } = createBuyerIntelligenceServices(getSupabaseServiceClient());
+  const storeIds = products
+    .map((p) => p.lowestPriceStoreId)
+    .filter((id): id is string => typeof id === "string");
+  return trustComposer.composeCompactForStores(storeIds);
+}
+
+export const getCachedSearchTrustBadges = cache(getSearchTrustBadges);

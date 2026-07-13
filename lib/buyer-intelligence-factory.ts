@@ -1,12 +1,23 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { ComparisonIntelligenceComposer, ProductIntelligenceComposer, SearchIntelligenceComposer, BestDealComposer, PurchaseTimingComposer } from "@/src/domains/buyer-intelligence";
+import { ComparisonIntelligenceComposer, ProductIntelligenceComposer, SearchIntelligenceComposer, BestDealComposer, PurchaseTimingComposer, TrustComposer } from "@/src/domains/buyer-intelligence";
 import { createCanonicalCatalogServices } from "./canonical-catalog-factory";
 import { createMarketInsightsServices } from "./market-insights-factory";
 import { createRealtimeCommerceServices } from "./realtime-commerce-factory";
 import { createExchangeServices } from "./exchange-factory";
 import { SupabaseMerchantStoreLinkRepository } from "@/src/domains/merchant-ownership/infrastructure/SupabaseMerchantStoreLinkRepository";
 import { BadgeService } from "@/src/domains/trust/services/BadgeService";
-import { SupabaseBadgeRepository, SupabaseTrustRepository, SupabaseTrustEventRepository } from "@/src/domains/trust/infrastructure";
+import { MerchantProfileService } from "@/src/domains/trust/services/MerchantProfileService";
+import { TrustHistoryService } from "@/src/domains/trust/services/TrustHistoryService";
+import {
+  SupabaseBadgeRepository,
+  SupabaseTrustRepository,
+  SupabaseTrustEventRepository,
+  SupabaseTrustSignalRepository,
+  SupabaseMerchantReviewRepository,
+  SupabaseMerchantTimelineRepository,
+  SupabaseTrustHistoryRepository,
+  SupabaseVerificationRepository,
+} from "@/src/domains/trust/infrastructure";
 
 // Release 2.0 — Wave 1. Same composition pattern as every other
 // `lib/*-factory.ts` — reuses the existing canonical-catalog/market-insights/
@@ -26,6 +37,19 @@ export function createBuyerIntelligenceServices(client: SupabaseClient) {
     new SupabaseTrustRepository(client),
     new SupabaseTrustEventRepository(client)
   );
+  const merchantProfileService = new MerchantProfileService(
+    new SupabaseTrustRepository(client),
+    new SupabaseBadgeRepository(client),
+    new SupabaseTrustSignalRepository(client),
+    new SupabaseMerchantReviewRepository(client),
+    new SupabaseMerchantTimelineRepository(client)
+  );
+  const trustHistoryService = new TrustHistoryService(
+    new SupabaseTrustHistoryRepository(client),
+    new SupabaseTrustRepository(client),
+    new SupabaseTrustEventRepository(client),
+    new SupabaseVerificationRepository(client)
+  );
 
   const comparisonComposer = new ComparisonIntelligenceComposer(
     compareFoundationService,
@@ -39,6 +63,7 @@ export function createBuyerIntelligenceServices(client: SupabaseClient) {
   const searchComposer = new SearchIntelligenceComposer(catalogRepo, priceIntelligenceService);
   const bestDealComposer = new BestDealComposer(rateService);
   const purchaseTimingComposer = new PurchaseTimingComposer(volatilityRollupService, historyService);
+  const trustComposer = new TrustComposer(merchantStoreLinkRepo, merchantProfileService, trustHistoryService, badgeService);
 
-  return { comparisonComposer, productComposer, searchComposer, bestDealComposer, purchaseTimingComposer };
+  return { comparisonComposer, productComposer, searchComposer, bestDealComposer, purchaseTimingComposer, trustComposer };
 }

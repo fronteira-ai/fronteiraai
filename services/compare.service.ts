@@ -169,13 +169,13 @@ function buildSummary(rankedOffers: RankedOffer[]): CompareSummary {
 }
 
 async function buildCompareResult(productId: string, product: ProductWithRelations): Promise<CompareResult> {
-  const { productComposer, bestDealComposer, purchaseTimingComposer } = createBuyerIntelligenceServices(getSupabaseServiceClient());
+  const { productComposer, bestDealComposer, purchaseTimingComposer, trustComposer } = createBuyerIntelligenceServices(getSupabaseServiceClient());
   const { comparison } = await productComposer.composeForProduct(productId);
 
   if (!comparison) {
     // No canonical link yet (Product Identity, Shadow Mode) — nothing to
     // compare across stores. Empty result, never an error.
-    return { product, offers: [], summary: buildSummary([]), bestDeal: null, bestDealStoreName: null, purchaseTiming: null };
+    return { product, offers: [], summary: buildSummary([]), bestDeal: null, bestDealStoreName: null, purchaseTiming: null, trust: null };
   }
 
   const storeIds = [...new Set(comparison.offers.map((o) => o.offer.storeId))];
@@ -191,9 +191,14 @@ async function buildCompareResult(productId: string, product: ProductWithRelatio
     purchaseTimingComposer.compose(comparison),
   ]);
 
+  // Release 2.0 — Wave 4 (Trust Experience). Trust for the same recommended
+  // (rank-1) offer BestDealCard already surfaces — depends on bestDeal, so
+  // it runs after the Promise.all above rather than inside it.
+  const trust = bestDeal ? await trustComposer.composeForOffer(bestDeal.recommendedOffer) : null;
+
   const rankedOffers = toRankedOffers(comparison.offers, storesById, offerExtrasById, metricsById);
   const bestDealStoreName = bestDeal ? storesById.get(bestDeal.recommendedOffer.offer.storeId)?.name ?? bestDeal.recommendedOffer.offer.storeSlug : null;
-  return { product, offers: rankedOffers, summary: buildSummary(rankedOffers), bestDeal, bestDealStoreName, purchaseTiming };
+  return { product, offers: rankedOffers, summary: buildSummary(rankedOffers), bestDeal, bestDealStoreName, purchaseTiming, trust };
 }
 
 // Primary entry point: compare by product slug.

@@ -20,6 +20,11 @@ type Props = {
   /** Release 2.0 — Wave 2 ("🏆 Melhor Compra"), same SearchIntelligenceComposer
    * call — takes priority over belowAveragePrice when both are true. */
   isBestDeal?: boolean;
+  /** Release 2.0 — Wave 4 (Trust Experience), TrustComposer.composeCompactForStores
+   * — compact "🛡️ Verificada" pill for the store selling this product in a
+   * results grid. Undefined on every existing caller (Home/catalog/related
+   * products) keeps their rendered DOM identical. */
+  isVerifiedStore?: boolean;
 };
 
 function ProductCard({
@@ -32,6 +37,7 @@ function ProductCard({
   inStock,
   belowAveragePrice,
   isBestDeal,
+  isVerifiedStore,
 }: Props) {
   const discount =
     originalPriceUSD && priceUSD
@@ -74,6 +80,12 @@ function ProductCard({
 
         {subtitle ? (
           <p className="mt-1 text-sm text-slate-500">{subtitle}</p>
+        ) : null}
+
+        {isVerifiedStore ? (
+          <span className="mt-1 inline-flex w-fit items-center gap-1 rounded-full bg-slate-800 px-2.5 py-0.5 text-xs font-semibold text-slate-300">
+            🛡️ Verificada
+          </span>
         ) : null}
 
         {priceUSD !== undefined ? (
