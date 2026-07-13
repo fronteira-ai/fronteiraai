@@ -201,3 +201,46 @@ export interface CompactTrustBadge {
   storeId: string;
   isVerified: boolean;
 }
+
+// ── Release 2.0 — Fase 2 — Wave 5 (EI-5 — ParaguAI Advisor). ─────────────
+// Pure composition-of-compositions: every field below is read from
+// BestDealResult (Wave 2, which already carries the "Buyer Savings" numbers
+// — see PARAGUAI_ADVISOR_ARCHITECTURE.md §1 for why there is no separate
+// BuyerSavingsResult), PurchaseTimingResult (Wave 3), and TrustCardResult
+// (Wave 4). ParaguAIAdvisorComposer performs zero I/O and zero new scoring —
+// it only reads fields these three composers already computed and decides
+// which existing verdict to surface, via plain condition checks, never a
+// new weighted score.
+
+export type AdvisorRecommendation = "buy_now" | "good_deal_caution" | "wait" | "insufficient_data";
+
+/** Objetivo 4 — a conflict is two already-existing signals disagreeing
+ * (e.g. bestDeal.savingsOpportunity > 0 vs. trust.isVerified === false).
+ * Never hidden, never resolved by inventing a tie-break — always surfaced
+ * to the buyer verbatim. */
+export interface AdvisorConflict {
+  signalA: string;
+  signalB: string;
+  explanation: string;
+}
+
+/** Objetivo 5 — Recommendation Summary: at most 5 of these are ever
+ * produced by ParaguAIAdvisorComposer.buildSummaryLines. */
+export interface AdvisorSummaryLine {
+  icon: string;
+  label: string;
+  value: string;
+}
+
+export interface ParaguAIAdvisorResult {
+  recommendation: AdvisorRecommendation;
+  headline: string;
+  bestDeal: BestDealResult | null;
+  purchaseTiming: PurchaseTimingResult | null;
+  trust: TrustCardResult | null;
+  /** Objetivo 4 — populated whenever named signals disagree; empty array
+   * means no detected conflict, never that conflicts were suppressed. */
+  conflicts: AdvisorConflict[];
+  /** Objetivo 5 — Recommendation Summary content, capped at 5 lines. */
+  summary: AdvisorSummaryLine[];
+}

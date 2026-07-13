@@ -1,5 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { ComparisonIntelligenceComposer, ProductIntelligenceComposer, SearchIntelligenceComposer, BestDealComposer, PurchaseTimingComposer, TrustComposer } from "@/src/domains/buyer-intelligence";
+import { ComparisonIntelligenceComposer, ProductIntelligenceComposer, SearchIntelligenceComposer, BestDealComposer, PurchaseTimingComposer, TrustComposer, ParaguAIAdvisorComposer } from "@/src/domains/buyer-intelligence";
 import { createCanonicalCatalogServices } from "./canonical-catalog-factory";
 import { createMarketInsightsServices } from "./market-insights-factory";
 import { createRealtimeCommerceServices } from "./realtime-commerce-factory";
@@ -64,6 +64,7 @@ export function createBuyerIntelligenceServices(client: SupabaseClient) {
   const bestDealComposer = new BestDealComposer(rateService);
   const purchaseTimingComposer = new PurchaseTimingComposer(volatilityRollupService, historyService);
   const trustComposer = new TrustComposer(merchantStoreLinkRepo, merchantProfileService, trustHistoryService, badgeService);
+  const advisorComposer = new ParaguAIAdvisorComposer();
 
-  return { comparisonComposer, productComposer, searchComposer, bestDealComposer, purchaseTimingComposer, trustComposer };
+  return { comparisonComposer, productComposer, searchComposer, bestDealComposer, purchaseTimingComposer, trustComposer, advisorComposer };
 }

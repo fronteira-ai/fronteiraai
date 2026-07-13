@@ -11,11 +11,17 @@ import CompareOfferCard from "@/components/compare/CompareOfferCard";
 import BestDealCard from "@/components/product/BestDealCard";
 import ShouldIBuyNowCard from "@/components/product/ShouldIBuyNowCard";
 import TrustCard from "@/components/product/TrustCard";
+import ParaguAIAdvisor from "@/components/product/ParaguAIAdvisor";
+import RecommendationSummary from "@/components/product/RecommendationSummary";
 import { getProductComparisonBySlug } from "@/services/compare.service";
 import { getRelatedProducts } from "@/services/product.service";
 import { compareUrl, productPath } from "@/constants/routes";
+import { ParaguAIAdvisorComposer } from "@/src/domains/buyer-intelligence";
 
 const getCachedComparison = cache(getProductComparisonBySlug);
+// Objetivo 2/3 — pure, stateless, zero I/O: instantiated directly, no
+// factory/client needed (unlike every other buyer-intelligence composer).
+const advisorComposer = new ParaguAIAdvisorComposer();
 
 type Props = {
   params: Promise<{ slug: string }>;
@@ -48,6 +54,7 @@ export default async function ComparePage({ params }: Props) {
   if (!result) notFound();
 
   const { product, offers, summary, bestDeal, bestDealStoreName, purchaseTiming, trust } = result;
+  const advisor = advisorComposer.compose(bestDeal, purchaseTiming, trust);
 
   const relatedProducts = product.category_id
     ? await getRelatedProducts(product.category_id, product.id)
@@ -73,6 +80,14 @@ export default async function ComparePage({ params }: Props) {
         {/* Product header */}
         <div className="mt-10">
           <ProductHeader product={product} />
+        </div>
+
+        {/* ParaguAI Advisor — unified recommendation */}
+        <div className="mt-10">
+          <ParaguAIAdvisor advisor={advisor} />
+        </div>
+        <div className="mt-4">
+          <RecommendationSummary advisor={advisor} />
         </div>
 
         {/* Best Deal */}

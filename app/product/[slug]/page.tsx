@@ -15,8 +15,15 @@ import ProductViewTracker from "@/components/product/ProductViewTracker";
 import BestDealCard from "@/components/product/BestDealCard";
 import ShouldIBuyNowCard from "@/components/product/ShouldIBuyNowCard";
 import TrustCard from "@/components/product/TrustCard";
+import ParaguAIAdvisor from "@/components/product/ParaguAIAdvisor";
+import RecommendationSummary from "@/components/product/RecommendationSummary";
 import { comparePath } from "@/constants/routes";
+import { ParaguAIAdvisorComposer } from "@/src/domains/buyer-intelligence";
 import { getCachedProduct, getCachedOffers, getCachedRelatedProducts, getCachedIntelligence, getCachedBestDeal, getCachedPurchaseTiming, getCachedTrust } from "./_cache";
+
+// Objetivo 2/3 — pure, stateless, zero I/O: instantiated directly, no
+// factory/client needed (unlike every other buyer-intelligence composer).
+const advisorComposer = new ParaguAIAdvisorComposer();
 
 type Params = Promise<{ slug: string }>;
 
@@ -39,6 +46,7 @@ export default async function ProductPage({ params }: { params: Params }) {
     getCachedPurchaseTiming(intelligence.comparison),
     getCachedTrust(bestDeal),
   ]);
+  const advisor = advisorComposer.compose(bestDeal, purchaseTiming, trust);
 
   return (
     <main className="min-h-screen bg-[#050816] text-white">
@@ -85,6 +93,8 @@ export default async function ProductPage({ params }: { params: Params }) {
         </div>
 
         <div className="mt-12 flex flex-col gap-8">
+          <ParaguAIAdvisor advisor={advisor} />
+          <RecommendationSummary advisor={advisor} />
           {bestDeal ? <BestDealCard bestDeal={bestDeal} storeName={storeName ?? ""} /> : null}
           <ShouldIBuyNowCard timing={purchaseTiming} />
           <TrustCard trust={trust} />
