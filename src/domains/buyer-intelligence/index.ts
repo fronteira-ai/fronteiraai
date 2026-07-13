@@ -11,3 +11,4 @@ export { ComparisonIntelligenceComposer } from "./services/ComparisonIntelligenc
 export { ProductIntelligenceComposer } from "./services/ProductIntelligenceComposer";
 export { SearchIntelligenceComposer } from "./services/SearchIntelligenceComposer";
 export type { SearchIntelligenceInput } from "./services/SearchIntelligenceComposer";
+export { BestDealComposer } from "./services/BestDealComposer";

@@ -169,26 +169,30 @@ function buildSummary(rankedOffers: RankedOffer[]): CompareSummary {
 }
 
 async function buildCompareResult(productId: string, product: ProductWithRelations): Promise<CompareResult> {
-  const { productComposer } = createBuyerIntelligenceServices(getSupabaseServiceClient());
+  const { productComposer, bestDealComposer } = createBuyerIntelligenceServices(getSupabaseServiceClient());
   const { comparison } = await productComposer.composeForProduct(productId);
 
   if (!comparison) {
     // No canonical link yet (Product Identity, Shadow Mode) — nothing to
     // compare across stores. Empty result, never an error.
-    return { product, offers: [], summary: buildSummary([]) };
+    return { product, offers: [], summary: buildSummary([]), bestDeal: null, bestDealStoreName: null };
   }
 
   const storeIds = [...new Set(comparison.offers.map((o) => o.offer.storeId))];
   const offerIds = comparison.offers.map((o) => o.offer.offerId);
 
-  const [storesById, offerExtrasById, metricsById] = await Promise.all([
+  // Release 2.0 — Wave 2 (Best Deal): bestDealComposer.compose() only reads
+  // `comparison`, already fetched above — no duplicate query.
+  const [storesById, offerExtrasById, metricsById, bestDeal] = await Promise.all([
     resolveStores(storeIds),
     resolveOfferExtras(offerIds),
     batchPriceMetrics(comparison.offers.map((o) => ({ id: o.offer.offerId, price_usd: o.offer.priceUSD }))),
+    bestDealComposer.compose(comparison),
   ]);
 
   const rankedOffers = toRankedOffers(comparison.offers, storesById, offerExtrasById, metricsById);
-  return { product, offers: rankedOffers, summary: buildSummary(rankedOffers) };
+  const bestDealStoreName = bestDeal ? storesById.get(bestDeal.recommendedOffer.offer.storeId)?.name ?? bestDeal.recommendedOffer.offer.storeSlug : null;
+  return { product, offers: rankedOffers, summary: buildSummary(rankedOffers), bestDeal, bestDealStoreName };
 }
 
 // Primary entry point: compare by product slug.

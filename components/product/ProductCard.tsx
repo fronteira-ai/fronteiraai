@@ -17,6 +17,9 @@ type Props = {
   /** Release 2.0 — Wave 1 ("Preço Abaixo da Média"), PriceIntelligenceService
    * via SearchIntelligenceComposer — a compact signal for grid contexts. */
   belowAveragePrice?: boolean;
+  /** Release 2.0 — Wave 2 ("🏆 Melhor Compra"), same SearchIntelligenceComposer
+   * call — takes priority over belowAveragePrice when both are true. */
+  isBestDeal?: boolean;
 };
 
 function ProductCard({
@@ -28,6 +31,7 @@ function ProductCard({
   subtitle,
   inStock,
   belowAveragePrice,
+  isBestDeal,
 }: Props) {
   const discount =
     originalPriceUSD && priceUSD
@@ -86,7 +90,11 @@ function ProductCard({
               ) : null}
             </div>
 
-            {belowAveragePrice ? (
+            {isBestDeal ? (
+              <span className="mt-1 inline-block w-fit rounded-full bg-blue-500/20 px-2.5 py-0.5 text-xs font-semibold text-blue-300">
+                🏆 Melhor compra
+              </span>
+            ) : belowAveragePrice ? (
               <span className="mt-1 inline-block w-fit rounded-full bg-emerald-500/20 px-2.5 py-0.5 text-xs font-semibold text-emerald-300">
                 Preço abaixo da média
               </span>

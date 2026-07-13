@@ -2,6 +2,7 @@ import { ProductWithRelations } from "@/types/product";
 import { OfferWithStore } from "@/types/offer";
 import { OfferPriceMetrics } from "@/types/priceHistory";
 import type { OfferRankFactor } from "@/src/domains/canonical-catalog";
+import type { BestDealResult } from "@/src/domains/buyer-intelligence";
 
 export interface RankedOffer {
   offer: OfferWithStore;
@@ -29,4 +30,9 @@ export interface CompareResult {
   product: ProductWithRelations;
   offers: RankedOffer[];
   summary: CompareSummary;
+  /** Release 2.0 — Wave 2 (Best Deal). null when there's no canonical link
+   * yet (Shadow Mode) — same BestDealComposer output used on the product
+   * page, just resolved from data this service already fetched. */
+  bestDeal: BestDealResult | null;
+  bestDealStoreName: string | null;
 }

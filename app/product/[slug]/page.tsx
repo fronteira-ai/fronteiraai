@@ -12,10 +12,9 @@ import RelatedProducts from "@/components/product/RelatedProducts";
 import FavoriteButton from "@/components/product/FavoriteButton";
 import ShareButton from "@/components/product/ShareButton";
 import ProductViewTracker from "@/components/product/ProductViewTracker";
-import SavingsCallout from "@/components/product/SavingsCallout";
-import IntelligenceBadges from "@/components/product/IntelligenceBadges";
+import BestDealCard from "@/components/product/BestDealCard";
 import { comparePath } from "@/constants/routes";
-import { getCachedProduct, getCachedOffers, getCachedRelatedProducts, getCachedIntelligence } from "./_cache";
+import { getCachedProduct, getCachedOffers, getCachedRelatedProducts, getCachedIntelligence, getCachedBestDeal } from "./_cache";
 
 type Params = Promise<{ slug: string }>;
 
@@ -33,6 +32,7 @@ export default async function ProductPage({ params }: { params: Params }) {
     getCachedRelatedProducts(product.category_id, product.id),
     getCachedIntelligence(product.id),
   ]);
+  const { bestDeal, storeName } = await getCachedBestDeal(intelligence.comparison);
 
   return (
     <main className="min-h-screen bg-[#050816] text-white">
@@ -62,8 +62,6 @@ export default async function ProductPage({ params }: { params: Params }) {
           <div>
             <ProductHeader product={product} />
 
-            <IntelligenceBadges comparison={intelligence.comparison} />
-
             <div className="mt-6 flex flex-wrap gap-3">
               <Link
                 href={comparePath(product.slug)}
@@ -81,7 +79,7 @@ export default async function ProductPage({ params }: { params: Params }) {
         </div>
 
         <div className="mt-12 flex flex-col gap-8">
-          <SavingsCallout comparison={intelligence.comparison} />
+          {bestDeal ? <BestDealCard bestDeal={bestDeal} storeName={storeName ?? ""} /> : null}
           <ProductSpecifications specifications={product.specifications} />
           <ProductOffers offers={offers} />
           <RelatedProducts products={relatedProducts} />

@@ -1,8 +1,9 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { ComparisonIntelligenceComposer, ProductIntelligenceComposer, SearchIntelligenceComposer } from "@/src/domains/buyer-intelligence";
+import { ComparisonIntelligenceComposer, ProductIntelligenceComposer, SearchIntelligenceComposer, BestDealComposer } from "@/src/domains/buyer-intelligence";
 import { createCanonicalCatalogServices } from "./canonical-catalog-factory";
 import { createMarketInsightsServices } from "./market-insights-factory";
 import { createRealtimeCommerceServices } from "./realtime-commerce-factory";
+import { createExchangeServices } from "./exchange-factory";
 import { SupabaseMerchantStoreLinkRepository } from "@/src/domains/merchant-ownership/infrastructure/SupabaseMerchantStoreLinkRepository";
 import { BadgeService } from "@/src/domains/trust/services/BadgeService";
 import { SupabaseBadgeRepository, SupabaseTrustRepository, SupabaseTrustEventRepository } from "@/src/domains/trust/infrastructure";
@@ -17,6 +18,7 @@ export function createBuyerIntelligenceServices(client: SupabaseClient) {
   const { catalogRepo, compareFoundationService } = createCanonicalCatalogServices(client);
   const { priceIntelligenceService } = createMarketInsightsServices(client);
   const { freshnessService } = createRealtimeCommerceServices(client);
+  const { rateService } = createExchangeServices(client);
 
   const merchantStoreLinkRepo = new SupabaseMerchantStoreLinkRepository(client);
   const badgeService = new BadgeService(
@@ -35,6 +37,7 @@ export function createBuyerIntelligenceServices(client: SupabaseClient) {
   );
   const productComposer = new ProductIntelligenceComposer(catalogRepo, comparisonComposer);
   const searchComposer = new SearchIntelligenceComposer(catalogRepo, priceIntelligenceService);
+  const bestDealComposer = new BestDealComposer(rateService);
 
-  return { comparisonComposer, productComposer, searchComposer };
+  return { comparisonComposer, productComposer, searchComposer, bestDealComposer };
 }

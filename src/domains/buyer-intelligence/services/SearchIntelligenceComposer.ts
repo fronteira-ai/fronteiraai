@@ -28,15 +28,24 @@ export class SearchIntelligenceComposer {
   async composeForProducts(inputs: SearchIntelligenceInput[]): Promise<Map<string, SearchIntelligenceBadge>> {
     const entries = await Promise.allSettled(
       inputs.map(async ({ productId, priceUSD }): Promise<[string, SearchIntelligenceBadge]> => {
-        if (priceUSD === null) return [productId, { productId, belowAveragePrice: false }];
+        if (priceUSD === null) return [productId, { productId, belowAveragePrice: false, isBestDeal: false }];
 
         const canonicalProductId = await this.catalogRepo.findCanonicalProductIdByProductId(productId);
-        if (!canonicalProductId) return [productId, { productId, belowAveragePrice: false }];
+        if (!canonicalProductId) return [productId, { productId, belowAveragePrice: false, isBestDeal: false }];
 
         const statistics = await this.priceIntelligenceService.getStatistics(canonicalProductId);
         const belowAveragePrice = !!statistics && priceUSD < statistics.medianPriceUSD * 0.9;
+        // Release 2.0 — Wave 2 (Best Deal, Objetivo 5 — Search Results).
+        // Free to compute from the same statistics call above (storeCount>1
+        // guards a canonical product linked to only itself from always
+        // reading as "best") — never a second query, never the full
+        // ranking/verification/exchange pipeline BestDealComposer runs for
+        // a focused product/compare view (that would be real N+1 cost
+        // across a results grid, which this composer's own Wave 1 doc
+        // comment already commits to avoiding).
+        const isBestDeal = !!statistics && statistics.storeCount > 1 && priceUSD <= statistics.lowestPriceUSD;
 
-        return [productId, { productId, belowAveragePrice }];
+        return [productId, { productId, belowAveragePrice, isBestDeal }];
       })
     );
 

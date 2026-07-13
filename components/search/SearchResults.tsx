@@ -58,6 +58,7 @@ export default function SearchResults({ results, belowAveragePriceBadges }: Prop
                 priceUSD={product.lowestPriceUSD ?? undefined}
                 inStock={product.inStock}
                 belowAveragePrice={belowAveragePriceBadges?.get(product.id)?.belowAveragePrice}
+                isBestDeal={belowAveragePriceBadges?.get(product.id)?.isBestDeal}
               />
             ))}
           </div>

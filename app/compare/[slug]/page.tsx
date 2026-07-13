@@ -8,6 +8,7 @@ import ProductHeader from "@/components/product/ProductHeader";
 import RelatedProducts from "@/components/product/RelatedProducts";
 import CompareSummary from "@/components/compare/CompareSummary";
 import CompareOfferCard from "@/components/compare/CompareOfferCard";
+import BestDealCard from "@/components/product/BestDealCard";
 import { getProductComparisonBySlug } from "@/services/compare.service";
 import { getRelatedProducts } from "@/services/product.service";
 import { compareUrl, productPath } from "@/constants/routes";
@@ -44,7 +45,7 @@ export default async function ComparePage({ params }: Props) {
   const result = await getCachedComparison(slug);
   if (!result) notFound();
 
-  const { product, offers, summary } = result;
+  const { product, offers, summary, bestDeal, bestDealStoreName } = result;
 
   const relatedProducts = product.category_id
     ? await getRelatedProducts(product.category_id, product.id)
@@ -71,6 +72,13 @@ export default async function ComparePage({ params }: Props) {
         <div className="mt-10">
           <ProductHeader product={product} />
         </div>
+
+        {/* Best Deal */}
+        {bestDeal ? (
+          <div className="mt-10">
+            <BestDealCard bestDeal={bestDeal} storeName={bestDealStoreName ?? ""} />
+          </div>
+        ) : null}
 
         {/* Summary stats */}
         <div className="mt-10">
