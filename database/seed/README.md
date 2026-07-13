@@ -22,8 +22,9 @@ node database/seed/validate.js           # auditoria de qualidade, sempre seguro
 ```
 
 `--execute` exige aprovação explícita do CTO antes de ser rodado contra o
-banco real (`.ai/CLAUDE_SYSTEM.md`, Restrições Absolutas) — o dry-run é o
-padrão para que rodar o comando por engano nunca escreva nada.
+banco real (`docs/foundation/AI_CONSTITUTION.md`, "Aprovação antes de
+destruição") — o dry-run é o padrão para que rodar o comando por engano
+nunca escreva nada.
 
 Sem `SUPABASE_SERVICE_ROLE_KEY` em `.env.local`, o script usa a chave
 anônima — inserts podem falhar por RLS dependendo das policies da tabela
