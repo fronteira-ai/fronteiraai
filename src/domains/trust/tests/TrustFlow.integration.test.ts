@@ -197,6 +197,7 @@ const verificationRepo: IVerificationRepository = {
 const badgeRepo: IBadgeRepository = {
   findByMerchantId: async () => [],
   findActiveBadge: async () => null,
+  findActiveBadgesByMerchantIds: async () => new Map(),
   grant: async () => null,
   revoke: async () => null,
   deactivateAll: async () => undefined,

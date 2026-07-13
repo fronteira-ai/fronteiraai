@@ -101,6 +101,7 @@ function makeBadgeRepo(badges: MerchantBadgeRecord[] = [fakeBadge]): IBadgeRepos
   return {
     findByMerchantId: async () => badges,
     findActiveBadge: async () => badges.find(b => b.is_active) ?? null,
+    findActiveBadgesByMerchantIds: async () => new Map(badges.filter(b => b.is_active).map(b => [b.merchant_id, b])),
     grant: async () => null,
     revoke: async () => null,
     deactivateAll: async () => undefined,

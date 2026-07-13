@@ -29,4 +29,17 @@ export class SupabaseMerchantStoreLinkRepository implements IMerchantStoreLinkRe
     }
     return data !== null;
   }
+
+  async findMerchantIdsByStoreIds(storeIds: string[]): Promise<Map<string, string>> {
+    if (storeIds.length === 0) return new Map();
+    const { data, error } = await this.client
+      .from("merchant_stores")
+      .select("store_id, merchant_id")
+      .in("store_id", storeIds);
+    if (error) {
+      console.error("[SupabaseMerchantStoreLinkRepository.findMerchantIdsByStoreIds]", error.message);
+      return new Map();
+    }
+    return new Map((data ?? []).map((row) => [row.store_id as string, row.merchant_id as string]));
+  }
 }

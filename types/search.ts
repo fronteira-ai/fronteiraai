@@ -1,11 +1,11 @@
-import { Product } from "@/types/product";
+import { ProductCatalogItem } from "@/types/product";
 import { Store } from "@/types/store";
 import { Brand } from "@/types/brand";
 import { Category } from "@/types/category";
 
 export interface SearchResponse {
   query: string;
-  products: Product[];
+  products: ProductCatalogItem[];
   stores: Store[];
   brands: Brand[];
   categories: Category[];

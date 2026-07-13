@@ -8,6 +8,7 @@ import SearchResultsSkeleton from "@/components/search/SearchResultsSkeleton";
 import SearchViewTracker from "@/components/search/SearchViewTracker";
 import { searchEverything } from "@/services/search.service";
 import { searchUrl } from "@/constants/routes";
+import { getCachedSearchIntelligenceBadges } from "./_cache";
 
 type SearchParams = Promise<{ q?: string | string[] }>;
 
@@ -59,7 +60,8 @@ export async function generateMetadata({
 
 async function SearchResultsAsync({ query }: { query: string }) {
   const results = await getCachedSearch(query);
-  return <SearchResults results={results} />;
+  const belowAveragePriceBadges = await getCachedSearchIntelligenceBadges(results.products);
+  return <SearchResults results={results} belowAveragePriceBadges={belowAveragePriceBadges} />;
 }
 
 export default async function SearchPage({

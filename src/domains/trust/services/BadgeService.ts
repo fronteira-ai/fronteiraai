@@ -19,6 +19,10 @@ export class BadgeService {
     return this.badgeRepository.findActiveBadge(merchantId);
   }
 
+  async getActiveBadges(merchantIds: string[]): Promise<Map<string, MerchantBadgeRecord>> {
+    return this.badgeRepository.findActiveBadgesByMerchantIds(merchantIds);
+  }
+
   async grantBadge(
     merchantId: string,
     badgeType: TrustBadge,

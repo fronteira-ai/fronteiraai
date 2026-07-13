@@ -37,6 +37,29 @@ export class SupabaseBadgeRepository implements IBadgeRepository {
     return data as MerchantBadgeRecord | null;
   }
 
+  async findActiveBadgesByMerchantIds(merchantIds: string[]): Promise<Map<string, MerchantBadgeRecord>> {
+    if (merchantIds.length === 0) return new Map();
+    const { data, error } = await this.client
+      .from("merchant_badges")
+      .select("*")
+      .in("merchant_id", merchantIds)
+      .eq("is_active", true)
+      .order("granted_at", { ascending: false });
+
+    if (error) {
+      console.error("[BadgeRepository.findActiveBadgesByMerchantIds]", error);
+      return new Map();
+    }
+    // Rows are ordered newest-first; a Map keeps only the first (most
+    // recent) badge seen per merchant_id, matching findActiveBadge's
+    // single-row semantics.
+    const map = new Map<string, MerchantBadgeRecord>();
+    for (const row of (data ?? []) as MerchantBadgeRecord[]) {
+      if (!map.has(row.merchant_id)) map.set(row.merchant_id, row);
+    }
+    return map;
+  }
+
   async grant(
     merchantId: string,
     badgeType: TrustBadge,

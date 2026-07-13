@@ -10,9 +10,12 @@ type Props = {
 };
 
 function CompareOfferCard({ rankedOffer, productSlug }: Props & { productSlug?: string }) {
-  const { offer, rank, rankScore, priceMetrics } = rankedOffer;
+  const { offer, rank, rankScore, priceMetrics, factors } = rankedOffer;
   const store = offer.store;
   const isBest = rank === 1;
+  // Release 2.0 — Wave 1 ("Loja Recomendada"): the 2 factors that contributed
+  // most to this offer's score — never an unexplained "recommended" badge.
+  const topFactors = isBest ? [...(factors ?? [])].sort((a, b) => b.weight - a.weight).slice(0, 2) : [];
 
   const handleOfferClick = useCallback(() => {
     if (!offer.product_url) return;
@@ -68,6 +71,12 @@ function CompareOfferCard({ rankedOffer, productSlug }: Props & { productSlug?: 
             </div>
 
           </div>
+
+          {topFactors.length > 0 ? (
+            <p className="mt-2 text-xs text-blue-300">
+              Recomendada: {topFactors.map((f) => f.evidence).join(" · ")}
+            </p>
+          ) : null}
 
           {/* Offer badges */}
           <div className="mt-4 flex flex-wrap gap-2 text-sm">

@@ -5,12 +5,14 @@ import CategoryCard from "@/components/ui/CategoryCard";
 import Chip from "@/components/ui/Chip";
 import EmptyState from "@/components/ui/EmptyState";
 import { SearchResponse } from "@/types/search";
+import type { SearchIntelligenceBadge } from "@/src/domains/buyer-intelligence";
 
 type Props = {
   results: SearchResponse;
+  belowAveragePriceBadges?: Map<string, SearchIntelligenceBadge>;
 };
 
-export default function SearchResults({ results }: Props) {
+export default function SearchResults({ results, belowAveragePriceBadges }: Props) {
   const { query, products, stores, brands, categories, total, durationMs } = results;
 
   if (!query) {
@@ -53,6 +55,9 @@ export default function SearchResults({ results }: Props) {
                 slug={product.slug}
                 name={product.name}
                 imageUrl={product.image_url}
+                priceUSD={product.lowestPriceUSD ?? undefined}
+                inStock={product.inStock}
+                belowAveragePrice={belowAveragePriceBadges?.get(product.id)?.belowAveragePrice}
               />
             ))}
           </div>

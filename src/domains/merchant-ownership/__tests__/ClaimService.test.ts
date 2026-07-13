@@ -57,6 +57,7 @@ function makeStoreLinkRepo(overrides: Partial<IMerchantStoreLinkRepository> = {}
     link: jest.fn().mockResolvedValue(undefined),
     unlink: jest.fn().mockResolvedValue(undefined),
     isLinked: jest.fn().mockResolvedValue(false),
+    findMerchantIdsByStoreIds: jest.fn().mockResolvedValue(new Map()),
     ...overrides,
   };
 }

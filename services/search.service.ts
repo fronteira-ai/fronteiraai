@@ -1,10 +1,17 @@
 import { supabase } from "@/lib/supabase";
 import { SearchResponse } from "@/types/search";
-import { Product } from "@/types/product";
+import { ProductCatalogItem, ProductWithRelations } from "@/types/product";
 import { Store } from "@/types/store";
 import { Brand } from "@/types/brand";
 import { Category } from "@/types/category";
 import { escapeLikePattern } from "@/utils/search";
+
+// Release 2.0 — Wave 1 (Quick Wins). Closes the gap named in
+// docs/product/BUYER_INTELLIGENCE_MAP.md: search results never showed price.
+// Same offers!left join pattern already used by getProductsCatalog
+// (services/product.service.ts) — offers!left so a product without any
+// offer yet still appears (never hidden), just without a price badge.
+type SearchProductRow = ProductWithRelations & { offers: { price_usd: number; in_stock: boolean }[] };
 
 const RESULTS_PER_SECTION = 8;
 
@@ -34,7 +41,7 @@ export async function searchEverything(search: string): Promise<SearchResponse> 
     await Promise.all([
       supabase
         .from("products")
-        .select("*")
+        .select("*, brand:brands(*), category:categories(*), offers!left(price_usd, in_stock)")
         .ilike("name", pattern)
         .limit(RESULTS_PER_SECTION),
 
@@ -69,7 +76,18 @@ export async function searchEverything(search: string): Promise<SearchResponse> 
     if (result.error) console.error(result.error);
   });
 
-  const products = (productsResult.data ?? []) as Product[];
+  const productRows = (productsResult.data ?? []) as unknown as SearchProductRow[];
+  const products: ProductCatalogItem[] = productRows.map((row) => {
+    const { offers, ...product } = row;
+    const prices = (offers ?? [])
+      .map((offer) => offer.price_usd)
+      .filter((price): price is number => typeof price === "number");
+    return {
+      ...product,
+      lowestPriceUSD: prices.length > 0 ? Math.min(...prices) : null,
+      inStock: (offers ?? []).some((offer) => offer.in_stock),
+    };
+  });
   const stores = (storesResult.data ?? []) as Store[];
   const brands = (brandsResult.data ?? []) as Brand[];
   const categories = (categoriesResult.data ?? []) as Category[];

@@ -6,4 +6,10 @@ export interface IMerchantStoreLinkRepository {
   link(merchantId: string, storeId: string): Promise<void>;
   unlink(merchantId: string, storeId: string): Promise<void>;
   isLinked(merchantId: string, storeId: string): Promise<boolean>;
+  /** Batched reverse lookup (store -> owning merchant) for callers that need
+   * to resolve verification/trust status for a list of offers' stores in one
+   * query instead of N (e.g. buyer-intelligence composers). Stores with no
+   * `merchant_stores` row (unclaimed — the structural default, see
+   * DiscoveryService) are simply absent from the returned map, never an error. */
+  findMerchantIdsByStoreIds(storeIds: string[]): Promise<Map<string, string>>;
 }

@@ -12,8 +12,10 @@ import RelatedProducts from "@/components/product/RelatedProducts";
 import FavoriteButton from "@/components/product/FavoriteButton";
 import ShareButton from "@/components/product/ShareButton";
 import ProductViewTracker from "@/components/product/ProductViewTracker";
+import SavingsCallout from "@/components/product/SavingsCallout";
+import IntelligenceBadges from "@/components/product/IntelligenceBadges";
 import { comparePath } from "@/constants/routes";
-import { getCachedProduct, getCachedOffers, getCachedRelatedProducts } from "./_cache";
+import { getCachedProduct, getCachedOffers, getCachedRelatedProducts, getCachedIntelligence } from "./_cache";
 
 type Params = Promise<{ slug: string }>;
 
@@ -26,9 +28,10 @@ export default async function ProductPage({ params }: { params: Params }) {
     notFound();
   }
 
-  const [offers, relatedProducts] = await Promise.all([
+  const [offers, relatedProducts, intelligence] = await Promise.all([
     getCachedOffers(product.id),
     getCachedRelatedProducts(product.category_id, product.id),
+    getCachedIntelligence(product.id),
   ]);
 
   return (
@@ -59,6 +62,8 @@ export default async function ProductPage({ params }: { params: Params }) {
           <div>
             <ProductHeader product={product} />
 
+            <IntelligenceBadges comparison={intelligence.comparison} />
+
             <div className="mt-6 flex flex-wrap gap-3">
               <Link
                 href={comparePath(product.slug)}
@@ -76,6 +81,7 @@ export default async function ProductPage({ params }: { params: Params }) {
         </div>
 
         <div className="mt-12 flex flex-col gap-8">
+          <SavingsCallout comparison={intelligence.comparison} />
           <ProductSpecifications specifications={product.specifications} />
           <ProductOffers offers={offers} />
           <RelatedProducts products={relatedProducts} />
