@@ -8,21 +8,20 @@ const steps = [
   {
     step: "01",
     icon: Search,
-    title: "Pesquise",
-    description: "Diga o que você quer comprar ou pergunte para a nossa IA.",
+    title: "Busque",
+    description: "Diga o que você quer comprar.",
   },
   {
     step: "02",
     icon: Scale,
-    title: "Compare",
-    description:
-      "Veja o produto em centenas de lojas, com preço, estoque e garantia.",
+    title: "Analisamos",
+    description: "Preço, confiança e timing, cruzados na hora.",
   },
   {
     step: "03",
     icon: PiggyBank,
-    title: "Economize",
-    description: "Escolha a melhor oferta e compre com confiança.",
+    title: "Decida",
+    description: "Receba uma recomendação clara, com o porquê.",
   },
 ];
 

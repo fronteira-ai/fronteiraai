@@ -10,14 +10,12 @@ import SearchBar from "@/components/home/SearchBar";
 import HeroCTAs from "@/components/home/HeroCTAs";
 import DashboardStrip from "@/components/home/DashboardStrip";
 import Offers from "@/components/home/Offers";
-import EconomiaDoDia from "@/components/home/EconomiaDoDia";
+import AchadoDoDia from "@/components/home/AchadoDoDia";
 import AIShowcase from "@/components/home/AIShowcase";
 import Benefits from "@/components/home/Benefits";
 import HowItWorks from "@/components/home/HowItWorks";
-import Brands from "@/components/home/Brands";
 import ForLojistasSection from "@/components/home/ForLojistasSection";
 import CTASection from "@/components/home/CTASection";
-import { getBrands } from "@/services/brand.service";
 
 // Release 1.9 — Program F — Wave 2 (v0 realignment, ADR-050 v1.1). Loaded
 // here (not in the root layout) and applied only to this page's <main> below
@@ -40,15 +38,15 @@ const inter = Inter({ subsets: ["latin"], variable: "--font-home-sans", display:
 export const revalidate = 60;
 
 export const metadata: Metadata = {
-  title: "ParaguAI — Compare preços e venda no Paraguai",
+  title: "ParaguAI — O jeito mais inteligente de comprar no Paraguai",
   description:
-    "Pesquise produtos, compare preços entre lojas e descubra as melhores ofertas no Paraguai. Lojistas: cadastre sua loja e sincronize produtos automaticamente.",
-  keywords: ["Paraguai", "Ciudad del Este", "comparador de preços", "eletrônicos", "importados", "lojista Paraguai", "marketplace Paraguai"],
+    "O ParaguAI analisa preço, confiança da loja e o momento certo de compra — e recomenda a melhor compra para você na fronteira Brasil-Paraguai. Lojistas: cadastre sua loja e sincronize produtos automaticamente.",
+  keywords: ["Paraguai", "Ciudad del Este", "consultor de compras", "recomendação inteligente", "eletrônicos", "importados", "lojista Paraguai", "marketplace Paraguai"],
   alternates: { canonical: SITE_URL },
   openGraph: {
-    title: "ParaguAI — Compare preços e venda no Paraguai",
+    title: "ParaguAI — O jeito mais inteligente de comprar no Paraguai",
     description:
-      "A maior plataforma de comparação de preços do Paraguai. Para compradores e lojistas de Ciudad del Este.",
+      "O consultor inteligente de compras da fronteira Brasil-Paraguai. Recomendações com evidência, para compradores e lojistas de Ciudad del Este.",
     url: SITE_URL,
     siteName: "ParaguAI",
     type: "website",
@@ -56,23 +54,21 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "ParaguAI — Compare preços e venda no Paraguai",
+    title: "ParaguAI — O jeito mais inteligente de comprar no Paraguai",
     description:
-      "A maior plataforma de comparação de preços do Paraguai. Para compradores e lojistas de Ciudad del Este.",
+      "O consultor inteligente de compras da fronteira Brasil-Paraguai. Recomendações com evidência, para compradores e lojistas de Ciudad del Este.",
   },
 };
 
 export default async function Home() {
-  const brands = await getBrands();
-
   return (
     <main className={`min-h-screen bg-[oklch(0.14_0.03_265)] text-white ${sora.variable} ${inter.variable}`}>
       <Navbar />
 
       {/* Hero — photographic backdrop + real stats (Release 1.9 — Program F —
-          Wave 2, v0 realignment, ADR-050 v1.1). Search and the "Comparar
-          preços"/"Sou Lojista" CTAs are now separate sections below it,
-          matching the approved v0 layout. */}
+          Wave 2, v0 realignment, ADR-050 v1.1). Search and the "Encontrar a
+          melhor compra"/"Sou Lojista" CTAs are now separate sections below
+          it, matching the approved v0 layout. */}
       <Suspense fallback={<SectionSkeleton minHeight={640} />}>
         <Hero />
       </Suspense>
@@ -84,31 +80,62 @@ export default async function Home() {
         </div>
       </div>
 
+      {/* Program UX — Mission UX-1B (Objetivo 3/7). Moved up from below the
+          dashboard/offers blocks — the proof of "toda busca já vem com a
+          decisão pronta" belongs right after the promise the Hero makes, not
+          several data-dense sections later.
+          Program UX — Mission UX-1C (Objetivo 2). -mt-* below pulls each
+          section closer to the one above it, cutting roughly a quarter of
+          the empty space Section's own py-16/py-20 padding leaves on both
+          sides of the seam — Section itself (components/ui/, shared Design
+          System) is never touched. */}
+      <div className="-mt-4 sm:-mt-6">
+        <AIShowcase />
+      </div>
+
       {/* Dense dashboard: 4-card info row (Economia do dia | Market Pulse |
-          Câmbio ao Vivo | Live Marketplace), a 3-column row (Lojas em
-          destaque | Categorias | Câmeras ao vivo) and the trust-strip/lojista
-          banner — each card streams independently (see DashboardStrip.tsx). */}
-      <DashboardStrip />
+          Câmbio ao Vivo | Live Marketplace) and a row (Lojas em destaque |
+          Categorias) plus the trust-strip/lojista banner — each card streams
+          independently (see DashboardStrip.tsx). */}
+      <div className="-mt-8 sm:-mt-10">
+        <DashboardStrip />
+      </div>
 
       {/* Produtos Mais Buscados */}
-      <Suspense fallback={<SectionSkeleton />}>
-        <Offers />
-      </Suspense>
+      <div className="-mt-6 sm:-mt-8">
+        <Suspense fallback={<SectionSkeleton />}>
+          <Offers />
+        </Suspense>
+      </div>
 
-      {/* Economia do Dia — a single spotlighted deal, distinct from the
-          dashboard strip's "Economia do dia" card. */}
-      <Suspense fallback={<SectionSkeleton minHeight={280} />}>
-        <EconomiaDoDia />
-      </Suspense>
-
-      {/* Inteligência da IA — chat not implemented this Wave, per mandate */}
-      <AIShowcase />
+      {/* Achado do Dia — a single spotlighted deal, distinct from the
+          dashboard strip's "Economia do dia" card (Mission UX-1B, Objetivo
+          8; renamed in Mission UX-1C, Objetivo 3). */}
+      <div className="-mt-8 sm:-mt-10">
+        <Suspense fallback={<SectionSkeleton minHeight={280} />}>
+          <AchadoDoDia />
+        </Suspense>
+      </div>
 
       <Benefits />
-      <HowItWorks />
-      <Brands brands={brands} />
-      <ForLojistasSection />
-      <CTASection />
+
+      <div className="-mt-6 sm:-mt-8">
+        <HowItWorks />
+      </div>
+
+      {/* Program UX — Mission UX-1C (Objetivo 1). Brands is intentionally
+          not rendered here — it added scroll without buyer-relevant value.
+          The component itself, and the brand fetch it needs, are untouched
+          in components/home/Brands.tsx / services/brand.service.ts, ready
+          for reuse elsewhere. */}
+      <div className="-mt-8 sm:-mt-10">
+        <ForLojistasSection />
+      </div>
+
+      <div className="-mt-8 sm:-mt-10">
+        <CTASection />
+      </div>
+
       <Footer />
     </main>
   );

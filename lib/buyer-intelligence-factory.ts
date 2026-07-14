@@ -1,5 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { ComparisonIntelligenceComposer, ProductIntelligenceComposer, SearchIntelligenceComposer, BestDealComposer, PurchaseTimingComposer, TrustComposer, ParaguAIAdvisorComposer } from "@/src/domains/buyer-intelligence";
+import { ComparisonIntelligenceComposer, ProductIntelligenceComposer, SearchIntelligenceComposer, BestDealComposer, PurchaseTimingComposer, TrustComposer, ParaguAIAdvisorComposer, OpportunityEngine } from "@/src/domains/buyer-intelligence";
 import { createCanonicalCatalogServices } from "./canonical-catalog-factory";
 import { createMarketInsightsServices } from "./market-insights-factory";
 import { createRealtimeCommerceServices } from "./realtime-commerce-factory";
@@ -18,6 +18,7 @@ import {
   SupabaseTrustHistoryRepository,
   SupabaseVerificationRepository,
 } from "@/src/domains/trust/infrastructure";
+import { SupabaseAnalyticsEventRepository } from "@/src/domains/merchant-analytics/infrastructure/SupabaseAnalyticsEventRepository";
 
 // Release 2.0 — Wave 1. Same composition pattern as every other
 // `lib/*-factory.ts` — reuses the existing canonical-catalog/market-insights/
@@ -65,6 +66,16 @@ export function createBuyerIntelligenceServices(client: SupabaseClient) {
   const purchaseTimingComposer = new PurchaseTimingComposer(volatilityRollupService, historyService);
   const trustComposer = new TrustComposer(merchantStoreLinkRepo, merchantProfileService, trustHistoryService, badgeService);
   const advisorComposer = new ParaguAIAdvisorComposer();
+  const opportunityEngine = new OpportunityEngine(
+    catalogRepo,
+    priceIntelligenceService,
+    freshnessService,
+    merchantStoreLinkRepo,
+    badgeService,
+    comparisonComposer,
+    purchaseTimingComposer,
+    new SupabaseAnalyticsEventRepository(client)
+  );
 
-  return { comparisonComposer, productComposer, searchComposer, bestDealComposer, purchaseTimingComposer, trustComposer, advisorComposer };
+  return { comparisonComposer, productComposer, searchComposer, bestDealComposer, purchaseTimingComposer, trustComposer, advisorComposer, opportunityEngine };
 }

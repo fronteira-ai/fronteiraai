@@ -3,11 +3,11 @@ import Container from "@/components/ui/Container";
 import Reveal from "@/components/ui/Reveal";
 
 const benefits = [
-  { icon: Radio, title: "Preços 100% atualizados", description: "Dados em tempo real" },
-  { icon: ShieldCheck, title: "Lojas confiáveis", description: "Verificadas e avaliadas" },
-  { icon: Brain, title: "IA avançada", description: "Encontra o melhor preço" },
-  { icon: History, title: "Histórico de preços", description: "Compare e economize" },
-  { icon: Lock, title: "Seguro e transparente", description: "Sua compra protegida" },
+  { icon: Radio, title: "Preços sempre atualizados", description: "Dados direto das lojas, em tempo real" },
+  { icon: ShieldCheck, title: "Lojas verificadas", description: "Avaliadas antes de aparecerem para você" },
+  { icon: Brain, title: "Recomendação com evidência", description: "Cada sugestão vem com o motivo" },
+  { icon: History, title: "Histórico de preços", description: "Saiba se o preço de hoje é bom" },
+  { icon: Lock, title: "Compra protegida", description: "Transparência do início ao fim" },
 ] as const;
 
 // Release 1.9 — Program F — Wave 1 (revision). Thin horizontal strip, per
@@ -15,7 +15,7 @@ const benefits = [
 // duplicate.
 export default function Benefits() {
   return (
-    <section className="border-y border-slate-800 bg-slate-900/30 py-8">
+    <section className="border-y border-slate-800 bg-slate-900/30 py-6">
       <Container>
         <Reveal direction="up">
           <div className="flex flex-wrap justify-center gap-x-10 gap-y-5">

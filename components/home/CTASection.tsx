@@ -13,12 +13,11 @@ export default function CTASection() {
           </h2>
 
           <p className="mx-auto mt-4 max-w-xl text-lg text-slate-400">
-            Pesquise agora e descubra a melhor oferta entre centenas de lojas
-            no Paraguai.
+            O ParaguAI recomenda. Você decide com confiança.
           </p>
 
           <Button href="/search" variant="primary" className="mt-8">
-            Pesquisar agora
+            Encontrar a melhor compra
           </Button>
         </GradientCard>
       </Reveal>

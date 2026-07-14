@@ -202,6 +202,35 @@ export interface CompactTrustBadge {
   isVerified: boolean;
 }
 
+// ── Release 2.0 — Experience Iteration 6.5 (Opportunity Engine). ─────────
+// A decision tree over already-existing signals — never a score, never a
+// weight, never Machine Learning. Every field below is read from
+// PriceIntelligenceService (economia), CanonicalOfferView.inStock (estoque),
+// FreshnessService (frescor), TrustComposer-style verification (confiança),
+// PurchaseTimingComposer (timing) and IAnalyticsEventRepository (popularidade
+// — buyer_events already collected since Release 2.0 Wave 1, aggregated
+// here for the first time). See docs/product/OPPORTUNITY_ENGINE_ARCHITECTURE.md.
+
+export interface Opportunity {
+  canonicalProductId: string;
+  productName: string;
+  /** The winning (cheapest) offer's raw `products.id` — resolving this to a
+   * `/product/[slug]` route is a raw-table lookup (same as every other
+   * buyer-intelligence composer's store-name/product-slug glue), done by
+   * the caller (lib/home-premium-service.ts), not by this domain type. */
+  winningOfferProductId: string;
+  cheapestStoreSlug: string;
+  oldPriceUSD: number;
+  newPriceUSD: number;
+  savingsUSD: number;
+  savingsPercent: number;
+  /** Read from the existing badge/verification signal (Wave 4) — informational
+   * only. Not a gate: today's real coverage of verified stores hasn't been
+   * measured, so this never eliminates a candidate on its own (see
+   * OPPORTUNITY_ENGINE_ARCHITECTURE.md §3, "nota de calibração honesta"). */
+  isVerifiedStore: boolean;
+}
+
 // ── Release 2.0 — Fase 2 — Wave 5 (EI-5 — ParaguAI Advisor). ─────────────
 // Pure composition-of-compositions: every field below is read from
 // BestDealResult (Wave 2, which already carries the "Buyer Savings" numbers

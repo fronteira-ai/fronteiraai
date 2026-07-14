@@ -4,7 +4,7 @@ import { Clock, ShieldCheck, BadgePercent, Bot, ArrowRight, type LucideIcon } fr
 const TRUST: { icon: LucideIcon; title: string; sub: string; color: string }[] = [
   { icon: Clock, title: "Atualizado 24h por dia", sub: "Preços sempre atualizados", color: "text-brand-cyan" },
   { icon: ShieldCheck, title: "100% Seguro", sub: "Seus dados protegidos", color: "text-positive" },
-  { icon: BadgePercent, title: "Melhores preços", sub: "Garantia de economia", color: "text-amber" },
+  { icon: BadgePercent, title: "Melhores preços", sub: "Economia comprovada por dado real", color: "text-amber" },
   { icon: Bot, title: "IA que recomenda", sub: "Realmente vale a pena", color: "text-brand-purple" },
 ];
 

@@ -2,15 +2,12 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { createMarketplaceOperationsServices } from "./marketplace-operations-factory";
 import { createExchangeServices } from "./exchange-factory";
 import { createRealtimeCommerceServices } from "./realtime-commerce-factory";
-import { createMarketInsightsServices } from "./market-insights-factory";
-import { createCanonicalCatalogServices } from "./canonical-catalog-factory";
+import { createBuyerIntelligenceServices } from "./buyer-intelligence-factory";
 import { ConnectorDirectoryService } from "./connector-directory-service";
 import { Currency, CurrencyPair } from "@/src/domains/exchange";
 import { ChangeType } from "@/src/domains/realtime-commerce";
 import { getStoreBySlug } from "@/services/store.service";
 import { getCategories } from "@/services/category.service";
-import type { CanonicalProduct } from "@/src/domains/canonical-catalog";
-import type { SavingsOpportunity } from "@/src/domains/market-insights";
 
 // Release 1.9 — Program F — Wave 1 (Premium Home Experience). This is the
 // ONLY place the Home/Categorias pages read data from — every function here
@@ -170,77 +167,58 @@ export interface SavingsHighlight {
   savingsPercent: number;
 }
 
-const SAVINGS_CANDIDATE_SAMPLE = 50;
+/** Release 2.0 — Experience Iteration 6.5 (Opportunity Engine). Both
+ * "Achado do Dia" (the single top pick) and "Economia do dia" (a ranked
+ * list, dashboard strip) now read from the same OpportunityEngine —
+ * see docs/product/OPPORTUNITY_ENGINE_ARCHITECTURE.md. This function only
+ * resolves the human-readable extras (product slug, store name) the engine
+ * deliberately leaves as raw-table lookups, same precedent as
+ * app/product/[slug]/_cache.ts's getProductBestDeal for the store name. */
+async function rankOpportunities(client: SupabaseClient, limit: number): Promise<SavingsHighlight[]> {
+  const { opportunityEngine } = createBuyerIntelligenceServices(client);
+  const opportunities = await opportunityEngine.getTopOpportunities(limit);
 
-/** Shared by "Economia do Dia" (the single best deal) and "Ofertas
- * Relâmpago" (a ranked list) — both are the same underlying computation
- * (`PriceIntelligenceService.getSavingsOpportunity`, Program C — Wave 1),
- * applied across a bounded sample of the catalog. Only 36 canonical
- * products exist today (Release 1.8 — Program D — Wave 1), so a full scan
- * of the sample is cheap; this re-evaluates the bound if the catalog grows. */
-async function rankSavingsAcrossCatalog(client: SupabaseClient, limit: number): Promise<SavingsHighlight[]> {
-  const { catalogRepo } = createCanonicalCatalogServices(client);
-  const { priceIntelligenceService } = createMarketInsightsServices(client);
-
-  const { items: canonicalProducts } = await catalogRepo.findAll({ limit: SAVINGS_CANDIDATE_SAMPLE, offset: 0 });
-
-  type Opportunity = { product: CanonicalProduct; savings: SavingsOpportunity };
-
-  const opportunities = await Promise.all(
-    canonicalProducts.map(async (product): Promise<Opportunity | null> => {
-      const savings = await priceIntelligenceService.getSavingsOpportunity(product.id);
-      return savings ? { product, savings } : null;
-    })
-  );
-
-  const ranked = opportunities
-    .filter((o): o is Opportunity => o !== null)
-    .sort((a, b) => b.savings.maxSavingsPercent - a.savings.maxSavingsPercent)
-    .slice(0, limit);
-
-  const storeNamesByStoreId = new Map<string, string>();
-  const winningProductSlugByCanonicalId = new Map<string, string | null>();
+  const storeNamesByStoreSlug = new Map<string, string>();
+  const productSlugByProductId = new Map<string, string | null>();
 
   await Promise.all(
-    ranked.map(async ({ product, savings }) => {
-      if (!storeNamesByStoreId.has(savings.cheapestStoreId)) {
-        const store = await getStoreBySlug(savings.cheapestStoreSlug);
-        storeNamesByStoreId.set(savings.cheapestStoreId, store?.name ?? savings.cheapestStoreSlug);
+    opportunities.map(async (o) => {
+      if (!storeNamesByStoreSlug.has(o.cheapestStoreSlug)) {
+        const store = await getStoreBySlug(o.cheapestStoreSlug);
+        storeNamesByStoreSlug.set(o.cheapestStoreSlug, store?.name ?? o.cheapestStoreSlug);
       }
-
-      // `/product/[slug]` looks up `products.slug`, never the canonical
-      // product's own slug — resolve the winning (cheapest) offer's raw
-      // product row to link somewhere real.
-      const { items: offers } = await catalogRepo.findOffersByCanonicalProductId(product.id, { limit: 50, offset: 0 });
-      const winningOffer = offers.find((o) => o.storeId === savings.cheapestStoreId);
-      const { data: winningProduct } = winningOffer
-        ? await client.from("products").select("slug").eq("id", winningOffer.productId).maybeSingle()
-        : { data: null };
-      winningProductSlugByCanonicalId.set(product.id, (winningProduct?.slug as string | undefined) ?? null);
+      if (!productSlugByProductId.has(o.winningOfferProductId)) {
+        const { data: winningProduct } = await client
+          .from("products")
+          .select("slug")
+          .eq("id", o.winningOfferProductId)
+          .maybeSingle();
+        productSlugByProductId.set(o.winningOfferProductId, (winningProduct?.slug as string | undefined) ?? null);
+      }
     })
   );
 
-  return ranked.map(({ product, savings }) => ({
-    canonicalProductId: product.id,
-    productName: product.name,
-    productSlug: winningProductSlugByCanonicalId.get(product.id) ?? null,
-    cheapestStoreName: storeNamesByStoreId.get(savings.cheapestStoreId) ?? savings.cheapestStoreSlug,
-    oldPriceUSD: savings.mostExpensivePriceUSD,
-    newPriceUSD: savings.cheapestPriceUSD,
-    savingsUSD: savings.maxSavingsUSD,
-    savingsPercent: savings.maxSavingsPercent,
+  return opportunities.map((o) => ({
+    canonicalProductId: o.canonicalProductId,
+    productName: o.productName,
+    productSlug: productSlugByProductId.get(o.winningOfferProductId) ?? null,
+    cheapestStoreName: storeNamesByStoreSlug.get(o.cheapestStoreSlug) ?? o.cheapestStoreSlug,
+    oldPriceUSD: o.oldPriceUSD,
+    newPriceUSD: o.newPriceUSD,
+    savingsUSD: o.savingsUSD,
+    savingsPercent: o.savingsPercent,
   }));
 }
 
 export async function getBestSavingsToday(client: SupabaseClient): Promise<SavingsHighlight | null> {
-  const [best] = await rankSavingsAcrossCatalog(client, 1);
+  const [best] = await rankOpportunities(client, 1);
   return best ?? null;
 }
 
 const FLASH_OFFERS_LIMIT = 6;
 
 export async function getFlashOffers(client: SupabaseClient): Promise<SavingsHighlight[]> {
-  return rankSavingsAcrossCatalog(client, FLASH_OFFERS_LIMIT);
+  return rankOpportunities(client, FLASH_OFFERS_LIMIT);
 }
 
 // ── Câmbio ao Vivo ────────────────────────────────────────────────────────

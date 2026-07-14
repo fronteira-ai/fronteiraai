@@ -46,7 +46,7 @@ export default async function Offers() {
         ))}
       </div>
 
-      <div className="mt-9 flex justify-center">
+      <div className="mt-7 flex justify-center">
         <Button href="/products" variant="secondary">
           Ver todos os produtos
         </Button>

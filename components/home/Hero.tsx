@@ -1,14 +1,18 @@
 import Image from "next/image";
-import { Sparkles, ArrowLeftRight, Store, Flower2 } from "lucide-react";
+import { Sparkles, Trophy, ShieldCheck, Zap, Flower2 } from "lucide-react";
 import HeroStats from "./HeroStats";
 import Reveal from "@/components/ui/Reveal";
 import { getSupabaseServiceClient } from "@/lib/supabase/service";
 import { getHomeStats } from "@/lib/home-premium-service";
 
+// Program UX — Mission UX-1B. Copy frozen per HOME_COPY_APPROVAL.md / the
+// CTO's official identity block — icons chosen to match each bullet's emoji
+// (🏆/🛡️/⚡) rather than duplicating the emoji as a second glyph next to the
+// existing colored Lucide icon treatment.
 const featureBullets = [
-  { icon: ArrowLeftRight, title: "Compare preços", sub: "em tempo real", color: "text-brand-blue" },
-  { icon: Store, title: "Centenas de lojas", sub: "confiáveis", color: "text-brand-purple" },
-  { icon: Sparkles, title: "IA que encontra", sub: "o melhor para você", color: "text-positive" },
+  { icon: Trophy, title: "Melhor compra", color: "text-brand-blue" },
+  { icon: ShieldCheck, title: "Lojas confiáveis", color: "text-brand-purple" },
+  { icon: Zap, title: "Decisão inteligente", color: "text-positive" },
 ] as const;
 
 // Release 1.9 — Program F — Wave 2 (v0 realignment, ADR-050 v1.1). Rebuilt
@@ -57,9 +61,8 @@ export default async function Hero() {
 
           <Reveal direction="up" delay={180}>
             <p className="mt-6 max-w-md text-[15px] leading-relaxed text-slate-400">
-              Compare preços entre centenas de lojas, converse com a nossa IA e
-              descubra exatamente onde vale a pena comprar — antes de
-              atravessar a fronteira.
+              Mais do que comparar preços. O ParaguAI analisa, explica e
+              recomenda a melhor compra para você.
             </p>
           </Reveal>
 
@@ -69,10 +72,7 @@ export default async function Hero() {
                 <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/5 ${f.color}`}>
                   <f.icon size={16} />
                 </span>
-                <span className="text-[13px] leading-tight">
-                  <span className="block font-semibold text-white">{f.title}</span>
-                  <span className="block text-slate-400">{f.sub}</span>
-                </span>
+                <span className="text-[13px] font-semibold leading-tight text-white">{f.title}</span>
               </div>
             ))}
           </Reveal>
