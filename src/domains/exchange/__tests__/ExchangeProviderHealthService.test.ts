@@ -15,12 +15,13 @@ function makeRun(overrides: Partial<ProviderRun> = {}): ProviderRun {
 }
 
 describe("buildProviderHealthSnapshot", () => {
-  it("reports full health with no evidence of failure for an empty sample", () => {
+  it("reports NeverStarted — never Healthy — for a provider with zero runs (Mission ΔR-1.1 regression)", () => {
     const snapshot = buildProviderHealthSnapshot("p1", "Provider 1", 1, []);
-    expect(snapshot.status).toBe(ProviderStatus.Healthy);
-    expect(snapshot.healthScore).toBe(100);
-    expect(snapshot.uptime).toBe(100);
+    expect(snapshot.status).toBe(ProviderStatus.NeverStarted);
+    expect(snapshot.healthScore).toBe(0);
+    expect(snapshot.uptime).toBe(0);
     expect(snapshot.avgResponseTimeMs).toBeNull();
+    expect(snapshot.lastSuccessAt).toBeNull();
   });
 
   it("computes uptime and healthScore proportionally to the sample", () => {

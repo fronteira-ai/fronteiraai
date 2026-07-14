@@ -6,6 +6,7 @@ import type { ExchangeAnalyticsService, ExchangeAnalyticsSnapshot } from "../ana
 import type { IExchangeConversionLogRepository } from "../repositories/IExchangeConversionLogRepository";
 import type { ExchangeRate } from "../types/Money";
 import type { ProviderHealthSnapshot } from "../types/ProviderHealth";
+import { computeSystemExchangeStatus, type SystemExchangeStatusResult } from "../services/SystemExchangeStatusService";
 
 type OverviewKey = "currentRates" | "providerHealth" | "history" | "analytics" | "conversionsToday";
 
@@ -16,6 +17,10 @@ export interface ExchangeOverview {
   history: ExchangeRate[] | null;
   analytics: ExchangeAnalyticsSnapshot | null;
   conversionsToday: number | null;
+  /** Program ΔR — Mission ΔR-1.1 (Objetivo 5). System-wide verdict — derived
+   * from currentRates/providerHealth above, not a new query. null only when
+   * providerHealth itself failed to load (errors.providerHealth is set). */
+  systemStatus: SystemExchangeStatusResult | null;
   errors: Partial<Record<OverviewKey, string>>;
   generatedAt: string;
 }
@@ -57,12 +62,16 @@ export class ExchangeDashboardService {
       return null;
     }
 
+    const resolvedRates = resolve(currentRates, "currentRates");
+    const resolvedHealth = resolve(providerHealth, "providerHealth");
+
     return {
-      currentRates: resolve(currentRates, "currentRates"),
-      providerHealth: resolve(providerHealth, "providerHealth"),
+      currentRates: resolvedRates,
+      providerHealth: resolvedHealth,
       history: resolve(history, "history"),
       analytics: resolve(analytics, "analytics"),
       conversionsToday: resolve(conversionsToday, "conversionsToday"),
+      systemStatus: resolvedHealth ? computeSystemExchangeStatus(resolvedHealth, resolvedRates ?? []) : null,
       errors,
       generatedAt: new Date().toISOString(),
     };

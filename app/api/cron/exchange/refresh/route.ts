@@ -32,6 +32,20 @@ export async function GET(request: NextRequest) {
 
   const result = await rateService.refresh();
 
+  // Program ΔR — Mission ΔR-1.1 (Objetivo 2/4). The refresh's own outcome
+  // was previously only visible in the JSON response nobody reads — logged
+  // explicitly here so Vercel's function logs show every cycle's real
+  // result, matching this project's "never hide degradation" discipline.
+  if (result.usingFallback) {
+    console.error(
+      `[cron/exchange/refresh] every registered provider failed — degraded to last-known-good (${result.rates.length} rate(s) served from cache/DB).`
+    );
+  } else {
+    console.log(
+      `[cron/exchange/refresh] refreshed ${result.rates.length} rate(s) from provider "${result.providerId}".`
+    );
+  }
+
   // Best effort — never fails the cron job itself (the rate refresh above
   // is the primary responsibility here; this Brain enrichment is secondary
   // and degrades silently on error).

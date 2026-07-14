@@ -31,17 +31,22 @@ export function buildProviderHealthSnapshot(
   priority: number,
   runs: ProviderRun[]
 ): ProviderHealthSnapshot {
+  // Program ΔR — Mission ΔR-1.1. Never assume Healthy in the absence of
+  // evidence — a provider that has never actually been called (exactly
+  // today's real production state: the cron was never scheduled) must
+  // report NeverStarted, not a false-positive 100/100.
   if (runs.length === 0) {
     return {
       providerId,
       providerName,
       priority,
-      status: ProviderStatus.Healthy,
-      healthScore: 100,
+      status: ProviderStatus.NeverStarted,
+      healthScore: 0,
       lastSuccessAt: null,
       lastFailureAt: null,
       avgResponseTimeMs: null,
-      uptime: 100,
+      uptime: 0,
+      sampledRuns: 0,
     };
   }
 
@@ -70,5 +75,6 @@ export function buildProviderHealthSnapshot(
     lastFailureAt: failureRuns[0]?.attemptedAt ?? null,
     avgResponseTimeMs,
     uptime,
+    sampledRuns: runs.length,
   };
 }

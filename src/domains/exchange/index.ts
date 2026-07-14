@@ -7,6 +7,7 @@ export * from "./enums";
 
 export type { IExchangeRateProvider } from "./providers/IExchangeRateProvider";
 export { ExchangeRateApiProvider } from "./providers/ExchangeRateApiProvider";
+export { OpenExchangeRatesProvider } from "./providers/OpenExchangeRatesProvider";
 export { ExchangeProviderRegistryImpl, exchangeProviderRegistry } from "./providers/ExchangeProviderRegistry";
 export { bootstrapExchangeProviders } from "./providers/bootstrap";
 
@@ -34,6 +35,8 @@ export type { RefreshResult } from "./services/ExchangeRateService";
 export { AutomaticCurrencyService } from "./services/AutomaticCurrencyService";
 export type { ConvertInput } from "./services/AutomaticCurrencyService";
 export { ExchangeProviderHealthService, buildProviderHealthSnapshot } from "./services/ExchangeProviderHealthService";
+export { computeSystemExchangeStatus, SystemExchangeStatus } from "./services/SystemExchangeStatusService";
+export type { SystemExchangeStatusResult } from "./services/SystemExchangeStatusService";
 
 export * as ExchangeAnalyticsFormulas from "./analytics/formulas";
 export { ExchangeAnalyticsService } from "./analytics/ExchangeAnalyticsService";

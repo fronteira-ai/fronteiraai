@@ -12,4 +12,9 @@ export interface ProviderHealthSnapshot {
   avgResponseTimeMs: number | null;
   /** 0-100: successful runs / sampled runs */
   uptime: number;
+  /** Program ΔR — Mission ΔR-1.1. Raw count backing `uptime` — lets a
+   * system-wide status (SystemExchangeStatusService) distinguish "healthy
+   * from 2 lucky runs" from "healthy with real history", without a second
+   * query. */
+  sampledRuns: number;
 }
