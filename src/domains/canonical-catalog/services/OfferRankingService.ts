@@ -1,4 +1,5 @@
 import type { CanonicalOfferView } from "../types/canonical-catalog.types";
+import { formatUSD } from "@/src/domains/exchange";
 
 // Extends the existing ADR-014 ranking pattern (services/compare.service.ts
 // computeRankScore: price/availability/store-reliability/listing-quality)
@@ -59,7 +60,7 @@ export class OfferRankingService {
       factors.push({
         factor: "price",
         weight: Math.round(priceScore),
-        evidence: `USD ${offer.priceUSD} vs. lowest USD ${lowestPrice} among compared offers`,
+        evidence: `${formatUSD(offer.priceUSD)} vs. lowest ${formatUSD(lowestPrice)} among compared offers`,
       });
 
       factors.push({

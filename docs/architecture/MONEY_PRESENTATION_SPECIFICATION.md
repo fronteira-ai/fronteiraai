@@ -152,3 +152,31 @@ Uma varredura mais ampla (além de `toFixed(`, incluindo padrões de interpolaç
 **SIM** — exatamente um item, listado acima, em um domínio explicitamente restringido, não corrigível dentro do escopo desta missão.
 
 Money Presentation Domain — **STATUS: COMPLETE dentro do escopo autorizado por todas as Missions ΔR-1.x até aqui**; uma exceção nomeada permanece em Canonical Catalog, fora de qualquer escopo já autorizado neste Program.
+
+---
+
+## 9. CTO Exception Approval — Final Closure
+
+**Data**: 2026-07-14
+**Autorização**: exceção específica do CTO para tocar `OfferRankingService.ts` (Canonical Catalog), estritamente limitada à apresentação textual de um único fator de evidência — nenhum algoritmo, score, ranking, peso, comparação ou decisão alterado.
+
+### Alteração realizada
+
+`src/domains/canonical-catalog/services/OfferRankingService.ts` — a evidência do fator `"price"` trocou `` `USD ${offer.priceUSD} vs. lowest USD ${lowestPrice} among compared offers` `` por `` `${formatUSD(offer.priceUSD)} vs. lowest ${formatUSD(lowestPrice)} among compared offers` ``. `priceScore`, `PRICE_WEIGHT`, `lowestPrice` (o cálculo, não o texto) e toda a lógica de `rank()` permanecem byte a byte idênticos — confirmado por diff. Suíte de testes existente (6/6) passou sem modificação.
+
+### Auditoria global final
+
+Repetida a varredura completa (`` `USD ${...}` ``, `formatUSD`/`formatBRL` fora do domínio, `Intl.NumberFormat` fora do domínio): **zero ocorrências em qualquer categoria**. Verificado ao vivo em `/compare/[slug]`: a evidência do fator de preço agora renderiza `"$65.90 vs. lowest $65.90 among compared offers"` — formatação correta, sem erro.
+
+### Definition of Done — final
+
+| Verificação | Resultado |
+|---|---|
+| Interpolação crua de moeda (`` `USD ${...}` ``) em qualquer lugar do código-fonte | **Zero** |
+| `toFixed()` monetário fora do domínio Exchange | **Zero** |
+| `Intl.NumberFormat` fora do domínio Exchange | **Zero** |
+| Conversão manual USD→BRL fora do domínio Exchange | **Zero** |
+| Exceções conhecidas e não corrigidas | **Zero** |
+
+**Money Presentation Domain**
+**STATUS: COMPLETE**
