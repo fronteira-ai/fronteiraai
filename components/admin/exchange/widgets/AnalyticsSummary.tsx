@@ -1,6 +1,7 @@
 import { AdminDataTable, type Column } from "@/components/admin/ui/AdminDataTable";
 import type { ExchangeAnalyticsSnapshot } from "@/src/domains/exchange/analytics/ExchangeAnalyticsService";
 import type { StoreReactionLag, CategoryImpact } from "@/src/domains/exchange/analytics/formulas";
+import { formatUSD } from "@/src/domains/exchange";
 
 function Tile({ label, value }: { label: string; value: string | number }) {
   return (
@@ -50,7 +51,7 @@ export function AnalyticsSummary({ analytics }: { analytics: ExchangeAnalyticsSn
         />
         <Tile
           label="Economia do comprador (USD)"
-          value={`$${analytics.buyerSavings.totalSavingsUsd.toFixed(2)}`}
+          value={formatUSD(analytics.buyerSavings.totalSavingsUsd)}
         />
       </div>
 

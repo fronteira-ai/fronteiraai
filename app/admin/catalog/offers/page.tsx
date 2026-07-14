@@ -6,6 +6,10 @@ import { AdminDataTable, type Column } from "@/components/admin/ui/AdminDataTabl
 import { AdminButton } from "@/components/admin/ui/AdminButton";
 import { ConfirmDialog } from "@/components/admin/ui/ConfirmDialog";
 import { useToast } from "@/contexts/admin/ToastContext";
+// Program ΔR — Mission ΔR-1.2A. Direct leaf import (not the domain barrel)
+// — this is a Client Component; the barrel also re-exports server-only
+// repository/service classes that have no reason to enter the client bundle.
+import { formatUSD, formatBRL } from "@/src/domains/exchange/presentation/formatters";
 
 interface Offer {
   id: string;
@@ -50,8 +54,8 @@ export default function OffersPage() {
   const cols: Column<Offer>[] = [
     { key: "product", header: "Produto", render: (r) => r.product?.name ?? "—" },
     { key: "store", header: "Loja", render: (r) => r.store?.name ?? "—" },
-    { key: "price_usd", header: "Preço USD", render: (r) => `$ ${r.price_usd.toFixed(2)}` },
-    { key: "price_brl", header: "Preço BRL", render: (r) => r.price_brl ? `R$ ${r.price_brl.toFixed(2)}` : "—" },
+    { key: "price_usd", header: "Preço USD", render: (r) => formatUSD(r.price_usd) },
+    { key: "price_brl", header: "Preço BRL", render: (r) => (r.price_brl ? formatBRL(r.price_brl) : "—") },
     { key: "in_stock", header: "Estoque", render: (r) => r.in_stock
       ? <PackageCheck className="w-4 h-4 text-green-400" />
       : <span className="text-slate-600">Sem estoque</span>

@@ -1,4 +1,4 @@
-import { CurrencyPair } from "@/src/domains/exchange";
+import { CurrencyPair, formatUSD } from "@/src/domains/exchange";
 import type { ExchangeHistoryService, ExchangeRate } from "@/src/domains/exchange";
 import type { VolatilityRollupService } from "@/src/domains/market-insights";
 import { VolatilityClass, FreshnessClass } from "@/src/domains/realtime-commerce";
@@ -90,14 +90,14 @@ function evaluateSignals(bundle: ComparisonIntelligenceBundle, exchangeTrend: Ex
       reasons.push({
         factor: "price-vs-median",
         label: "Preço abaixo da média",
-        evidence: `USD ${lastPriceUSD.toFixed(2)} vs. mediana de USD ${median.toFixed(2)} entre ${bundle.priceStatistics!.storeCount} loja(s)`,
+        evidence: `${formatUSD(lastPriceUSD)} vs. mediana de ${formatUSD(median)} entre ${bundle.priceStatistics!.storeCount} loja(s)`,
       });
       buyNowVotes++;
     } else if (lastPriceUSD > median * (1 + MEDIAN_BAND_RATIO)) {
       reasons.push({
         factor: "price-vs-median",
         label: "Preço acima da média",
-        evidence: `USD ${lastPriceUSD.toFixed(2)} vs. mediana de USD ${median.toFixed(2)} entre ${bundle.priceStatistics!.storeCount} loja(s)`,
+        evidence: `${formatUSD(lastPriceUSD)} vs. mediana de ${formatUSD(median)} entre ${bundle.priceStatistics!.storeCount} loja(s)`,
       });
       waitVotes++;
     }

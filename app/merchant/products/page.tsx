@@ -3,6 +3,10 @@ import { useState, useEffect } from "react";
 import { MerchantSidebar } from "@/components/merchant/layout/MerchantSidebar";
 import { Package, CheckCircle2, XCircle, ExternalLink } from "lucide-react";
 import Image from "next/image";
+// Program ΔR — Mission ΔR-1.2A. Direct leaf import (not the domain barrel)
+// — this is a Client Component; the barrel also re-exports server-only
+// repository/service classes that have no reason to enter the client bundle.
+import { formatUSD } from "@/src/domains/exchange/presentation/formatters";
 
 interface ProductRow {
   id: string;
@@ -89,7 +93,7 @@ export default function MerchantProductsPage() {
                         </td>
                         <td className="px-4 py-3 text-slate-400 text-xs">{row.products.brands?.name ?? "—"}</td>
                         <td className="px-4 py-3 text-slate-400 text-xs">{row.products.categories?.name ?? "—"}</td>
-                        <td className="px-4 py-3 text-right text-white font-medium">${row.price_usd.toFixed(2)}</td>
+                        <td className="px-4 py-3 text-right text-white font-medium">{formatUSD(row.price_usd)}</td>
                         <td className="px-4 py-3 text-center">
                           {row.in_stock
                             ? <CheckCircle2 className="w-4 h-4 text-emerald-400 mx-auto" />
