@@ -78,3 +78,43 @@ Por isso, `PresentMoneyInput.knownAmountBRL` existe: quando o chamador já possu
 ## 6. Fonte única alcançada
 
 `utils/currency.ts` não exporta mais `formatUSD`/`formatBRL` — apenas `discountPercentage` (um cálculo percentual, não uma formatação monetária, permanece ali). Toda formatação monetária no código-fonte agora importa de `@/src/domains/exchange`, confirmado por auditoria final (Objetivo 9).
+
+---
+
+## 7. Mission ΔR-1.2A Closure — Money Presentation Completion
+
+**Data**: 2026-07-14
+**Escopo autorizado**: Merchant, Admin, Purchase Timing (apresentação textual) — nenhuma outra área.
+
+### O que foi eliminado
+
+| Arquivo | Antes | Depois |
+|---|---|---|
+| `app/merchant/products/page.tsx` | `` `${row.price_usd.toFixed(2)}` `` | `formatUSD(row.price_usd)` (import direto do arquivo-folha, Client Component) |
+| `app/admin/catalog/offers/page.tsx` | `` `$ ${r.price_usd.toFixed(2)}` `` / `` `R$ ${r.price_brl.toFixed(2)}` `` | `formatUSD(r.price_usd)` / `formatBRL(r.price_brl)` (import direto do arquivo-folha, Client Component) |
+| `components/admin/exchange/widgets/AnalyticsSummary.tsx` | `` `$${analytics.buyerSavings.totalSavingsUsd.toFixed(2)}` `` | `formatUSD(analytics.buyerSavings.totalSavingsUsd)` (Server Component, import do barrel) |
+| `src/domains/buyer-intelligence/services/PurchaseTimingComposer.ts` | `` `USD ${lastPriceUSD.toFixed(2)} vs. mediana de USD ${median.toFixed(2)}...` `` | `` `${formatUSD(lastPriceUSD)} vs. mediana de ${formatUSD(median)}...` `` — **apenas o texto da evidência mudou; nenhuma condição, voto ou limiar de decisão foi tocado** (confirmado por diff e pela suíte de testes existente, que só valida `label`, nunca o texto de `evidence`, e passou sem alteração) |
+
+Nota técnica: nos dois arquivos de Merchant/Admin (Client Components), `formatUSD`/`formatBRL` foram importados diretamente do arquivo-folha (`@/src/domains/exchange/presentation/formatters`), não do barrel do domínio — o barrel também reexporta classes de repositório/serviço server-only, que não têm motivo para entrar no bundle do cliente.
+
+### O que permaneceu, e por quê
+
+- **`src/domains/buyer-intelligence/services/BestDealComposer.ts:63`** — encontrado pela auditoria global (Objetivo 4): `` `Até USD ${savings.maxSavingsUSD.toFixed(2)} (...)` ``, o mesmo padrão cru corrigido em Purchase Timing. **Não corrigido.** Best Deal não está entre as três pendências autorizadas nesta missão, e a lista de restrições do CTO proíbe alterar Best Deal sem qualificação (diferente de Purchase Timing, explicitamente qualificado como "(lógica)" — ou seja, a apresentação de Purchase Timing foi liberada, a de Best Deal não). Requer uma nova missão explicitamente autorizada.
+- **Grades de produto (`ProductCard`, `CompareSummary`) e o texto embutido do `ParaguAIAdvisorComposer.ts`** — fonte de formatação já corrigida na Mission ΔR-1.2; nenhuma conversão BRL ao vivo foi adicionada, por escolha de escopo já registrada em §5, não revisitada nesta missão (fora do que foi pedido: Merchant, Admin, Purchase Timing).
+
+### Auditoria global (Objetivo 4) — resultado exato
+
+- `formatUSD`/`formatBRL`: toda ocorrência no código-fonte importa de `@/src/domains/exchange` ou de `@/src/domains/exchange/presentation/formatters` — confirmado por grep, zero exceções.
+- `Intl.NumberFormat`: zero ocorrências fora de `src/domains/exchange`.
+- `toFixed(` fora do domínio Exchange: dezenas de ocorrências, **nenhuma nova identificada como dinheiro** além da já listada acima (`BestDealComposer.ts`) — as demais são percentuais (taxa de erro, variação), avaliações (`X.X/5`, `X.X★`) ou horas, confirmadas uma a uma.
+
+### Definition of Done (Objetivo 7)
+
+| Pergunta | Resposta |
+|---|---|
+| Toda a plataforma utiliza `PricePresentationService`? | **Não integralmente** — Merchant/Admin usam os formatadores puros (`formatUSD`/`formatBRL`), não o serviço completo (nenhuma conversão BRL é necessária ali hoje) |
+| Toda a plataforma utiliza os formatadores canônicos do domínio Exchange? | **Sim**, sem exceção, confirmado por auditoria global |
+| Existe alguma exceção? | **Sim, exatamente uma**: `BestDealComposer.ts:63`, fora do escopo autorizado desta missão |
+| Existe dívida técnica restante? | **Sim, uma linha, precisamente localizada e documentada** — não uma incerteza |
+
+Money Presentation Domain — **STATUS: quase completo**, com uma exceção nomeada, não uma lacuna desconhecida.
