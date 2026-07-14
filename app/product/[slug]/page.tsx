@@ -19,7 +19,7 @@ import ParaguAIAdvisor from "@/components/product/ParaguAIAdvisor";
 import RecommendationSummary from "@/components/product/RecommendationSummary";
 import { comparePath } from "@/constants/routes";
 import { ParaguAIAdvisorComposer } from "@/src/domains/buyer-intelligence";
-import { getCachedProduct, getCachedOffers, getCachedRelatedProducts, getCachedIntelligence, getCachedBestDeal, getCachedPurchaseTiming, getCachedTrust } from "./_cache";
+import { getCachedProduct, getCachedOffers, getCachedRelatedProducts, getCachedIntelligence, getCachedBestDeal, getCachedPurchaseTiming, getCachedTrust, getCachedMoneyPresentation } from "./_cache";
 
 // Objetivo 2/3 — pure, stateless, zero I/O: instantiated directly, no
 // factory/client needed (unlike every other buyer-intelligence composer).
@@ -42,9 +42,10 @@ export default async function ProductPage({ params }: { params: Params }) {
     getCachedIntelligence(product.id),
   ]);
   const { bestDeal, storeName } = await getCachedBestDeal(intelligence.comparison);
-  const [purchaseTiming, trust] = await Promise.all([
+  const [purchaseTiming, trust, money] = await Promise.all([
     getCachedPurchaseTiming(intelligence.comparison),
     getCachedTrust(bestDeal),
+    getCachedMoneyPresentation(bestDeal),
   ]);
   const advisor = advisorComposer.compose(bestDeal, purchaseTiming, trust);
 
@@ -93,9 +94,11 @@ export default async function ProductPage({ params }: { params: Params }) {
         </div>
 
         <div className="mt-12 flex flex-col gap-8">
-          <ParaguAIAdvisor advisor={advisor} />
+          <ParaguAIAdvisor advisor={advisor} price={money.price} savings={money.savings} />
           <RecommendationSummary advisor={advisor} />
-          {bestDeal ? <BestDealCard bestDeal={bestDeal} storeName={storeName ?? ""} /> : null}
+          {bestDeal ? (
+            <BestDealCard bestDeal={bestDeal} storeName={storeName ?? ""} price={money.price} savings={money.savings} />
+          ) : null}
           <ShouldIBuyNowCard timing={purchaseTiming} />
           <TrustCard trust={trust} />
           <ProductSpecifications specifications={product.specifications} />

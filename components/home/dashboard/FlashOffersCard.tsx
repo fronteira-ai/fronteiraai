@@ -3,6 +3,7 @@ import { Tag, Coins } from "lucide-react";
 import DashboardCardShell from "./DashboardCardShell";
 import { getSupabaseServiceClient } from "@/lib/supabase/service";
 import { getFlashOffers } from "@/lib/home-premium-service";
+import { formatUSD } from "@/src/domains/exchange";
 
 // Release 1.9 — Program F — Wave 2 (v0 realignment). Same
 // PriceIntelligenceService.getSavingsOpportunity computation as before — the
@@ -34,17 +35,19 @@ export default async function FlashOffersCard() {
                   <p className="line-clamp-2 min-w-0 text-[15px] font-semibold leading-tight text-white">{best.productName}</p>
                 )}
                 <span className="shrink-0 rounded-lg bg-positive/15 px-2 py-1 text-sm font-bold text-positive">
-                  -{best.savingsPercent.toFixed(0)}%
+                  -{best.savings.formattedPercent}
                 </span>
               </div>
-              <p className="mt-3 text-xs text-slate-500 line-through">US$ {best.oldPriceUSD.toFixed(2)}</p>
-              <p className="font-home-display text-2xl font-bold text-positive">US$ {best.newPriceUSD.toFixed(2)}</p>
+              <p className="mt-3 text-xs text-slate-500 line-through">{formatUSD(best.oldPriceUSD)}</p>
+              <p className="font-home-display text-2xl font-bold text-positive">{best.price.formattedUSD}</p>
+              {best.price.formattedBRL ? <p className="text-xs text-slate-500">≈ {best.price.formattedBRL}</p> : null}
               <p className="mt-1 text-xs text-slate-500">{best.cheapestStoreName}</p>
             </div>
           </div>
           <div className="mt-4 flex items-center gap-2 border-t border-white/10 pt-3 text-sm font-medium text-amber">
             <Coins size={16} />
-            Economize: US$ {best.savingsUSD.toFixed(2)}
+            Economize: {best.savings.formattedUSD}
+            {best.savings.formattedBRL ? ` (≈ ${best.savings.formattedBRL})` : ""}
           </div>
         </>
       )}

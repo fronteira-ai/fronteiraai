@@ -2,7 +2,8 @@ import { memo } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
-import { formatUSD, discountPercentage } from "@/utils/currency";
+import { formatUSD } from "@/src/domains/exchange";
+import { discountPercentage } from "@/utils/currency";
 import { productPath } from "@/constants/routes";
 import { animations } from "@/styles/animations";
 

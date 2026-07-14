@@ -1,8 +1,13 @@
-import { formatUSD } from "@/utils/currency";
 import type { ParaguAIAdvisorResult } from "@/src/domains/buyer-intelligence";
+import type { MoneyPresentation, MoneySavingsPresentation } from "@/src/domains/exchange";
 
 type Props = {
   advisor: ParaguAIAdvisorResult | null;
+  /** Program ΔR — Mission ΔR-1.2. Same MoneyPresentation/MoneySavingsPresentation
+   * already produced for BestDealCard's recommended offer — never
+   * recomputed here, never formatted with formatUSD directly. */
+  price: MoneyPresentation | null;
+  savings: MoneySavingsPresentation | null;
 };
 
 const RECOMMENDATION_STYLE: Record<ParaguAIAdvisorResult["recommendation"], { border: string; bg: string; text: string }> = {
@@ -16,7 +21,7 @@ const RECOMMENDATION_STYLE: Record<ParaguAIAdvisorResult["recommendation"], { bo
 // is read from BestDealResult/PurchaseTimingResult/TrustCardResult via
 // ParaguAIAdvisorComposer — this component formats, it never decides. See
 // docs/product/PARAGUAI_ADVISOR_ARCHITECTURE.md.
-export default function ParaguAIAdvisor({ advisor }: Props) {
+export default function ParaguAIAdvisor({ advisor, price, savings }: Props) {
   if (!advisor) return null;
 
   const style = RECOMMENDATION_STYLE[advisor.recommendation];
@@ -36,11 +41,12 @@ export default function ParaguAIAdvisor({ advisor }: Props) {
         </p>
       ) : (
         <div className="mt-4 flex flex-col gap-3 text-sm text-slate-300">
-          {bestDeal?.savingsOpportunity && bestDeal.savingsOpportunity.maxSavingsUSD > 0 ? (
+          {savings && savings.amountUSD > 0 ? (
             <p>
               <span aria-hidden>💰</span>{" "}
               <span className="font-medium text-white">Economia estimada</span> — até{" "}
-              {formatUSD(bestDeal.savingsOpportunity.maxSavingsUSD)} ({bestDeal.savingsOpportunity.maxSavingsPercent.toFixed(0)}%)
+              {savings.formattedUSD}
+              {savings.formattedBRL ? ` (≈ ${savings.formattedBRL})` : ""} ({savings.formattedPercent})
             </p>
           ) : null}
 
@@ -53,10 +59,11 @@ export default function ParaguAIAdvisor({ advisor }: Props) {
             </p>
           ) : null}
 
-          {bestDeal ? (
+          {bestDeal && price ? (
             <p>
               <span aria-hidden>📈</span>{" "}
-              <span className="font-medium text-white">Melhor compra</span> — {formatUSD(bestDeal.recommendedOffer.offer.priceUSD)}
+              <span className="font-medium text-white">Melhor compra</span> — {price.formattedUSD}
+              {price.formattedBRL ? ` (≈ ${price.formattedBRL})` : ""}
             </p>
           ) : null}
 

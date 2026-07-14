@@ -4,6 +4,7 @@ import Section from "@/components/ui/Section";
 import Reveal from "@/components/ui/Reveal";
 import { getSupabaseServiceClient } from "@/lib/supabase/service";
 import { getBestSavingsToday } from "@/lib/home-premium-service";
+import { formatUSD } from "@/src/domains/exchange";
 
 // Release 1.9 — Program F — Wave 1. Consumes PriceIntelligenceService
 // (Program C — Wave 1, Market Intelligence Engine) through home-premium-service
@@ -42,15 +43,22 @@ export default async function AchadoDoDia() {
           <div className="mt-6 flex flex-wrap items-center justify-center gap-6">
             <div>
               <p className="text-xs font-semibold uppercase tracking-wider text-emerald-400">Economize</p>
-              <p className="text-4xl font-black text-white">US$ {best.savingsUSD.toFixed(2)}</p>
+              <p className="text-4xl font-black text-white">{best.savings.formattedUSD}</p>
+              {best.savings.formattedBRL ? <p className="text-sm text-slate-400">≈ {best.savings.formattedBRL}</p> : null}
             </div>
             <div className="rounded-2xl bg-emerald-500/15 px-5 py-3 text-emerald-400">
-              <p className="text-lg font-bold">-{best.savingsPercent.toFixed(1)}%</p>
+              <p className="text-lg font-bold">-{best.savings.formattedPercent}</p>
               <p className="text-xs">
-                de US$ {best.oldPriceUSD.toFixed(2)} para US$ {best.newPriceUSD.toFixed(2)}
+                de {formatUSD(best.oldPriceUSD)} para {best.price.formattedUSD}
               </p>
             </div>
           </div>
+
+          {best.price.formattedRate ? (
+            <p className={`mt-4 text-xs ${best.price.isStale ? "text-amber-400" : "text-slate-500"}`}>
+              🌎 {best.price.formattedRate} — {best.price.formattedTimestamp}
+            </p>
+          ) : null}
 
           {best.productSlug ? (
             <Link

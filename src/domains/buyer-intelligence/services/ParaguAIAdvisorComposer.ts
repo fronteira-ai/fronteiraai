@@ -1,4 +1,4 @@
-import { formatUSD } from "@/utils/currency";
+import { formatUSD } from "@/src/domains/exchange";
 import type {
   BestDealResult,
   PurchaseTimingResult,

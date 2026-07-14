@@ -4,6 +4,8 @@
 
 export * from "./types";
 export * from "./enums";
+export { formatUSD, formatBRL, formatRate, formatTimestamp, formatPercent } from "./presentation/formatters";
+export { PricePresentationService } from "./services/PricePresentationService";
 
 export type { IExchangeRateProvider } from "./providers/IExchangeRateProvider";
 export { ExchangeRateApiProvider } from "./providers/ExchangeRateApiProvider";

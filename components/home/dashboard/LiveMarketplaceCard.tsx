@@ -2,6 +2,7 @@ import { Radio, ShoppingBag } from "lucide-react";
 import DashboardCardShell from "./DashboardCardShell";
 import { getSupabaseServiceClient } from "@/lib/supabase/service";
 import { getLiveMarketplaceFeed } from "@/lib/home-premium-service";
+import { formatUSD } from "@/src/domains/exchange";
 
 function timeAgo(iso: string): string {
   const minutes = Math.round((Date.now() - new Date(iso).getTime()) / 60000);
@@ -35,8 +36,8 @@ export default async function LiveMarketplaceCard() {
                   {entry.storeName ?? "Loja parceira"} · {timeAgo(entry.occurredAt)}
                 </p>
               </span>
-              {entry.newPriceUSD ? (
-                <span className="shrink-0 text-[13px] font-bold text-white">US$ {entry.newPriceUSD}</span>
+              {entry.newPriceUSD && Number.isFinite(Number(entry.newPriceUSD)) ? (
+                <span className="shrink-0 text-[13px] font-bold text-white">{formatUSD(Number(entry.newPriceUSD))}</span>
               ) : null}
             </li>
           ))}

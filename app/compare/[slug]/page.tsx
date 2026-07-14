@@ -53,7 +53,7 @@ export default async function ComparePage({ params }: Props) {
   const result = await getCachedComparison(slug);
   if (!result) notFound();
 
-  const { product, offers, summary, bestDeal, bestDealStoreName, purchaseTiming, trust } = result;
+  const { product, offers, summary, bestDeal, bestDealStoreName, purchaseTiming, trust, bestDealPrice, bestDealSavings } = result;
   const advisor = advisorComposer.compose(bestDeal, purchaseTiming, trust);
 
   const relatedProducts = product.category_id
@@ -84,7 +84,7 @@ export default async function ComparePage({ params }: Props) {
 
         {/* ParaguAI Advisor — unified recommendation */}
         <div className="mt-10">
-          <ParaguAIAdvisor advisor={advisor} />
+          <ParaguAIAdvisor advisor={advisor} price={bestDealPrice} savings={bestDealSavings} />
         </div>
         <div className="mt-4">
           <RecommendationSummary advisor={advisor} />
@@ -93,7 +93,7 @@ export default async function ComparePage({ params }: Props) {
         {/* Best Deal */}
         {bestDeal ? (
           <div className="mt-10">
-            <BestDealCard bestDeal={bestDeal} storeName={bestDealStoreName ?? ""} />
+            <BestDealCard bestDeal={bestDeal} storeName={bestDealStoreName ?? ""} price={bestDealPrice} savings={bestDealSavings} />
           </div>
         ) : null}
 

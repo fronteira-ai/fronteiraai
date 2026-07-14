@@ -5,6 +5,7 @@ import { createRealtimeCommerceServices } from "./realtime-commerce-factory";
 import { createBuyerIntelligenceServices } from "./buyer-intelligence-factory";
 import { ConnectorDirectoryService } from "./connector-directory-service";
 import { Currency, CurrencyPair } from "@/src/domains/exchange";
+import type { MoneyPresentation, MoneySavingsPresentation } from "@/src/domains/exchange";
 import { ChangeType } from "@/src/domains/realtime-commerce";
 import { getStoreBySlug } from "@/services/store.service";
 import { getCategories } from "@/services/category.service";
@@ -165,6 +166,11 @@ export interface SavingsHighlight {
   newPriceUSD: number;
   savingsUSD: number;
   savingsPercent: number;
+  /** Program ΔR — Mission ΔR-1.2 (Universal Price Presentation). Produced
+   * exclusively by PricePresentationService — AchadoDoDia/FlashOffersCard
+   * never format or convert currency themselves. */
+  price: MoneyPresentation;
+  savings: MoneySavingsPresentation;
 }
 
 /** Release 2.0 — Experience Iteration 6.5 (Opportunity Engine). Both
@@ -176,6 +182,7 @@ export interface SavingsHighlight {
  * app/product/[slug]/_cache.ts's getProductBestDeal for the store name. */
 async function rankOpportunities(client: SupabaseClient, limit: number): Promise<SavingsHighlight[]> {
   const { opportunityEngine } = createBuyerIntelligenceServices(client);
+  const { presentationService } = createExchangeServices(client);
   const opportunities = await opportunityEngine.getTopOpportunities(limit);
 
   const storeNamesByStoreSlug = new Map<string, string>();
@@ -198,16 +205,27 @@ async function rankOpportunities(client: SupabaseClient, limit: number): Promise
     })
   );
 
-  return opportunities.map((o) => ({
-    canonicalProductId: o.canonicalProductId,
-    productName: o.productName,
-    productSlug: productSlugByProductId.get(o.winningOfferProductId) ?? null,
-    cheapestStoreName: storeNamesByStoreSlug.get(o.cheapestStoreSlug) ?? o.cheapestStoreSlug,
-    oldPriceUSD: o.oldPriceUSD,
-    newPriceUSD: o.newPriceUSD,
-    savingsUSD: o.savingsUSD,
-    savingsPercent: o.savingsPercent,
-  }));
+  return Promise.all(
+    opportunities.map(async (o) => {
+      const [price, savings] = await Promise.all([
+        presentationService.present({ amountUSD: o.newPriceUSD }),
+        presentationService.presentSavings({ amountUSD: o.savingsUSD, percent: o.savingsPercent }),
+      ]);
+
+      return {
+        canonicalProductId: o.canonicalProductId,
+        productName: o.productName,
+        productSlug: productSlugByProductId.get(o.winningOfferProductId) ?? null,
+        cheapestStoreName: storeNamesByStoreSlug.get(o.cheapestStoreSlug) ?? o.cheapestStoreSlug,
+        oldPriceUSD: o.oldPriceUSD,
+        newPriceUSD: o.newPriceUSD,
+        savingsUSD: o.savingsUSD,
+        savingsPercent: o.savingsPercent,
+        price,
+        savings,
+      };
+    })
+  );
 }
 
 export async function getBestSavingsToday(client: SupabaseClient): Promise<SavingsHighlight | null> {

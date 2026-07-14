@@ -3,6 +3,7 @@ import { OfferWithStore } from "@/types/offer";
 import { OfferPriceMetrics } from "@/types/priceHistory";
 import type { OfferRankFactor } from "@/src/domains/canonical-catalog";
 import type { BestDealResult, PurchaseTimingResult, TrustCardResult } from "@/src/domains/buyer-intelligence";
+import type { MoneyPresentation, MoneySavingsPresentation } from "@/src/domains/exchange";
 
 export interface RankedOffer {
   offer: OfferWithStore;
@@ -41,4 +42,9 @@ export interface CompareResult {
   /** Release 2.0 — Wave 4 (Trust Experience). Trust card for the recommended
    * (rank-1) offer's store — same null-when-no-canonical-link convention. */
   trust: TrustCardResult | null;
+  /** Program ΔR — Mission ΔR-1.2 (Universal Price Presentation). Recommended
+   * offer's price and its savings figure, converted/formatted exclusively by
+   * PricePresentationService — never null unless bestDeal itself is null. */
+  bestDealPrice: MoneyPresentation | null;
+  bestDealSavings: MoneySavingsPresentation | null;
 }

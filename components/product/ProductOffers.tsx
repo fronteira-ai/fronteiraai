@@ -1,6 +1,6 @@
 import { memo } from "react";
 import { OfferWithStore } from "@/types/offer";
-import { formatUSD, formatBRL } from "@/utils/currency";
+import { formatUSD, formatBRL } from "@/src/domains/exchange";
 
 type Props = {
   offers: OfferWithStore[];

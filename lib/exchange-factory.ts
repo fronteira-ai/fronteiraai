@@ -11,6 +11,7 @@ import { ExchangeProviderHealthService } from "@/src/domains/exchange/services/E
 import { ExchangeHistoryService } from "@/src/domains/exchange/history/ExchangeHistoryService";
 import { ExchangeAnalyticsService } from "@/src/domains/exchange/analytics/ExchangeAnalyticsService";
 import { ExchangeDashboardService } from "@/src/domains/exchange/dashboard/ExchangeDashboardService";
+import { PricePresentationService } from "@/src/domains/exchange/services/PricePresentationService";
 
 // Shared across requests within the same process/serverless instance — that
 // is the entire point of a TTL cache (ExchangeRateCache's doc comment). A
@@ -36,6 +37,7 @@ export function createExchangeServices(client: SupabaseClient) {
     analyticsService,
     conversionLogRepo
   );
+  const presentationService = new PricePresentationService(currencyService);
 
   return {
     rateRepo,
@@ -47,5 +49,6 @@ export function createExchangeServices(client: SupabaseClient) {
     healthService,
     analyticsService,
     dashboardService,
+    presentationService,
   };
 }

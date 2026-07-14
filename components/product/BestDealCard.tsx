@@ -1,9 +1,14 @@
-import { formatUSD } from "@/utils/currency";
 import type { BestDealResult } from "@/src/domains/buyer-intelligence";
+import type { MoneyPresentation, MoneySavingsPresentation } from "@/src/domains/exchange";
 
 type Props = {
   bestDeal: BestDealResult | null;
   storeName: string;
+  /** Program ΔR — Mission ΔR-1.2. Produced by PricePresentationService —
+   * this component never calls formatUSD/formatBRL or converts currency
+   * itself. */
+  price: MoneyPresentation | null;
+  savings: MoneySavingsPresentation | null;
   /** Compact mode (search results): headline + economia only, no reason
    * list/near-tie banner — same data, less real estate. */
   compact?: boolean;
@@ -17,10 +22,10 @@ type Props = {
 // on this card is computed by this component. See
 // docs/product/WHY_THIS_RECOMMENDATION.md for the full explanation of each
 // field's origin.
-export default function BestDealCard({ bestDeal, storeName, compact = false }: Props) {
+export default function BestDealCard({ bestDeal, storeName, price, savings, compact = false }: Props) {
   if (!bestDeal) return null;
 
-  const { recommendedOffer, savingsOpportunity, priceStatistics, exchangeContext, nearTie, reasons, totalOffers } = bestDeal;
+  const { recommendedOffer, priceStatistics, nearTie, reasons, totalOffers } = bestDeal;
   const offer = recommendedOffer.offer;
 
   const priceVsMedian =
@@ -36,15 +41,17 @@ export default function BestDealCard({ bestDeal, storeName, compact = false }: P
       </div>
 
       <div className="mt-4 flex flex-wrap items-baseline gap-3">
-        <span className="text-3xl font-black text-white">{formatUSD(offer.priceUSD)}</span>
+        <span className="text-3xl font-black text-white">{price?.formattedUSD ?? "—"}</span>
+        {price?.formattedBRL ? <span className="text-lg font-semibold text-slate-400">≈ {price.formattedBRL}</span> : null}
         <span className="text-sm text-slate-400">
           ⭐ <span className="font-semibold text-slate-200">{storeName}</span>
         </span>
       </div>
 
-      {savingsOpportunity && savingsOpportunity.maxSavingsUSD > 0 ? (
+      {savings && savings.amountUSD > 0 ? (
         <p className="mt-2 text-sm font-semibold text-emerald-300">
-          💰 Economize até {formatUSD(savingsOpportunity.maxSavingsUSD)} ({savingsOpportunity.maxSavingsPercent.toFixed(0)}%) — 💵 economia estimada comparando {totalOffers} oferta{totalOffers !== 1 ? "s" : ""}
+          💰 Economize até {savings.formattedUSD}
+          {savings.formattedBRL ? ` (≈ ${savings.formattedBRL})` : ""} ({savings.formattedPercent}) — 💵 economia estimada comparando {totalOffers} oferta{totalOffers !== 1 ? "s" : ""}
         </p>
       ) : null}
 
@@ -65,9 +72,9 @@ export default function BestDealCard({ bestDeal, storeName, compact = false }: P
             ⏱ Atualizado {new Date(offer.updatedAt).toLocaleDateString("pt-BR")}
           </span>
         ) : null}
-        {exchangeContext ? (
-          <span className="rounded-full bg-slate-800 px-3 py-1 font-semibold text-slate-300">
-            🌎 Câmbio USD/BRL {exchangeContext.rate.rate.toFixed(2)} ({new Date(exchangeContext.rate.capturedAt).toLocaleDateString("pt-BR")})
+        {price?.formattedRate ? (
+          <span className={`rounded-full px-3 py-1 font-semibold ${price.isStale ? "bg-amber-500/20 text-amber-300" : "bg-slate-800 text-slate-300"}`}>
+            🌎 {price.formattedRate} — {price.formattedTimestamp}
           </span>
         ) : null}
       </div>

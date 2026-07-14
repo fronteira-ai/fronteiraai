@@ -3,13 +3,7 @@ import DashboardCardShell from "./DashboardCardShell";
 import Sparkline from "@/components/ui/Sparkline";
 import { getSupabaseServiceClient } from "@/lib/supabase/service";
 import { getExchangeSnapshot, type ExchangeRatePoint } from "@/lib/home-premium-service";
-
-function timeAgo(iso: string): string {
-  const minutes = Math.round((Date.now() - new Date(iso).getTime()) / 60000);
-  if (minutes < 1) return "agora mesmo";
-  if (minutes < 60) return `há ${minutes} min`;
-  return `há ${Math.round(minutes / 60)}h`;
-}
+import { formatTimestamp } from "@/src/domains/exchange";
 
 /** Real percent change from the first to the last point of the actual
  * history window — never fabricated, `null` when there isn't enough
@@ -62,7 +56,7 @@ function Rate({
 // both symmetrically instead of inventing a second "BRL" rate.
 export default async function CambioCard() {
   const client = getSupabaseServiceClient();
-  const { usdBrl, usdPyg, history, usdPygHistory } = await getExchangeSnapshot(client);
+  const { usdBrl, usdPyg, history, usdPygHistory, usingFallback } = await getExchangeSnapshot(client);
 
   return (
     <DashboardCardShell icon={<ArrowLeftRight size={16} />} title="Câmbio ao vivo">
@@ -74,12 +68,14 @@ export default async function CambioCard() {
             <Rate label="USD → BRL" current={usdBrl} history={history} />
             <Rate label="USD → PYG" current={usdPyg} history={usdPygHistory} />
           </div>
-          <div className="mt-4 flex items-center gap-2 text-xs text-slate-500">
-            <span className="relative flex h-2 w-2">
-              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-positive opacity-75" />
-              <span className="relative inline-flex h-2 w-2 rounded-full bg-positive" />
-            </span>
-            Atualizado {timeAgo((usdBrl ?? usdPyg)!.capturedAt)}
+          <div className={`mt-4 flex items-center gap-2 text-xs ${usingFallback ? "text-amber-400" : "text-slate-500"}`}>
+            {!usingFallback ? (
+              <span className="relative flex h-2 w-2">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-positive opacity-75" />
+                <span className="relative inline-flex h-2 w-2 rounded-full bg-positive" />
+              </span>
+            ) : null}
+            {formatTimestamp((usdBrl ?? usdPyg)!.capturedAt, usingFallback)}
           </div>
         </>
       )}

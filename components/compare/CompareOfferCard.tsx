@@ -2,7 +2,7 @@
 
 import { memo, useCallback } from "react";
 import { RankedOffer } from "@/types/compare";
-import { formatUSD, formatBRL } from "@/utils/currency";
+import { formatUSD, formatBRL } from "@/src/domains/exchange";
 import { analytics } from "@/utils/analytics";
 
 type Props = {

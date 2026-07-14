@@ -1,7 +1,7 @@
 import { memo } from "react";
 import Link from "next/link";
 import { OfferWithProduct } from "@/types/offer";
-import { formatUSD, formatBRL } from "@/utils/currency";
+import { formatUSD, formatBRL } from "@/src/domains/exchange";
 import { productPath } from "@/constants/routes";
 
 type Props = {

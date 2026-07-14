@@ -1,6 +1,7 @@
 import { supabase } from "@/lib/supabase";
 import { getSupabaseServiceClient } from "@/lib/supabase/service";
 import { createBuyerIntelligenceServices } from "@/lib/buyer-intelligence-factory";
+import { createExchangeServices } from "@/lib/exchange-factory";
 import { getProductBySlug } from "@/services/product.service";
 import { OfferWithStore } from "@/types/offer";
 import { Store } from "@/types/store";
@@ -175,7 +176,17 @@ async function buildCompareResult(productId: string, product: ProductWithRelatio
   if (!comparison) {
     // No canonical link yet (Product Identity, Shadow Mode) — nothing to
     // compare across stores. Empty result, never an error.
-    return { product, offers: [], summary: buildSummary([]), bestDeal: null, bestDealStoreName: null, purchaseTiming: null, trust: null };
+    return {
+      product,
+      offers: [],
+      summary: buildSummary([]),
+      bestDeal: null,
+      bestDealStoreName: null,
+      purchaseTiming: null,
+      trust: null,
+      bestDealPrice: null,
+      bestDealSavings: null,
+    };
   }
 
   const storeIds = [...new Set(comparison.offers.map((o) => o.offer.storeId))];
@@ -194,11 +205,33 @@ async function buildCompareResult(productId: string, product: ProductWithRelatio
   // Release 2.0 — Wave 4 (Trust Experience). Trust for the same recommended
   // (rank-1) offer BestDealCard already surfaces — depends on bestDeal, so
   // it runs after the Promise.all above rather than inside it.
-  const trust = bestDeal ? await trustComposer.composeForOffer(bestDeal.recommendedOffer) : null;
+  // Program ΔR — Mission ΔR-1.2: same dependency-on-bestDeal reasoning for
+  // the money presentation of its price/savings.
+  const { presentationService } = createExchangeServices(getSupabaseServiceClient());
+  const [trust, bestDealPrice, bestDealSavings] = await Promise.all([
+    bestDeal ? trustComposer.composeForOffer(bestDeal.recommendedOffer) : Promise.resolve(null),
+    bestDeal ? presentationService.present({ amountUSD: bestDeal.recommendedOffer.offer.priceUSD }) : Promise.resolve(null),
+    bestDeal?.savingsOpportunity
+      ? presentationService.presentSavings({
+          amountUSD: bestDeal.savingsOpportunity.maxSavingsUSD,
+          percent: bestDeal.savingsOpportunity.maxSavingsPercent,
+        })
+      : Promise.resolve(null),
+  ]);
 
   const rankedOffers = toRankedOffers(comparison.offers, storesById, offerExtrasById, metricsById);
   const bestDealStoreName = bestDeal ? storesById.get(bestDeal.recommendedOffer.offer.storeId)?.name ?? bestDeal.recommendedOffer.offer.storeSlug : null;
-  return { product, offers: rankedOffers, summary: buildSummary(rankedOffers), bestDeal, bestDealStoreName, purchaseTiming, trust };
+  return {
+    product,
+    offers: rankedOffers,
+    summary: buildSummary(rankedOffers),
+    bestDeal,
+    bestDealStoreName,
+    purchaseTiming,
+    trust,
+    bestDealPrice,
+    bestDealSavings,
+  };
 }
 
 // Primary entry point: compare by product slug.

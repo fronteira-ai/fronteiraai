@@ -3,7 +3,9 @@ import { getProductBySlug, getRelatedProducts } from "@/services/product.service
 import { getOffersByProduct } from "@/services/offer.service";
 import { getSupabaseServiceClient } from "@/lib/supabase/service";
 import { createBuyerIntelligenceServices } from "@/lib/buyer-intelligence-factory";
+import { createExchangeServices } from "@/lib/exchange-factory";
 import type { ComparisonIntelligenceBundle, BestDealResult } from "@/src/domains/buyer-intelligence";
+import type { MoneyPresentation, MoneySavingsPresentation } from "@/src/domains/exchange";
 
 export const getCachedProduct = cache(getProductBySlug);
 export const getCachedOffers = cache(getOffersByProduct);
@@ -44,6 +46,33 @@ async function getProductBestDeal(comparison: ComparisonIntelligenceBundle | nul
 }
 
 export const getCachedBestDeal = cache(getProductBestDeal);
+
+// Program ΔR — Mission ΔR-1.2 (Universal Price Presentation). The only
+// place BestDealCard's numbers are converted/formatted — never inside the
+// component. Reuses the same bestDeal Wave 2 already computed (no new
+// ranking/decision), and offers.price_brl is deliberately never touched
+// here (ADR-009: independent merchant-entered value) — this only presents
+// the recommended offer's USD price and its USD savings figure in BRL too.
+async function getProductMoneyPresentation(
+  bestDeal: BestDealResult | null
+): Promise<{ price: MoneyPresentation | null; savings: MoneySavingsPresentation | null }> {
+  if (!bestDeal) return { price: null, savings: null };
+
+  const { presentationService } = createExchangeServices(getSupabaseServiceClient());
+  const [price, savings] = await Promise.all([
+    presentationService.present({ amountUSD: bestDeal.recommendedOffer.offer.priceUSD }),
+    bestDeal.savingsOpportunity
+      ? presentationService.presentSavings({
+          amountUSD: bestDeal.savingsOpportunity.maxSavingsUSD,
+          percent: bestDeal.savingsOpportunity.maxSavingsPercent,
+        })
+      : Promise.resolve(null),
+  ]);
+
+  return { price, savings };
+}
+
+export const getCachedMoneyPresentation = cache(getProductMoneyPresentation);
 
 // Release 2.0 — Wave 3 (Should I Buy Now). Same reuse discipline as
 // getProductBestDeal — takes the bundle getCachedIntelligence already

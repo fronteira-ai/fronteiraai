@@ -1,6 +1,6 @@
 import { memo } from "react";
 import { CompareSummary as CompareSummaryType } from "@/types/compare";
-import { formatUSD } from "@/utils/currency";
+import { formatUSD } from "@/src/domains/exchange";
 
 type Props = {
   summary: CompareSummaryType;
