@@ -1,5 +1,5 @@
 import { FreshnessClass } from "@/src/domains/realtime-commerce";
-import { CurrencyPair } from "@/src/domains/exchange";
+import { CurrencyPair, formatUSD } from "@/src/domains/exchange";
 import type { ExchangeRateService } from "@/src/domains/exchange";
 import type {
   ComparisonIntelligenceBundle,
@@ -60,7 +60,7 @@ function buildSavingsReason(
   return {
     factor: "savings",
     label: "Economia estimada",
-    evidence: `Até USD ${savings.maxSavingsUSD.toFixed(2)} (${savings.maxSavingsPercent.toFixed(0)}%) mais barato que a loja mais cara`,
+    evidence: `Até ${formatUSD(savings.maxSavingsUSD)} (${savings.maxSavingsPercent.toFixed(0)}%) mais barato que a loja mais cara`,
   };
 }
 

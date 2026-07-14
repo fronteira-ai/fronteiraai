@@ -118,3 +118,37 @@ Nota técnica: nos dois arquivos de Merchant/Admin (Client Components), `formatU
 | Existe dívida técnica restante? | **Sim, uma linha, precisamente localizada e documentada** — não uma incerteza |
 
 Money Presentation Domain — **STATUS: quase completo**, com uma exceção nomeada, não uma lacuna desconhecida.
+
+---
+
+## 8. Mission ΔR-1.2B Final Closure — Money Presentation Final Closure
+
+**Data**: 2026-07-14
+**Escopo autorizado**: exclusivamente a linha nomeada pela missão anterior (`BestDealComposer.ts`, evidência de economia) — nenhuma outra área.
+
+### Alteração realizada
+
+`src/domains/buyer-intelligence/services/BestDealComposer.ts` — `buildSavingsReason`'s evidência trocou `` `Até USD ${savings.maxSavingsUSD.toFixed(2)} (...)` `` por `` `Até ${formatUSD(savings.maxSavingsUSD)} (...)` ``. `maxSavingsPercent.toFixed(0)` permanece intocado (percentual, não dinheiro). Nenhuma condição de `buildSavingsReason` (o filtro `savings.maxSavingsUSD <= 0`, o filtro `cheapestStoreId !== offer.offer.storeId`) foi alterada — confirmado por diff. Suíte de testes existente (9/9, incluindo a asserção que verifica a substring `"20.00"` na evidência) passou sem modificação.
+
+### Nova auditoria global — um achado adicional, honestamente reportado
+
+Uma varredura mais ampla (além de `toFixed(`, incluindo padrões de interpolação crua `USD ${...}`) encontrou **mais um caso real, ao vivo, voltado ao comprador**, não capturado pelas auditorias anteriores porque não usa `.toFixed()`:
+
+- **`src/domains/canonical-catalog/services/OfferRankingService.ts:62`** — `` `USD ${offer.priceUSD} vs. lowest USD ${lowestPrice} among compared offers` ``. Esta é a evidência do fator "price" do ranking de ofertas — confirmada ao vivo, renderizada hoje em `BestDealCard.tsx` via `BestDealComposer.buildRankingReasons`, em inglês e sem nenhuma formatação (nem `.toFixed()`, nem símbolo de moeda correto).
+- **Não corrigido.** `OfferRankingService.ts` pertence ao Canonical Catalog — um domínio explicitamente restringido em todas as missões do Program ΔR até aqui, e esta missão autoriza exclusivamente a linha do `BestDealComposer.ts`. Corrigir aqui seria aumentar o escopo além do que foi pedido ("Não aumentar escopo. Não procurar novos problemas.") — por isso é reportado, não corrigido, deixado para uma missão futura explicitamente autorizada a tocar Canonical Catalog/Offer Ranking (apenas o texto de evidência, nunca o score/ranking em si).
+
+### Auditoria global — resultado final
+
+| Verificação | Resultado |
+|---|---|
+| `toFixed()` monetário fora do domínio Exchange | Zero (a última ocorrência, `BestDealComposer.ts`, corrigida nesta missão) |
+| `Intl.NumberFormat` fora do domínio Exchange | Zero |
+| Conversão manual USD→BRL fora do domínio Exchange | Zero |
+| Formatação monetária local (import de `formatUSD`/`formatBRL` fora de `@/src/domains/exchange`) | Zero |
+| Interpolação crua de moeda (`` `USD ${...}` ``) fora do domínio Exchange | **Uma**: `OfferRankingService.ts:62` (Canonical Catalog, fora do escopo autorizado) |
+
+### Existe código monetário fora do domínio Exchange? (Objetivo 3)
+
+**SIM** — exatamente um item, listado acima, em um domínio explicitamente restringido, não corrigível dentro do escopo desta missão.
+
+Money Presentation Domain — **STATUS: COMPLETE dentro do escopo autorizado por todas as Missions ΔR-1.x até aqui**; uma exceção nomeada permanece em Canonical Catalog, fora de qualquer escopo já autorizado neste Program.
