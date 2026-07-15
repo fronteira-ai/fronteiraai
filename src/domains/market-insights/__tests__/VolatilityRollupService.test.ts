@@ -15,6 +15,11 @@ function makeCatalogRepo(overrides: Partial<ICanonicalCatalogRepository> = {}): 
     findAll: jest.fn(),
     linkOffer: jest.fn(),
     findOffersByCanonicalProductId: jest.fn(),
+    findOfferIdsByCanonicalProductId: jest.fn(),
+    reassignOffers: jest.fn(),
+    reassignOffersByIds: jest.fn(),
+    deactivateAndMerge: jest.fn(),
+    reactivate: jest.fn(),
     ...overrides,
   };
 }
@@ -137,8 +142,8 @@ describe("VolatilityRollupService", () => {
   describe("getCategoryVolatility", () => {
     it("averages canonical volatility scores across the category's canonical products", async () => {
       const products: CanonicalProduct[] = [
-        { id: "c1", canonicalSlug: "a", name: "A", brandId: null, categoryId: "cat-1", imageUrl: null, specifications: null, createdAt: "", updatedAt: "" },
-        { id: "c2", canonicalSlug: "b", name: "B", brandId: null, categoryId: "cat-1", imageUrl: null, specifications: null, createdAt: "", updatedAt: "" },
+        { id: "c1", canonicalSlug: "a", name: "A", brandId: null, categoryId: "cat-1", imageUrl: null, specifications: null, createdAt: "", updatedAt: "", isActive: true, mergedIntoId: null },
+        { id: "c2", canonicalSlug: "b", name: "B", brandId: null, categoryId: "cat-1", imageUrl: null, specifications: null, createdAt: "", updatedAt: "", isActive: true, mergedIntoId: null },
       ];
 
       const findOffersByCanonicalProductId = jest.fn().mockImplementation((canonicalProductId: string) => {

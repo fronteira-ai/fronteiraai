@@ -13,4 +13,11 @@ export interface CanonicalProduct {
   specifications: Record<string, string> | null;
   createdAt: string;
   updatedAt: string;
+  /** Program Ω — Mission Ω-1. false only after this product was the
+   * "source" of an executed merge — it is never deleted, only deactivated,
+   * so a merge is always reversible via MergeExecutorService.rollback. */
+  isActive: boolean;
+  /** Set together with isActive=false. Points at the surviving ("target")
+   * canonical product this one was merged into. */
+  mergedIntoId: string | null;
 }

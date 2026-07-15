@@ -37,6 +37,9 @@ Garantir consistência de linguagem, padrões e qualidade entre todos os contrib
 | `MARKET_INTELLIGENCE_ENGINE.md` | Núcleo de inteligência de preços (Release 1.8 — Program C) |
 | `MARKETPLACE_FOUNDATION_SCALE_AUDIT.md` | Auditoria de escala da fundação de marketplace |
 | `PREMIUM_HOME_EXPERIENCE.md` | Arquitetura da Home Premium + `/categorias` (Release 1.9 — Program F) |
+| `MERGE_EXECUTION_ENGINE.md` | Executor real de `MergeCandidate` — arquitetura (Program Ω — Mission Ω-1) |
+| `MERGE_OPERATIONS.md` | Runbook operacional do Merge Execution Engine |
+| `MERGE_ROLLBACK.md` | Garantias de reversibilidade de um merge executado |
 
 ## Quando criar um novo documento aqui
 

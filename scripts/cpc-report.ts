@@ -74,6 +74,19 @@ async function main() {
     if (storeSet.size >= 3) comparable3plus++;
   }
 
+  // Program Ω — Mission Ω-1, Objetivo 5. Exact histogram by distinct store
+  // count per canonical product — the "2 lojas / 3 lojas / 4 lojas / 5+"
+  // breakdown the mission asks for, not just the 2+/3+ aggregates above.
+  const storeCountHistogram = { 1: 0, 2: 0, 3: 0, 4: 0, "5plus": 0 };
+  for (const storeSet of storesByCanonical.values()) {
+    const n = storeSet.size;
+    if (n === 1) storeCountHistogram[1]++;
+    else if (n === 2) storeCountHistogram[2]++;
+    else if (n === 3) storeCountHistogram[3]++;
+    else if (n === 4) storeCountHistogram[4]++;
+    else storeCountHistogram["5plus"]++;
+  }
+
   // Per-store offer counts.
   const offersByStore = new Map<string, number>();
   for (const o of offers) {
@@ -133,6 +146,13 @@ async function main() {
   console.log(
     `Comparable (3+ merchants):   ${comparable3plus} (${((comparable3plus / canonicalWithOffers) * 100 || 0).toFixed(2)}% of canonical-w/-offer)`
   );
+
+  console.log("\n— Store-count histogram (Objetivo 5) —");
+  console.log(`  1 loja:   ${storeCountHistogram[1]}`);
+  console.log(`  2 lojas:  ${storeCountHistogram[2]}`);
+  console.log(`  3 lojas:  ${storeCountHistogram[3]}`);
+  console.log(`  4 lojas:  ${storeCountHistogram[4]}`);
+  console.log(`  5+ lojas: ${storeCountHistogram["5plus"]}`);
 
   console.log("\n— Per-store offer count —");
   for (const [storeId, count] of [...offersByStore.entries()].sort((x, y) => y[1] - x[1])) {

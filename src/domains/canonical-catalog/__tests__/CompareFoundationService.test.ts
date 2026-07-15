@@ -18,6 +18,8 @@ function makeCanonicalProduct(): CanonicalProduct {
     specifications: null,
     createdAt: "2026-07-01T00:00:00Z",
     updatedAt: "2026-07-01T00:00:00Z",
+    isActive: true,
+    mergedIntoId: null,
   };
 }
 
@@ -51,6 +53,11 @@ describe("CompareFoundationService", () => {
       findAll: jest.fn(),
       linkOffer: jest.fn(),
       findOffersByCanonicalProductId: jest.fn(),
+      findOfferIdsByCanonicalProductId: jest.fn(),
+      reassignOffers: jest.fn(),
+      reassignOffersByIds: jest.fn(),
+      deactivateAndMerge: jest.fn(),
+      reactivate: jest.fn(),
     };
     const service = new CompareFoundationService(
       new CanonicalProductService(catalogRepo),
@@ -78,6 +85,11 @@ describe("CompareFoundationService", () => {
       findAll: jest.fn(),
       linkOffer: jest.fn(),
       findOffersByCanonicalProductId: jest.fn().mockResolvedValue({ items: offers, total: 2 }),
+      findOfferIdsByCanonicalProductId: jest.fn(),
+      reassignOffers: jest.fn(),
+      reassignOffersByIds: jest.fn(),
+      deactivateAndMerge: jest.fn(),
+      reactivate: jest.fn(),
     };
 
     const priceHistoryRepo: ICanonicalPriceHistoryRepository = {

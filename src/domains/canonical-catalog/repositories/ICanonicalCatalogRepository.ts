@@ -45,4 +45,23 @@ export interface ICanonicalCatalogRepository {
    * (Home's "Economia do Dia"/"Ofertas Relâmpago") — the only caller that
    * needs every canonical product rather than one scoped by brand/category/id. */
   findAll(pagination: PaginationParams): Promise<PaginatedResult<CanonicalProduct>>;
+
+  // Program Ω — Mission Ω-1 (Merge Execution Engine). Read-only — used only
+  // to build a dry-run preview of which offers a merge would move, without
+  // writing anything.
+  findOfferIdsByCanonicalProductId(canonicalProductId: string): Promise<string[]>;
+  /** Atomically repoints every offer currently on `sourceCanonicalProductId`
+   * to `targetCanonicalProductId` and returns the moved offer ids — a
+   * single UPDATE ... RETURNING, so the returned list is exactly what moved
+   * in this call, safe to hand straight to a MergeExecution audit row. */
+  reassignOffers(sourceCanonicalProductId: string, targetCanonicalProductId: string): Promise<string[]>;
+  /** Rollback-only: repoints exactly the given offer ids (never "every
+   * offer currently on X", which could include offers moved by a later,
+   * unrelated merge into the same target). */
+  reassignOffersByIds(offerIds: string[], targetCanonicalProductId: string): Promise<void>;
+  /** Marks a canonical product as merged into another. Never deletes the
+   * row — reversible via `reactivate`. */
+  deactivateAndMerge(id: string, mergedIntoId: string): Promise<void>;
+  /** Reverses `deactivateAndMerge`. Used only by MergeExecutorService.rollback. */
+  reactivate(id: string): Promise<void>;
 }

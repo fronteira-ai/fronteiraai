@@ -20,6 +20,8 @@ function toCanonicalProduct(row: Record<string, unknown>): CanonicalProduct {
     specifications: (row.specifications as Record<string, string> | null) ?? null,
     createdAt: row.created_at as string,
     updatedAt: row.updated_at as string,
+    isActive: (row.is_active as boolean | null) ?? true,
+    mergedIntoId: (row.merged_into_id as string | null) ?? null,
   };
 }
 
@@ -185,5 +187,54 @@ export class SupabaseCanonicalCatalogRepository implements ICanonicalCatalogRepo
       return null;
     }
     return (data?.canonical_product_id as string | null) ?? null;
+  }
+
+  // Program Ω — Mission Ω-1 (Merge Execution Engine)
+
+  async findOfferIdsByCanonicalProductId(canonicalProductId: string): Promise<string[]> {
+    const { data, error } = await this.client
+      .from("offers")
+      .select("id")
+      .eq("canonical_product_id", canonicalProductId);
+    if (error) {
+      console.error("[SupabaseCanonicalCatalogRepository.findOfferIdsByCanonicalProductId]", error.message);
+      return [];
+    }
+    return (data ?? []).map((row) => row.id as string);
+  }
+
+  async reassignOffers(sourceCanonicalProductId: string, targetCanonicalProductId: string): Promise<string[]> {
+    const { data, error } = await this.client
+      .from("offers")
+      .update({ canonical_product_id: targetCanonicalProductId })
+      .eq("canonical_product_id", sourceCanonicalProductId)
+      .select("id");
+    if (error) throw new Error(`merge offer reassignment: ${error.message}`);
+    return (data ?? []).map((row) => row.id as string);
+  }
+
+  async reassignOffersByIds(offerIds: string[], targetCanonicalProductId: string): Promise<void> {
+    if (offerIds.length === 0) return;
+    const { error } = await this.client
+      .from("offers")
+      .update({ canonical_product_id: targetCanonicalProductId })
+      .in("id", offerIds);
+    if (error) throw new Error(`merge rollback offer reassignment: ${error.message}`);
+  }
+
+  async deactivateAndMerge(id: string, mergedIntoId: string): Promise<void> {
+    const { error } = await this.client
+      .from("canonical_products")
+      .update({ is_active: false, merged_into_id: mergedIntoId, updated_at: new Date().toISOString() })
+      .eq("id", id);
+    if (error) throw new Error(`canonical product deactivate: ${error.message}`);
+  }
+
+  async reactivate(id: string): Promise<void> {
+    const { error } = await this.client
+      .from("canonical_products")
+      .update({ is_active: true, merged_into_id: null, updated_at: new Date().toISOString() })
+      .eq("id", id);
+    if (error) throw new Error(`canonical product reactivate: ${error.message}`);
   }
 }

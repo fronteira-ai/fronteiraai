@@ -97,6 +97,11 @@ describe("PriceIntelligenceService", () => {
         })),
         total: offers.length,
       }),
+      findOfferIdsByCanonicalProductId: jest.fn(),
+      reassignOffers: jest.fn(),
+      reassignOffersByIds: jest.fn(),
+      deactivateAndMerge: jest.fn(),
+      reactivate: jest.fn(),
     };
   }
 
@@ -118,6 +123,11 @@ describe("PriceIntelligenceService", () => {
         ],
         total: 2,
       }),
+      findOfferIdsByCanonicalProductId: jest.fn(),
+      reassignOffers: jest.fn(),
+      reassignOffersByIds: jest.fn(),
+      deactivateAndMerge: jest.fn(),
+      reactivate: jest.fn(),
     };
 
     const service = new PriceIntelligenceService(repo);

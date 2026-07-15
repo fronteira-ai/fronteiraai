@@ -30,6 +30,11 @@ function makeCatalogRepo(overrides: Partial<ICanonicalCatalogRepository> = {}): 
     findAll: jest.fn(),
     linkOffer: jest.fn(),
     findOffersByCanonicalProductId: jest.fn(),
+    findOfferIdsByCanonicalProductId: jest.fn(),
+    reassignOffers: jest.fn(),
+    reassignOffersByIds: jest.fn(),
+    deactivateAndMerge: jest.fn(),
+    reactivate: jest.fn(),
     ...overrides,
   };
 }
@@ -62,6 +67,8 @@ describe("MarketPulseInsightsService", () => {
       specifications: null,
       createdAt: "",
       updatedAt: "",
+      isActive: true,
+      mergedIntoId: null,
     };
 
     const catalogRepo = makeCatalogRepo({

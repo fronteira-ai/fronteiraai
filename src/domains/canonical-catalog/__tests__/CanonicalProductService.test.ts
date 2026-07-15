@@ -13,6 +13,8 @@ function makeCanonicalProduct(overrides: Partial<CanonicalProduct> = {}): Canoni
     specifications: null,
     createdAt: "2026-07-01T00:00:00Z",
     updatedAt: "2026-07-01T00:00:00Z",
+    isActive: true,
+    mergedIntoId: null,
     ...overrides,
   };
 }
@@ -29,6 +31,11 @@ function makeRepo(overrides: Partial<ICanonicalCatalogRepository> = {}): ICanoni
     findAll: jest.fn(),
     linkOffer: jest.fn(),
     findOffersByCanonicalProductId: jest.fn(),
+    findOfferIdsByCanonicalProductId: jest.fn(),
+    reassignOffers: jest.fn(),
+    reassignOffersByIds: jest.fn(),
+    deactivateAndMerge: jest.fn(),
+    reactivate: jest.fn(),
     ...overrides,
   };
 }

@@ -21,6 +21,11 @@ function makeCatalogRepo(overrides: Partial<ICanonicalCatalogRepository> = {}): 
       ],
       total: 1,
     }),
+    findOfferIdsByCanonicalProductId: jest.fn(),
+    reassignOffers: jest.fn(),
+    reassignOffersByIds: jest.fn(),
+    deactivateAndMerge: jest.fn(),
+    reactivate: jest.fn(),
     ...overrides,
   };
 }

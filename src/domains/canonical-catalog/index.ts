@@ -10,9 +10,11 @@ export * from "./types/canonical-catalog.types";
 
 export type { CanonicalProduct } from "./domain/CanonicalProduct";
 export type { MergeCandidate, MergeCandidatePenalty } from "./domain/MergeCandidate";
+export type { MergeExecution } from "./domain/MergeExecution";
 
 export type { ICanonicalCatalogRepository } from "./repositories/ICanonicalCatalogRepository";
 export type { IMergeCandidateRepository, CreateMergeCandidateInput } from "./repositories/IMergeCandidateRepository";
+export type { IMergeExecutionRepository, CreateMergeExecutionInput } from "./repositories/IMergeExecutionRepository";
 export type {
   ICanonicalPriceHistoryRepository,
   CanonicalPriceHistoryPoint,
@@ -20,6 +22,7 @@ export type {
 
 export { SupabaseCanonicalCatalogRepository } from "./infrastructure/SupabaseCanonicalCatalogRepository";
 export { SupabaseMergeCandidateRepository } from "./infrastructure/SupabaseMergeCandidateRepository";
+export { SupabaseMergeExecutionRepository } from "./infrastructure/SupabaseMergeExecutionRepository";
 export { SupabaseCanonicalPriceHistoryRepository } from "./infrastructure/SupabaseCanonicalPriceHistoryRepository";
 
 export { CanonicalProductService } from "./services/CanonicalProductService";
@@ -30,3 +33,18 @@ export { CanonicalPriceHistoryService, computePriceAggregation } from "./service
 export type { CanonicalPriceAggregation, PriceTrend } from "./services/CanonicalPriceHistoryService";
 export { CompareFoundationService } from "./services/CompareFoundationService";
 export type { CompareFoundationResult } from "./services/CompareFoundationService";
+export { MergeAuditService, classifyMergeConfidence, MERGE_AUDIT_ALTA_THRESHOLD, MERGE_AUDIT_MEDIA_THRESHOLD } from "./services/MergeAuditService";
+export type { MergeCandidateAudit, MergeConfidenceClassification } from "./services/MergeAuditService";
+export { MergeExecutorService } from "./services/MergeExecutorService";
+export type {
+  MergeError,
+  MergeErrorCode,
+  MergePreview,
+  ReviewResult,
+  PreviewResult,
+  ExecuteResult,
+  RollbackResult,
+  BatchExecuteResult,
+} from "./services/MergeExecutorService";
+export { MergeQueueDashboardService } from "./services/MergeQueueDashboardService";
+export type { MergeQueueStats } from "./services/MergeQueueDashboardService";
