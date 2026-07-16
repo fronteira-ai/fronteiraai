@@ -79,6 +79,7 @@ describe("PriceIntelligenceService", () => {
       findByBrandId: jest.fn(),
       findByCategoryId: jest.fn(),
       findCanonicalProductIdByProductId: jest.fn(),
+      findCategorySlugsByIds: jest.fn().mockResolvedValue(new Map()),
       findAll: jest.fn(),
       linkOffer: jest.fn(),
       findOffersByCanonicalProductId: jest.fn().mockResolvedValue({
@@ -114,6 +115,7 @@ describe("PriceIntelligenceService", () => {
       findByBrandId: jest.fn(),
       findByCategoryId: jest.fn(),
       findCanonicalProductIdByProductId: jest.fn(),
+      findCategorySlugsByIds: jest.fn().mockResolvedValue(new Map()),
       findAll: jest.fn(),
       linkOffer: jest.fn(),
       findOffersByCanonicalProductId: jest.fn().mockResolvedValue({

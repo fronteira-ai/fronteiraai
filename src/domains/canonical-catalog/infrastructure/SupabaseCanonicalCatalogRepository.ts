@@ -237,4 +237,29 @@ export class SupabaseCanonicalCatalogRepository implements ICanonicalCatalogRepo
       .eq("id", id);
     if (error) throw new Error(`canonical product reactivate: ${error.message}`);
   }
+
+  // Program Κ — Mission Κ-4 (Product Identity Integration)
+
+  async findCategorySlugsByIds(categoryIds: string[]): Promise<Map<string, string>> {
+    const uniqueIds = Array.from(new Set(categoryIds)).filter((id): id is string => Boolean(id));
+    const result = new Map<string, string>();
+    if (uniqueIds.length === 0) return result;
+
+    // Chunked to stay well under Postgres/HTTP header limits for large
+    // .in() filters (a 500-id chunk was already observed to overflow
+    // request headers against this project — 100 stays comfortably under).
+    const CHUNK = 100;
+    for (let i = 0; i < uniqueIds.length; i += CHUNK) {
+      const chunk = uniqueIds.slice(i, i + CHUNK);
+      const { data, error } = await this.client.from("categories").select("id, slug").in("id", chunk);
+      if (error) {
+        console.error("[SupabaseCanonicalCatalogRepository.findCategorySlugsByIds]", error.message);
+        continue;
+      }
+      for (const row of (data ?? []) as { id: string; slug: string }[]) {
+        result.set(row.id, row.slug);
+      }
+    }
+    return result;
+  }
 }

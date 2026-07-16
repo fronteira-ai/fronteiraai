@@ -11,6 +11,7 @@ function makeCatalogRepo(overrides: Partial<ICanonicalCatalogRepository> = {}): 
     findByBrandId: jest.fn(),
     findByCategoryId: jest.fn(),
     findCanonicalProductIdByProductId: jest.fn().mockResolvedValue(null),
+    findCategorySlugsByIds: jest.fn().mockResolvedValue(new Map()),
     findAll: jest.fn(),
     linkOffer: jest.fn(),
     findOffersByCanonicalProductId: jest.fn().mockResolvedValue({ items: [], total: 0 }),

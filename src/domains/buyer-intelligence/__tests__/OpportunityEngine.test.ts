@@ -70,6 +70,7 @@ function makeCatalogRepo(products: CanonicalProduct[], offersByProductId: Record
     findBySlug: jest.fn(),
     findById: jest.fn(),
     findCanonicalProductIdByProductId: jest.fn(),
+    findCategorySlugsByIds: jest.fn().mockResolvedValue(new Map()),
   } as unknown as ICanonicalCatalogRepository;
 }
 

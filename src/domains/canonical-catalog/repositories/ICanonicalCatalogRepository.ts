@@ -40,6 +40,13 @@ export interface ICanonicalCatalogRepository {
    * canonical product it's linked to, if any. `null` when the offer(s) for
    * this raw product haven't been linked yet (Product Identity, Shadow Mode). */
   findCanonicalProductIdByProductId(productId: string): Promise<string | null>;
+  /** Program Κ — Mission Κ-4 (Product Identity Integration). Batch id->slug
+   * lookup against `categories` — the join `CanonicalProduct.categoryId`
+   * (a UUID) needs before it can be resolved through the Universal Taxonomy
+   * (`taxonomy.findNodeByRealCategorySlug`, which keys on the real slug,
+   * never the id). Ids not found (deleted/orphaned category) are simply
+   * absent from the returned map, never a fabricated entry. */
+  findCategorySlugsByIds(categoryIds: string[]): Promise<Map<string, string>>;
   /** Release 1.9 — Program F — Wave 1 (Premium Home Experience). Unscoped
    * listing, used to rank Savings Opportunities across the whole catalog
    * (Home's "Economia do Dia"/"Ofertas Relâmpago") — the only caller that
