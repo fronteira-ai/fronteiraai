@@ -1,11 +1,14 @@
 # ROADMAP_2_0.md
 # Release 2.0 Organizado por Ordem de Execução
 
-**Versão**: 2.2
+**Versão**: 2.3
 **Criado**: 2026-07-08 (PROGRAM Z — RC-10, a partir de `docs/product/releases/RELEASE_2_0_PREVIEW.md`)
 **Atualizado**: 2026-07-08 (PROGRAM Ω — Mission Ω-1) Program Ω adicionado como maior prioridade, aprovado pelo CTO
 **Atualizado novamente**: 2026-07-08 (PROGRAM Ω — Mission Ω-3, Resolve Strategic Review Findings) — ownership de cobertura/certificação/ativação consolidado inteiramente em Program Ω; Waves 1/4 reescritas para assumir os outputs de Program Ω em vez de reivindicá-los; Wave 5 dividida em 5a (mapeamento, sem dependência) e 5b (primeiro consumidor real); reordenação de `RELEASE_ALIGNMENT.md` adotada nesta versão — documento agora reflete a ordem de execução real, não mais só a ordem de dependência técnica
+**Atualizado novamente**: 2026-07-16 (PROGRAM Κ — Mission Κ-5, Program Κ Final Closure) — Program Κ (fora deste roadmap, mandatado diretamente pelo CTO em paralelo, Missões Κ-1 a Κ-5) encerrado oficialmente: Universal Taxonomy e Product Signature conectadas ao `ProductIdentityEngine` real (`docs/engineering/PROGRAM_K_FINAL_REPORT.md`), cross-merchant merge candidates 0→66 medido. Isso muda uma premissa da Wave 2 (§5, Recommendation Engine) — "cobertura real" não depende só de Program Ω (volume de catálogo), depende também da qualidade de pareamento que Program Κ agora entrega; ver nota na Wave 2.
 **Status**: Roadmap de intenção — nenhum Program/Wave aberto ainda (Program Ω está **aprovado**, não **aberto** — ver §Governança); abertura formal de cada um exige mandato próprio do CTO, seguindo o mesmo processo de auditoria-antes-de-código usado em toda Wave da Release 1.8/1.9
+
+**PROGRAM Κ — STATUS: COMPLETE ✅** (encerrado oficialmente 2026-07-16, autorizado pelo CTO, Missões Κ-1 a Κ-5). Executado fora da numeração de Wave deste roadmap (mandato direto do CTO, em paralelo) — registrado aqui porque seu output (Universal Taxonomy + Product Signature conectadas ao `ProductIdentityEngine`, cross-merchant merge candidates 0→66 medido) é uma precondição real da Wave 2 (§5). Ver `docs/engineering/PROGRAM_K_FINAL_REPORT.md` para o relatório completo e `docs/operations/DECISIONS.md` ADR-057/ADR-058 para o histórico de decisões de integração e encerramento.
 
 ---
 
@@ -118,7 +121,7 @@ Um Program que só produz os indicadores líderes (mais merchants, `merchant_sto
 
 **Escopo**: motor de recomendação construído sobre Canonical Catalog (identidade de produto), Market Intelligence (preço/economia/volatilidade) e Trust (reputação de loja) já existentes — auditoria prévia obrigatória para confirmar que nenhuma heurística de "produto parecido"/"loja confiável" já existe espalhada em outro domínio antes de escrever qualquer lógica nova.
 
-**Dependências**: **Program Ω (§1)** — cobertura real é o que torna a recomendação relevante, não apenas correta; Wave 1 (§2, hardening de engine); Trust Platform (reputação de loja, já em produção).
+**Dependências**: **Program Ω (§1)** — cobertura real é o que torna a recomendação relevante, não apenas correta; Wave 1 (§2, hardening de engine); Trust Platform (reputação de loja, já em produção). **Program Κ (encerrado 2026-07-16, fora deste roadmap)** — a Universal Taxonomy e o Product Signature já conectados ao `ProductIdentityEngine` (`docs/engineering/PROGRAM_K_FINAL_REPORT.md`) são o que torna "produto parecido" um dado real, não uma heurística nova que esta Wave precisaria inventar; auditoria prévia desta Wave deve partir de `merge_candidates`/Comparable Coverage como já existem, não do zero.
 
 **Critérios de aceite**: recomendações rastreáveis a um motivo explicável (mesma disciplina de "score explicável" já usada em `MerchantPriorityService`/`VolatilityEngine` — nunca uma caixa-preta); nenhuma duplicação de lógica já presente em `market-insights`/`canonical-catalog`; Quality Gate verde.
 

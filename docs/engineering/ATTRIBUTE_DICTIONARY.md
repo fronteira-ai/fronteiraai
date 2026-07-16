@@ -3,10 +3,12 @@
 
 **Categoria**: `docs/engineering/`
 **Criado**: 2026-07-15
+**Atualizado**: 2026-07-16 (Program Κ, Mission Κ-5 — Program Κ Final Closure). Corrigidas 3 entradas ausentes (`gpu`, `power_w`, `bundle_includes`) que Mission Κ-3 já havia adicionado ao arquivo TS em 2026-07-15 sem atualizar este documento — a divergência entre os dois foi o próprio achado de auditoria que motivou esta correção (ver `PROGRAM_K_CLOSURE.md` §ATTRIBUTE_DICTIONARY).
+**Status**: Mantido como código (`src/domains/taxonomy/data/attribute-dictionary.ts`), não apenas documentação — consumidor real confirmado: `scripts/kappa2-taxonomy-backfill.ts` (bloqueado pela mesma autorização de migration pendente que o resto da ferramentação de backfill deste domínio, mas real, não morto).
 
 ---
 
-## 1. Vocabulário oficial (10 atributos)
+## 1. Vocabulário oficial (13 atributos)
 
 `src/domains/taxonomy/data/attribute-dictionary.ts`. `key` é o que efetivamente vai em `canonical_products.specifications`/`products.specifications` (o mesmo campo jsonb que `ProductIdentityEngine`'s fator `specifications` já lê) — labels são só apresentação, nunca comparadas pelo Engine.
 
@@ -22,6 +24,11 @@
 | `ean` | EAN | EAN | identifier | **Hoje não populado por nenhum conector — achado real, não hipotético** |
 | `mpn` | MPN | MPN | identifier | Confirmado presente em nomes reais (ex.: "A3257", "ICE-21RP1"), não extraído estruturadamente ainda |
 | `manufacturer_sku` | SKU do Fabricante | SKU del Fabricante | identifier | Confirmado em nomes reais (ex.: "JBLFLIP7BLKAM") |
+| `gpu` | GPU | GPU | technical | Adicionado por Κ-3; wired em produção via `ProductSignatureExtractor` (Mission Κ-4) |
+| `power_w` | Potência | Potencia | technical | Adicionado por Κ-3; wired em produção via `ProductSignatureExtractor` (Mission Κ-4) |
+| `bundle_includes` | Itens Inclusos | Incluye | physical | Adicionado por Κ-3; wired em produção via `ProductSignatureExtractor` (Mission Κ-4) |
+
+Nota: `mpn`/`manufacturer_sku` permanecem os únicos 2 atributos aspiracionais desta lista — `ProductSignature` (`src/domains/product-intelligence/types/product-intelligence.types.ts`) tem um único campo `manufacturerCode` (extraído do texto do nome, não de uma chave de `specifications`) cobrindo os dois conceitos, não dois campos distintos. Reportado aqui como está, não harmonizado — harmonizar exigiria decidir se são o mesmo conceito ou não, decisão fora do escopo de uma Mission de encerramento.
 
 ## 2. Por que "nunca depender do texto livre da loja"
 
