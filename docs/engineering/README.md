@@ -40,6 +40,16 @@ Garantir consistência de linguagem, padrões e qualidade entre todos os contrib
 | `MERGE_EXECUTION_ENGINE.md` | Executor real de `MergeCandidate` — arquitetura (Program Ω — Mission Ω-1) |
 | `MERGE_OPERATIONS.md` | Runbook operacional do Merge Execution Engine |
 | `MERGE_ROLLBACK.md` | Garantias de reversibilidade de um merge executado |
+| `UNIVERSAL_TAXONOMY.md` | A árvore oficial de categorias do ParaguAI (Program Κ — Mission Κ-2) |
+| `CATEGORY_DICTIONARY.md` | Auditoria real de idioma/duplicação de categorias e marcas |
+| `ALIAS_ENGINE.md` | Como um slug real de categoria resolve ao nó oficial da árvore |
+| `MODEL_NORMALIZATION.md` | Normalização de modelo (Apple), grounded em texto real de catálogo |
+| `ATTRIBUTE_DICTIONARY.md` | Vocabulário oficial de atributos estruturados |
+| `PRODUCT_INTELLIGENCE_LAYER.md` | Extração de atributos estruturados para o Product Identity (Program Κ — Mission Κ-3) |
+| `ATTRIBUTE_EXTRACTION.md` | Auditoria real de `specifications` + extractors construídos |
+| `PRODUCT_SIGNATURE.md` | A assinatura estruturada por produto e sua cobertura real |
+| `ATTRIBUTE_CONFIDENCE.md` | Contrato de proveniência/confiança — nunca um valor inventado |
+| `PRODUCT_NORMALIZATION_GUIDE.md` | Normalizadores de unidade/cor/EAN, grounded em valores reais |
 
 ## Quando criar um novo documento aqui
 
