@@ -1,11 +1,16 @@
 // Program Κ — Mission Κ-2 (Universal Product Taxonomy Engine). Pure data
 // shapes — this domain has no I/O of its own (no repository, no Supabase
-// client). Backfill scripts read these constants and write to the new
-// universal_categories/category_universal_map/canonical_brands/
-// brand_universal_map/model_aliases/attribute_dictionary tables.
-// Deliberately not wired into product-identity/, canonical-catalog/, or
-// connectors/ — this Mission builds the semantic layer, a future Mission
-// decides how (or whether) ProductIdentityEngine consumes it.
+// client). `UniversalCategoryNode` is wired into production as of Program
+// Κ Mission Κ-4 (see taxonomy/index.ts). `BrandDuplicateGroup` and
+// `MapConfidence` were removed by Mission Κ-5 — `MapConfidence` had zero
+// consumers of any kind; `BrandDuplicateGroup`'s only consumer (its own
+// test) disproved the type's reason for existing (see
+// docs/engineering/PROGRAM_K_CLOSURE.md). `AttributeDictionaryEntry` was
+// initially assessed the same way and then correctly restored: its real
+// consumer is `scripts/kappa2-taxonomy-backfill.ts` (blocked on the same
+// pending migration authorization as the rest of this domain's backfill
+// tooling, but real, not dead) — the audit trail for that correction is
+// in docs/engineering/PROGRAM_K_CLOSURE.md.
 
 export interface UniversalCategoryNode {
   /** Stable, human-assigned slug — never regenerated once backfilled. */
@@ -20,15 +25,6 @@ export interface UniversalCategoryNode {
    * categorias dos lojistas"). */
   realCategorySlugs: string[];
   children?: UniversalCategoryNode[];
-}
-
-export type MapConfidence = "alta" | "media" | "manual";
-
-export interface BrandDuplicateGroup {
-  canonicalName: string;
-  /** Real `brands.name` values (production) found to normalize to the same
-   * identity — measured, not hypothetical (scripts/kappa2-taxonomy-audit.ts). */
-  variantNames: string[];
 }
 
 export interface ModelAliasEntry {

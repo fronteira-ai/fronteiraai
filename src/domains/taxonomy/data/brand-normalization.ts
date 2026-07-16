@@ -1,11 +1,24 @@
-import type { BrandDuplicateGroup } from "../types/taxonomy.types";
-
 // Program Κ — Mission Κ-2, Objetivo 4. Pure normalization function — case,
 // diacritics, corporate-suffix (Inc/Corp/Ltd/®/™), and whitespace/punctuation
-// insensitive. Deterministic, no lookup table required for the general
-// case; `KNOWN_BRAND_DUPLICATES` below is only the real, measured
-// exceptions this function alone does NOT already collapse (parenthetical
-// sub-brand notation, e.g. "Meta(quest)" vs "Meta Quest").
+// (including parentheses) insensitive. Deterministic, no lookup table
+// required — measured against the real 852-row `brands` table
+// (scripts/kappa2-taxonomy-audit.ts, 2026-07-15): only 2 real duplicate
+// groups exist in production (both a sub-brand written with vs. without
+// parentheses, e.g. "Meta(quest)" vs "Meta Quest"), and this function
+// alone already collapses both to the same identity — no hardcoded
+// exception list is needed (a `KNOWN_BRAND_DUPLICATES` constant existed
+// here through Mission Κ-4 under the assumption that it caught cases this
+// function couldn't; Mission Κ-5 measured that assumption directly and
+// found it false — the function's own test already proved it by
+// collapsing both real groups without consulting the list — so the list
+// was removed as redundant, not the function).
+//
+// Deliberately unwired into product-identity/ — Mission Κ-5 measured the
+// real impact of wiring this (same pattern as Κ-4's category/signature
+// wiring) across all 852 production brand rows: 0 cross-merchant merge
+// candidates would result. Kept prepared for when brand-name
+// fragmentation grows, not integrated because there is nothing real to
+// integrate yet (see docs/engineering/PROGRAM_K_CLOSURE.md).
 export function normalizeBrandName(name: string): string {
   return name
     .toLowerCase()
@@ -16,16 +29,3 @@ export function normalizeBrandName(name: string): string {
     .replace(/[^a-z0-9]+/g, " ")
     .trim();
 }
-
-// Measured against the real 852-row `brands` table
-// (scripts/kappa2-taxonomy-audit.ts, run 2026-07-15) — NOT the
-// hypothetical Apple/Samsung example from the mission brief. The real
-// catalog's brand data is already largely clean: only 2 groups (4 rows)
-// were found, both a sub-brand written with vs. without parentheses. This
-// is reported honestly, not inflated to match the brief's illustrative
-// example — see docs/engineering/MODEL_NORMALIZATION.md §"O que a medição
-// real mostrou" for the full comparison against the hypothetical case.
-export const KNOWN_BRAND_DUPLICATES: BrandDuplicateGroup[] = [
-  { canonicalName: "Meta Quest", variantNames: ["Meta Quest", "Meta(quest)"] },
-  { canonicalName: "Rayban - Meta", variantNames: ["Rayban - Meta", "Rayban(meta)"] },
-];
