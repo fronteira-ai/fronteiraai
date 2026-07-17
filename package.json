@@ -40,6 +40,8 @@
     "sync:mobilezone:execute": "tsx scripts/sync-mobilezone.ts --execute",
     "canonical-catalog:bootstrap": "tsx scripts/canonical-catalog-bootstrap.ts",
     "canonical-catalog:bootstrap:execute": "tsx scripts/canonical-catalog-bootstrap.ts --execute",
+    "marketplace-memory:backfill": "tsx scripts/marketplace-memory-backfill.ts",
+    "marketplace-memory:backfill:execute": "tsx scripts/marketplace-memory-backfill.ts --execute",
     "db:push": "supabase db push",
     "db:reset": "supabase db reset",
     "db:diff": "supabase db diff",
