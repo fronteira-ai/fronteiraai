@@ -205,6 +205,7 @@ Ver Seção V (Quando consultar cada documento).
 | O que fazer depois? | `NEXT_STEPS.md` |
 | Qual a dívida técnica existente? | `TECH_DEBT.md` |
 | Qual o roadmap estratégico? | `MASTER_ROADMAP.md` |
+| Como o ParaguAI executa a estratégia no dia a dia? Qual a cadência, RACI, framework de priorização, KPIs? | `docs/operations/PARAGUAI_OPERATING_SYSTEM.md` |
 | Como funciona o Acquisition Engine? | `ACQUISITION.md` |
 | Como criar um novo Connector? | `CONNECTOR_GUIDE.md` |
 | Como os imports se conectam? | `DEPENDENCY_GRAPH.md` |
@@ -471,6 +472,7 @@ Os seguintes documentos mudam continuamente — atualizam a cada Release, sprint
 | `docs/operations/CHANGELOG.md` | Sempre ao final de cada Release | Autor da Release |
 | `docs/engineering/TECH_DEBT.md` | Ao identificar nova dívida ou encerrar dívida existente | Autor da Release |
 | `docs/operations/NEXT_STEPS.md` | Sempre ao final de cada Release | Autor da Release |
+| `docs/operations/PARAGUAI_OPERATING_SYSTEM.md` | Ao revisar cadência, RACI, framework de priorização, KPIs ou qualquer uma das 15 Partes — Release tipo Quality/Platform, nunca silenciosamente | CEO/CTO |
 | `docs/product/MASTER_ROADMAP.md` | Ao completar uma Fase ou redefinir prioridades estratégicas | CTO |
 | `docs/operations/DECISIONS.md` | Sempre que uma decisão Tipo 1 for tomada | Autor do ADR |
 | `docs/marketplace/Tier1_Merchants.md` | Ao auditar/certificar uma nova loja candidata a Connector, ou ao mudar o status de certificação de uma existente | Autor da Release |
@@ -686,6 +688,7 @@ Mapa completo do conhecimento do ParaguAI — todos os documentos, suas relaçõ
 ║  TECH_DEBT.md ─────── dívida técnica aberta                     ║
 ║  NEXT_STEPS.md ────── próximos passos imediatos                 ║
 ║  MASTER_ROADMAP.md ── roadmap de 4 Fases                        ║
+║  PARAGUAI_OPERATING_SYSTEM.md ── como executamos (POS, ADR-059) ║
 ║                                                                  ║
 ║  FOUNDATION_INDEX.md ── ESTE DOCUMENTO (porta de entrada)       ║
 ╚══════════════════════════════════════════════════════════════════╝
@@ -780,7 +783,7 @@ Foundation (LOCKED, 8), Governança (2), Arquitetura (3), Contratos (4), Referê
 
 ### Documentos vivos
 
-17 documentos operacionais — ARCHITECTURE, DOMAIN_MODEL, DEPENDENCY_GRAPH, ACQUISITION, CONNECTOR_GUIDE, API_CONTRACTS, CONVENTIONS, GLOSSARY, AGENTS, COMPONENT_INDEX, FEATURES, PROJECT_STATUS, CHANGELOG, TECH_DEBT, NEXT_STEPS, MASTER_ROADMAP, DECISIONS.
+18 documentos operacionais — ARCHITECTURE, DOMAIN_MODEL, DEPENDENCY_GRAPH, ACQUISITION, CONNECTOR_GUIDE, API_CONTRACTS, CONVENTIONS, GLOSSARY, AGENTS, COMPONENT_INDEX, FEATURES, PROJECT_STATUS, CHANGELOG, TECH_DEBT, NEXT_STEPS, MASTER_ROADMAP, DECISIONS, PARAGUAI_OPERATING_SYSTEM (novo em 2026-07-18, Program E-1, ADR-059 — como o ParaguAI executa a estratégia congelada).
 
 ### Fluxo para IA
 
