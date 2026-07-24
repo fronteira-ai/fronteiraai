@@ -29,3 +29,10 @@ export interface ConnectorBatch {
   fetchedAt: string;
   items: RawOffer[];
 }
+
+// Mission Ω-Pipeline (Scalable Connector Architecture). A connector that
+// implements `IConnector.fetchStream` yields one RawOffer at a time instead
+// of materializing the whole catalog as `ConnectorBatch.items` — the type
+// SyncOrchestrator.runStream() consumes in fixed-size batches so memory
+// stays bounded by batch size, never by catalog size.
+export type RawOfferStream = AsyncGenerator<RawOffer, void, void>;

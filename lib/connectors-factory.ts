@@ -14,6 +14,13 @@ import { SupabaseProductCandidateRepository } from "@/src/domains/product-identi
 import { SupabaseProductIdentityMatchLogRepository } from "@/src/domains/product-identity/infrastructure/SupabaseProductIdentityMatchLogRepository";
 import { ChangeDetectionService } from "@/src/domains/realtime-commerce/change-detection/ChangeDetectionService";
 import { SupabaseMarketChangeRepository } from "@/src/domains/realtime-commerce/infrastructure/SupabaseMarketChangeRepository";
+import {
+  MarketplaceMemoryService,
+  SupabaseLearnedFactRepository,
+  SupabaseMerchantAttributePatternRepository,
+} from "@/src/domains/marketplace-memory";
+import { createCanonicalCatalogServices } from "@/lib/canonical-catalog-factory";
+import { SupabaseCanonicalSuggestionOutboxRepository } from "@/src/domains/connectors/infrastructure/SupabaseCanonicalSuggestionOutboxRepository";
 
 export function createConnectorsServices(client: SupabaseClient) {
   bootstrapConnectors();
@@ -29,6 +36,24 @@ export function createConnectorsServices(client: SupabaseClient) {
 
   const changeDetectionService = new ChangeDetectionService(new SupabaseMarketChangeRepository(client));
 
+  // Mission Ω-Gatekeeper (Catalog Integrity Firewall) — reuses Marketplace
+  // Memory (Program Ω) so CatalogWriteStage can consult/record learned
+  // brand/category corrections, same instance shape already used for
+  // Product Identity read-through (lib/canonical-catalog-factory.ts).
+  const marketplaceMemoryService = new MarketplaceMemoryService(
+    new SupabaseLearnedFactRepository(client),
+    new SupabaseMerchantAttributePatternRepository(client)
+  );
+
+  // Mission Ω-Canonical Integration — reuses the same Canonical Catalog
+  // services canonical-catalog-bootstrap.ts already uses (unmodified),
+  // so CanonicalLinkStage calls the exact same public API a human used to
+  // invoke manually. `canonicalCatalogRepo` is aliased (not named
+  // `catalogRepo`) to avoid colliding with this factory's own connectors-
+  // domain `catalogRepo` above — they are two different repositories.
+  const { canonicalProductService, catalogRepo: canonicalCatalogRepo } = createCanonicalCatalogServices(client);
+  const canonicalSuggestionOutboxRepo = new SupabaseCanonicalSuggestionOutboxRepository(client);
+
   const syncOrchestrator = new SyncOrchestrator(
     catalogRepo,
     client,
@@ -36,7 +61,8 @@ export function createConnectorsServices(client: SupabaseClient) {
     syncRunRepo,
     eventService,
     productIdentityService,
-    changeDetectionService
+    changeDetectionService,
+    { marketplaceMemoryService, canonicalProductService, canonicalCatalogRepo, canonicalSuggestionOutboxRepo }
   );
   const manualSyncTrigger = new ManualSyncTrigger(syncOrchestrator);
   const healthService = new ConnectorHealthService(connectorRepo, syncRunRepo);
@@ -51,6 +77,10 @@ export function createConnectorsServices(client: SupabaseClient) {
     eventService,
     productIdentityService,
     changeDetectionService,
+    marketplaceMemoryService,
+    canonicalProductService,
+    canonicalCatalogRepo,
+    canonicalSuggestionOutboxRepo,
     healthService,
   };
 }

@@ -14,6 +14,7 @@ export const MerchantAttributePatternMapper = {
       validationStatus: row.validation_status as ValidationStatus,
       createdAt: row.created_at as string,
       updatedAt: row.updated_at as string,
+      resolvedValue: (row.resolved_value as string | null) ?? null,
     };
   },
 
@@ -23,6 +24,7 @@ export const MerchantAttributePatternMapper = {
     concept: PatternConcept;
     confidence: FactConfidence;
     algorithmVersion: string;
+    resolvedValue?: string | null;
   }, occurrences: number): Record<string, unknown> {
     return {
       store_id: input.storeId,
@@ -32,6 +34,7 @@ export const MerchantAttributePatternMapper = {
       occurrences,
       algorithm_version: input.algorithmVersion,
       updated_at: new Date().toISOString(),
+      ...(input.resolvedValue !== undefined ? { resolved_value: input.resolvedValue } : {}),
     };
   },
 };

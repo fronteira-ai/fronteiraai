@@ -19,6 +19,9 @@ function makeExistingOffer(overrides: Partial<ExistingOfferLookup> = {}): Existi
 function makeCatalogRepo(overrides: Partial<ICatalogRepository> = {}): ICatalogRepository {
   return {
     findProductIdsBySlugs: jest.fn().mockResolvedValue(new Map()),
+    findProductById: jest.fn().mockResolvedValue(null),
+    findProductsAfterId: jest.fn().mockResolvedValue([]),
+    findOfferIdsByProductId: jest.fn().mockResolvedValue([]),
     findStoreIdBySlug: jest.fn().mockResolvedValue("store-1"),
     findOfferByProductAndStore: jest.fn().mockResolvedValue(null),
     upsertBrand: jest.fn(),
@@ -27,6 +30,13 @@ function makeCatalogRepo(overrides: Partial<ICatalogRepository> = {}): ICatalogR
     updateOffer: jest.fn(),
     upsertOffer: jest.fn(),
     insertPriceHistory: jest.fn(),
+    findBrandByNormalizedName: jest.fn().mockResolvedValue(null),
+    findCategoryByNormalizedName: jest.fn().mockResolvedValue(null),
+    findBrandIdByIdentifier: jest.fn().mockResolvedValue(null),
+    recordProductIdentifier: jest.fn().mockResolvedValue(undefined),
+    createPendingReview: jest.fn().mockResolvedValue(undefined),
+    findPendingReviewsByStoreFieldValue: jest.fn().mockResolvedValue([]),
+    resolvePendingReview: jest.fn().mockResolvedValue(undefined),
     ...overrides,
   };
 }
@@ -40,6 +50,10 @@ function makeContext(catalogRepo: ICatalogRepository, normalized: PipelineContex
     storage: {} as never,
     productIdentityService: { evaluateAndLog: jest.fn().mockResolvedValue(undefined) } as never,
     changeDetectionService: { detectAndRecord: jest.fn().mockResolvedValue([]) } as never,
+    marketplaceMemoryService: null,
+    canonicalProductService: null,
+    canonicalCatalogRepo: null,
+    canonicalSuggestionOutboxRepo: null,
     raw: [],
     validated: [],
     normalized,

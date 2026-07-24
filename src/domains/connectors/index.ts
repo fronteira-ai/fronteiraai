@@ -15,6 +15,7 @@ export { DeduplicationStage } from "./services/stages/DeduplicationStage";
 export { ProductIdentityShadowStage } from "./services/stages/ProductIdentityShadowStage";
 export { MediaStage } from "./services/stages/MediaStage";
 export { CatalogWriteStage } from "./services/stages/CatalogWriteStage";
+export { CanonicalLinkStage } from "./services/stages/CanonicalLinkStage";
 
 export { normalizeOffer } from "./normalization/OfferNormalizer";
 
@@ -38,17 +39,40 @@ export type { DeltaCandidate, DeltaPlan } from "./delta";
 export { ConnectorHealthService, buildConnectorHealthSummary } from "./services/ConnectorHealthService";
 export type { ConnectorHealthSummary } from "./services/ConnectorHealthService";
 
+// Mission Ω-Canonical Integration.
+export { CanonicalSuggestionSweepService, MAX_ATTEMPTS } from "./services/CanonicalSuggestionSweepService";
+export type { SweepResult } from "./services/CanonicalSuggestionSweepService";
+export { computeBackoffDelayMs, computeNextAttemptAt, isDeadLetter } from "./services/outbox/backoff";
+
+// Mission Ω-Hardening.
+export { OutboxRetentionService } from "./services/outbox/OutboxRetentionService";
+export type { RetentionResult } from "./services/outbox/OutboxRetentionService";
+export { OutboxExpirationService } from "./services/outbox/OutboxExpirationService";
+export type { ExpirationResult } from "./services/outbox/OutboxExpirationService";
+export { outboxRetentionDays, maxRetryAgeDays, outboxMinBatchSize, outboxMaxBatchSize } from "./services/outbox/config";
+export { computeAdaptiveBatchSize } from "./services/outbox/adaptiveBatch";
+export { OutboxObservabilityService } from "./services/outbox/OutboxObservabilityService";
+export type { OutboxMetricsSnapshot, CanonicalLinkStageSummary } from "./services/outbox/OutboxObservabilityService";
+export { HistoricalCanonicalBootstrapService } from "./services/HistoricalCanonicalBootstrapService";
+export type { HistoricalBootstrapDependencies, HistoricalBootstrapOptions, BootstrapRunResult } from "./services/HistoricalCanonicalBootstrapService";
+export type { BootstrapCheckpoint, BootstrapCheckpointStatus } from "./domain/BootstrapCheckpoint";
+export type { IBootstrapCheckpointRepository, UpdateProgressInput } from "./repositories/IBootstrapCheckpointRepository";
+export { SupabaseBootstrapCheckpointRepository } from "./infrastructure/SupabaseBootstrapCheckpointRepository";
+
 export { SupabaseConnectorRepository } from "./infrastructure/SupabaseConnectorRepository";
 export { SupabaseSyncRunRepository } from "./infrastructure/SupabaseSyncRunRepository";
 export { SupabaseCatalogRepository } from "./infrastructure/SupabaseCatalogRepository";
 export { SupabaseDeltaStateRepository } from "./infrastructure/SupabaseDeltaStateRepository";
+export { SupabaseCanonicalSuggestionOutboxRepository } from "./infrastructure/SupabaseCanonicalSuggestionOutboxRepository";
 export type { IConnectorRepository } from "./repositories/IConnectorRepository";
 export type { ISyncRunRepository } from "./repositories/ISyncRunRepository";
-export type { ICatalogRepository } from "./repositories/ICatalogRepository";
+export type { ICatalogRepository, ResolvedProduct } from "./repositories/ICatalogRepository";
 export type { IDeltaStateRepository, DeltaStateEntry } from "./repositories/IDeltaStateRepository";
+export type { ICanonicalSuggestionOutboxRepository, MarkFailedForRetryInput, MarkDeadLetterInput } from "./repositories/ICanonicalSuggestionOutboxRepository";
 
 export type { Connector } from "./domain/Connector";
 export type { SyncRun } from "./domain/SyncRun";
+export type { CanonicalSuggestionOutboxEntry, CanonicalSuggestionOutboxStatus } from "./domain/CanonicalSuggestionOutboxEntry";
 
 export type { CertificationCriterionResult, CertificationReport, ConnectorQualityScore } from "./certification/types";
 export type { ConnectorObservabilitySnapshot } from "./observability/types";

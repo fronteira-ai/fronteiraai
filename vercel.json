@@ -2,6 +2,8 @@
   "crons": [
     { "path": "/api/cron/connectors/sync", "schedule": "0 6 * * *" },
     { "path": "/api/cron/marketplace-operations/snapshot", "schedule": "0 7 * * *" },
-    { "path": "/api/cron/exchange/refresh", "schedule": "*/5 * * * *" }
+    { "path": "/api/cron/exchange/refresh", "schedule": "*/5 * * * *" },
+    { "path": "/api/cron/canonical-catalog/merge-suggestions", "schedule": "*/15 * * * *" },
+    { "path": "/api/cron/canonical-catalog/outbox-maintenance", "schedule": "0 3 * * *" }
   ]
 }

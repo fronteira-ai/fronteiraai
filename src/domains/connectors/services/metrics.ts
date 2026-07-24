@@ -24,11 +24,13 @@ export function recordStage(
   startedAt: string,
   accepted: number,
   rejected: number,
-  skipped = 0
+  skipped = 0,
+  details?: Record<string, number>
 ): void {
   const completedAt = new Date().toISOString();
   const durationMs = new Date(completedAt).getTime() - new Date(startedAt).getTime();
   const entry: StageMetrics = { stage, startedAt, completedAt, durationMs, accepted, rejected, skipped };
+  if (details) entry.details = details;
   ctx.metrics.stages.push(entry);
 }
 
@@ -38,7 +40,11 @@ export function recordError(ctx: PipelineContext, stage: string, error: string, 
   ctx.errors.push(entry);
 }
 
-export function printReport(ctx: PipelineContext): void {
+// Mission Ω-Pipeline — narrowed from the full PipelineContext so
+// SyncOrchestrator.runStream() can call this with a lightweight
+// cumulative-totals object spanning every batch, not just a single
+// batch-scoped ctx. Every existing PipelineContext still satisfies this.
+export function printReport(ctx: Pick<PipelineContext, "metrics" | "dryRun" | "errors">): void {
   const m = ctx.metrics;
   const durationMs = m.completedAt
     ? new Date(m.completedAt).getTime() - new Date(m.startedAt).getTime()

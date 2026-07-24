@@ -20,6 +20,10 @@ export interface MerchantAttributePatternInput {
   concept: PatternConcept;
   confidence: FactConfidence;
   algorithmVersion: string;
+  /** Mission Ω-Gatekeeper — see MerchantAttributePattern.resolvedValue.
+   * Optional so every pre-existing caller (spec-key -> concept learning)
+   * stays byte-identical. */
+  resolvedValue?: string | null;
 }
 
 export interface PaginationParams {

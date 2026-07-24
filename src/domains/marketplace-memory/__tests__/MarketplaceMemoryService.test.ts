@@ -89,6 +89,7 @@ describe("MarketplaceMemoryService", () => {
       validationStatus: "unvalidated",
       createdAt: "2026-07-16T00:00:00Z",
       updatedAt: "2026-07-16T00:00:00Z",
+      resolvedValue: null,
     };
     const patternRepo = makePatternRepo({
       findByStoreAndKey: jest.fn().mockResolvedValue(existing),

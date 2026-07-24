@@ -26,6 +26,7 @@ describe("MerchantAttributePatternMapper", () => {
       validationStatus: "unvalidated",
       createdAt: "2026-07-16T00:00:00Z",
       updatedAt: "2026-07-16T00:00:00Z",
+      resolvedValue: null,
     });
   });
 
@@ -42,5 +43,13 @@ describe("MerchantAttributePatternMapper", () => {
       occurrences: 3,
       algorithm_version: "1.0.0",
     });
+  });
+
+  it("maps Ω-Gatekeeper resolvedValue through to the DB row when provided", () => {
+    const row = MerchantAttributePatternMapper.toRow(
+      { storeId: "store-1", rawKey: "Apple Inc", concept: "brand", confidence: "high", algorithmVersion: "1.0.0", resolvedValue: "Apple" },
+      1
+    );
+    expect(row).toMatchObject({ resolved_value: "Apple" });
   });
 });

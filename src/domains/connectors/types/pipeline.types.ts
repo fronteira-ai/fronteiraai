@@ -1,8 +1,11 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { RawOffer } from "./raw.types";
 import type { ICatalogRepository, ExistingOfferLookup } from "../repositories/ICatalogRepository";
+import type { ICanonicalSuggestionOutboxRepository } from "../repositories/ICanonicalSuggestionOutboxRepository";
 import type { ProductIdentityService } from "@/src/domains/product-identity/services/ProductIdentityService";
 import type { ChangeDetectionService } from "@/src/domains/realtime-commerce/change-detection/ChangeDetectionService";
+import type { MarketplaceMemoryService } from "@/src/domains/marketplace-memory";
+import type { CanonicalProductService, ICanonicalCatalogRepository } from "@/src/domains/canonical-catalog";
 
 export interface NormalizedOffer {
   raw: RawOffer;
@@ -67,6 +70,13 @@ export interface StageMetrics {
   accepted: number;
   rejected: number;
   skipped: number;
+  /** Mission Ω-Canonical Integration — optional, additive. A stage that
+   * needs finer-grained counters than accepted/rejected/skipped (e.g.
+   * CanonicalLinkStage: created vs reused vs enqueued) reports them here
+   * instead of growing StageMetrics' fixed fields for every future stage's
+   * own vocabulary. Absent for every pre-existing stage — unchanged
+   * behavior for all of them. */
+  details?: Record<string, number>;
 }
 
 export interface PipelineMetrics {
@@ -107,6 +117,27 @@ export interface PipelineContext {
   /** Real-Time Commerce Engine (Wave 2) is a Core Asset domain connectors/
    * depends on, never owns — see MarketChangeDetectionStage. */
   changeDetectionService: ChangeDetectionService;
+  /** Mission Ω-Gatekeeper (Catalog Integrity Firewall) — Marketplace Memory
+   * (Program Ω) is a Core Asset domain connectors/ depends on, never owns,
+   * same discipline as productIdentityService/changeDetectionService. Null
+   * when not wired (every pre-existing caller/test) — CatalogWriteStage
+   * degrades to "no learned correction available" rather than throwing. */
+  marketplaceMemoryService: MarketplaceMemoryService | null;
+  /** Mission Ω-Canonical Integration. Canonical Catalog is a Core Asset
+   * domain connectors/ depends on, never owns — same discipline as
+   * productIdentityService/changeDetectionService/marketplaceMemoryService.
+   * Null when not wired (every pre-existing caller/test) — CanonicalLinkStage
+   * degrades to a no-op rather than throwing. */
+  canonicalProductService: CanonicalProductService | null;
+  /** Only `linkOffer` is used from this — the full canonical-catalog
+   * repository is threaded (not a narrower interface) because
+   * ICanonicalCatalogRepository already exists and is the real contract
+   * CanonicalProductService itself is built on. */
+  canonicalCatalogRepo: ICanonicalCatalogRepository | null;
+  /** Mission Ω-Canonical Integration — the Transactional Outbox
+   * CanonicalLinkStage enqueues into. Owned by connectors/, not
+   * canonical-catalog/ — see ICanonicalSuggestionOutboxRepository. */
+  canonicalSuggestionOutboxRepo: ICanonicalSuggestionOutboxRepository | null;
   raw: RawOffer[];
   validated: RawOffer[];
   normalized: NormalizedOffer[];
