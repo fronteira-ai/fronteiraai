@@ -28,6 +28,11 @@ on:
     - cron: "*/15 * * * *"
   workflow_dispatch:
 
+# Mission Ω-Canonical Rollout — restores RC-3's fix (vercel.json had
+# regressed exchange/refresh back to a Hobby-incompatible */5 schedule)
+# and adds canonical-catalog/merge-suggestions here rather than to
+# vercel.json, following the exact pattern already established below.
+
 jobs:
   check-config:
     name: Check required secrets/variables
@@ -80,3 +85,10 @@ jobs:
           bash .github/scripts/call-cron-endpoint.sh \
             "realtime-commerce-buyer-alerts" \
             "${{ vars.CRON_APP_URL }}/api/cron/realtime-commerce/buyer-alerts"
+      - name: Trigger /api/cron/canonical-catalog/merge-suggestions
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          bash .github/scripts/call-cron-endpoint.sh \
+            "canonical-catalog-merge-suggestions" \
+            "${{ vars.CRON_APP_URL }}/api/cron/canonical-catalog/merge-suggestions"
