@@ -158,3 +158,35 @@ describe("CanonicalSuggestionSweepService", () => {
     expect(result.oldestPendingNextAttemptAt).toBe("2026-07-24T01:00:00Z");
   });
 });
+
+describe("CanonicalSuggestionSweepService — deadline (2026-07-29 hotfix, Runtime Timeout 504)", () => {
+  it("omitting deadlineAt processes the full batch exactly as before — zero behavior change for every existing caller", async () => {
+    const entries = [makeEntry({ id: "e1", canonicalProductId: "c1" }), makeEntry({ id: "e2", canonicalProductId: "c2" })];
+    const outboxRepo = makeOutboxRepo({ claimBatch: jest.fn().mockResolvedValue(entries) });
+    const suggestMergesFor = jest.fn().mockResolvedValue(undefined);
+    const mergeSuggestionService = { suggestMergesFor } as unknown as CanonicalMergeSuggestionService;
+    const service = new CanonicalSuggestionSweepService(outboxRepo, mergeSuggestionService);
+
+    const result = await service.sweep();
+
+    expect(suggestMergesFor).toHaveBeenCalledTimes(2);
+    expect(result.succeeded).toBe(2);
+    expect(result.stoppedForDeadline).toBe(false);
+  });
+
+  it("a deadline already in the past stops before starting any entry — nothing processed, batch left processing for the next sweep to reclaim", async () => {
+    const entries = [makeEntry({ id: "e1", canonicalProductId: "c1" }), makeEntry({ id: "e2", canonicalProductId: "c2" })];
+    const outboxRepo = makeOutboxRepo({ claimBatch: jest.fn().mockResolvedValue(entries) });
+    const suggestMergesFor = jest.fn().mockResolvedValue(undefined);
+    const mergeSuggestionService = { suggestMergesFor } as unknown as CanonicalMergeSuggestionService;
+    const service = new CanonicalSuggestionSweepService(outboxRepo, mergeSuggestionService);
+
+    const result = await service.sweep(2, 60_000, Date.now() - 1);
+
+    expect(suggestMergesFor).not.toHaveBeenCalled();
+    expect(outboxRepo.markDone).not.toHaveBeenCalled();
+    expect(result.claimed).toBe(2); // still reported claimed — they were claimed, just not processed
+    expect(result.succeeded).toBe(0);
+    expect(result.stoppedForDeadline).toBe(true);
+  });
+});

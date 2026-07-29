@@ -14,6 +14,12 @@ export interface SweepResult {
   throughputPerSecond: number;
   statusCounts: Record<string, number>;
   oldestPendingNextAttemptAt: string | null;
+  /** Hotfix (2026-07-29): true when the item loop below stopped because
+   * `deadlineAt` was reached before every claimed entry was processed —
+   * the unprocessed remainder stays `processing` and self-heals through
+   * the same staleClaimMs recovery path already used for a crashed
+   * worker (see claimBatch's stale-claim reclaim), never a new mechanism. */
+  stoppedForDeadline: boolean;
 }
 
 const DEFAULT_STALE_CLAIM_MS = 5 * 60_000; // 5 minutes
@@ -47,8 +53,18 @@ export class CanonicalSuggestionSweepService {
    * unchanged — sweep()'s claim/process/finalize semantics and idempotency
    * guarantees are identical either way. Omitting it computes an adaptive
    * size from current backlog + recent throughput (never alters what
-   * happens to a claimed item, only how many are claimed at once). */
-  async sweep(batchLimit?: number, staleClaimMs: number = DEFAULT_STALE_CLAIM_MS): Promise<SweepResult> {
+   * happens to a claimed item, only how many are claimed at once).
+   *
+   * Hotfix (2026-07-29): `deadlineAt` is a 4th optional parameter (epoch
+   * ms). Every existing caller omits it and is completely unaffected —
+   * without it the loop below processes every claimed entry exactly as
+   * before. When passed, the item loop checks it before starting each
+   * entry (never mid-entry) and stops claiming the caller's time budget
+   * further; entries not yet started when the deadline hits stay
+   * `processing` and are picked up by the next sweep once staleClaimMs
+   * elapses — the exact recovery path this outbox already guarantees for
+   * a worker that dies mid-batch, not a new contract. */
+  async sweep(batchLimit?: number, staleClaimMs: number = DEFAULT_STALE_CLAIM_MS, deadlineAt?: number): Promise<SweepResult> {
     const startedAt = Date.now();
     const effectiveBatchLimit = batchLimit ?? (await this.computeAdaptiveLimit());
     const entries = await this.outboxRepo.claimBatch(effectiveBatchLimit, staleClaimMs);
@@ -56,8 +72,13 @@ export class CanonicalSuggestionSweepService {
     let succeeded = 0;
     let retried = 0;
     let deadLettered = 0;
+    let stoppedForDeadline = false;
 
     for (const entry of entries) {
+      if (deadlineAt !== undefined && Date.now() >= deadlineAt) {
+        stoppedForDeadline = true;
+        break;
+      }
       try {
         await this.mergeSuggestionService.suggestMergesFor(entry.canonicalProductId);
         await this.outboxRepo.markDone(entry.id, PRODUCT_IDENTITY_ALGORITHM_VERSION);
@@ -86,15 +107,21 @@ export class CanonicalSuggestionSweepService {
       this.outboxRepo.oldestPendingNextAttemptAt(),
     ]);
 
+    const processedCount = succeeded + retried + deadLettered;
+
     return {
       claimed: entries.length,
       succeeded,
       retried,
       deadLettered,
       durationMs,
-      throughputPerSecond: durationMs > 0 ? entries.length / (durationMs / 1000) : entries.length,
+      // processedCount, not entries.length: when stoppedForDeadline leaves
+      // part of the claimed batch untouched, throughput must reflect what
+      // actually ran, not what was merely claimed.
+      throughputPerSecond: durationMs > 0 ? processedCount / (durationMs / 1000) : processedCount,
       statusCounts,
       oldestPendingNextAttemptAt,
+      stoppedForDeadline,
     };
   }
 

@@ -31,6 +31,27 @@ export const maxDuration = 60;
 const STALE_CLAIM_MS = 5 * 60_000;
 const MAX_ITERATIONS = 20; // caps worst-case work per invocation
 
+// Hotfix (2026-07-29): production evidence (Vercel runtime logs) showed
+// this route hitting "Task timed out after 60 seconds" (504) on every
+// real invocation once the outbox held a real backlog (~7.7k items) —
+// neither MAX_ITERATIONS nor claimed===0 ever kicked in, because the
+// route never survived past the first sweep() call. Root cause: nothing
+// in this route or in sweep()'s per-item loop ever checked elapsed time
+// against maxDuration — a batch could (and did) contain items whose
+// suggestMergesFor() cost is proportional to same-brand candidate-pool
+// size (up to ~3k products for the largest brand), so a "full" 200-item
+// batch had no upper bound on wall-clock cost.
+//
+// ROUTE_TIME_BUDGET_MS stops the outer loop from starting another sweep()
+// and stops sweep()'s own item loop from starting another item once
+// elapsed time crosses this budget — leaving margin under maxDuration for
+// whatever single item was already in flight plus the final observability
+// snapshot below. Unprocessed claimed items stay `processing` and are
+// picked up by the next invocation via the same staleClaimMs recovery
+// path already used for a crashed worker — no new recovery mechanism, no
+// change to the outbox's AT LEAST ONCE DELIVERY contract.
+const ROUTE_TIME_BUDGET_MS = 45_000;
+
 export async function GET(request: NextRequest) {
   const authError = requireCronSecret(request);
   if (authError) return authError;
@@ -42,18 +63,21 @@ export async function GET(request: NextRequest) {
   const observabilityService = new OutboxObservabilityService(outboxRepo);
 
   const startedAt = Date.now();
+  const deadlineAt = startedAt + ROUTE_TIME_BUDGET_MS;
   let totalClaimed = 0;
   let totalSucceeded = 0;
   let totalRetried = 0;
   let totalDeadLettered = 0;
   let iterations = 0;
+  let stoppedForDeadline = false;
 
-  for (; iterations < MAX_ITERATIONS; iterations++) {
-    const result = await sweepService.sweep(undefined, STALE_CLAIM_MS);
+  for (; iterations < MAX_ITERATIONS && Date.now() < deadlineAt; iterations++) {
+    const result = await sweepService.sweep(undefined, STALE_CLAIM_MS, deadlineAt);
     totalClaimed += result.claimed;
     totalSucceeded += result.succeeded;
     totalRetried += result.retried;
     totalDeadLettered += result.deadLettered;
+    if (result.stoppedForDeadline) stoppedForDeadline = true;
     if (result.claimed === 0) break; // caught up — nothing more due right now
   }
 
@@ -73,6 +97,7 @@ export async function GET(request: NextRequest) {
       processing_time_ms: durationMs,
       backlog_remaining: metrics.backlogRemaining,
       estimated_completion_minutes: metrics.estimatedCompletionMinutes,
+      stopped_for_deadline: stoppedForDeadline,
     })
   );
 
@@ -84,6 +109,7 @@ export async function GET(request: NextRequest) {
       totalRetried,
       totalDeadLettered,
       durationMs,
+      stoppedForDeadline,
       metrics,
     },
   });
