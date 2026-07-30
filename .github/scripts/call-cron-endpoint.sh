@@ -21,7 +21,14 @@ URL="${2:?usage: call-cron-endpoint.sh <name> <url>}"
 : "${CRON_SECRET:?CRON_SECRET env var is required}"
 
 readonly MAX_ATTEMPTS=3
-readonly TIMEOUT_SECONDS=20
+# Hotfix (2026-07-30): was 20s, too short for merge-suggestions, whose
+# route.ts deliberately runs up to its own maxDuration=60s (deadline-aware
+# hotfix, 2026-07-29). 70 = maxDuration (60s, the platform's guaranteed
+# ceiling) + 10s margin for TLS/routing/cold-start overhead not captured
+# by the endpoint's own in-process timing. Anchored to that ceiling, not
+# to any single observed sample, so no real 200 or 504 is ever missed by
+# the client giving up early.
+readonly TIMEOUT_SECONDS=70
 backoff_seconds=2
 
 attempt=1
