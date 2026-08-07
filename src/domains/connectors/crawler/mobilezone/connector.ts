@@ -1,5 +1,5 @@
 import type { IConnector, ConnectorMetadata } from "../../types/connector.types";
-import type { ConnectorBatch } from "../../types/raw.types";
+import type { ConnectorBatch, RawOffer, RawOfferStream } from "../../types/raw.types";
 import { ConnectorType } from "../../types/enums";
 import { HttpFetchStrategy, RateLimitedFetchStrategy } from "../../sdk";
 import { MOBILE_ZONE_CONFIG as CFG } from "./config";
@@ -12,6 +12,9 @@ import { mapApiProduct } from "./product-mapper";
 // &limit=`), the same endpoint the React SPA itself calls. Reuses the SDK's
 // HttpFetchStrategy/RateLimitedFetchStrategy (retry/backoff + politeness
 // delay) exactly like every other connector — no new fetch infrastructure.
+// Mission Ω-Pipeline — fetchStream() yields one offer per page item instead
+// of accumulating the whole catalog before returning; fetch() is a thin
+// backward-compatible wrapper that drains it into an array.
 interface ApiProductsResponse {
   count: number;
   products: unknown[];
@@ -30,14 +33,12 @@ export class MobileZoneConnector implements IConnector {
 
   private readonly fetcher = new RateLimitedFetchStrategy(new HttpFetchStrategy(), CFG.requestDelayMs);
 
-  async fetch(): Promise<ConnectorBatch> {
-    const fetchedAt = new Date().toISOString();
-    const allOffers: ConnectorBatch["items"] = [];
-
+  async *fetchStream(): RawOfferStream {
     let offset = 0;
     let total = Infinity;
+    let yielded = 0;
 
-    while (allOffers.length < CFG.maxProducts && offset < total) {
+    while (yielded < CFG.maxProducts && offset < total) {
       const url = `${CFG.apiBaseUrl}/products?offset=${offset}&limit=${CFG.pageSize}`;
       const result = await this.fetcher.fetch(url, { timeoutMs: CFG.timeoutMs });
 
@@ -60,8 +61,9 @@ export class MobileZoneConnector implements IConnector {
       for (const raw of page.products) {
         const { offer, error } = mapApiProduct(raw as Parameters<typeof mapApiProduct>[0]);
         if (offer) {
-          allOffers.push(offer);
-          if (allOffers.length >= CFG.maxProducts) break;
+          yield offer;
+          yielded++;
+          if (yielded >= CFG.maxProducts) break;
         } else {
           console.warn(`[MobileZone] Skipped product: ${error}`);
         }
@@ -69,7 +71,14 @@ export class MobileZoneConnector implements IConnector {
 
       offset += CFG.pageSize;
     }
+  }
 
+  async fetch(): Promise<ConnectorBatch> {
+    const fetchedAt = new Date().toISOString();
+    const allOffers: RawOffer[] = [];
+    for await (const offer of this.fetchStream()) {
+      allOffers.push(offer);
+    }
     return {
       connectorId: CFG.connectorId,
       connectorVersion: CFG.connectorVersion,

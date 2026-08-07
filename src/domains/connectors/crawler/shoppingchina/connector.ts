@@ -1,11 +1,11 @@
 import type { IConnector, ConnectorMetadata, ConnectorFetchOptions } from "../../types/connector.types";
-import type { ConnectorBatch } from "../../types/raw.types";
+import type { ConnectorBatch, RawOffer, RawOfferStream } from "../../types/raw.types";
 import { ConnectorType } from "../../types/enums";
 import { HttpFetchStrategy, RateLimitedFetchStrategy, SitemapCrawler } from "../../sdk";
 import { DeltaEngine } from "../../delta";
 import { SupabaseDeltaStateRepository } from "../../infrastructure/SupabaseDeltaStateRepository";
-import type { DeltaStateEntry } from "../../repositories/IDeltaStateRepository";
 import { getSupabaseServiceClient } from "@/lib/supabase/service";
+import { streamSitemapConnector } from "../../streaming/SitemapConnectorStream";
 import { isProductUrl, parseProductUrl } from "./listing-parser";
 import { parseDetailPage } from "./detail-parser";
 import { SHOPPING_CHINA_CONFIG as CFG } from "./config";
@@ -27,7 +27,7 @@ const FALLBACK_CATEGORY_NAME = "Geral";
 // Import Engine wired for real: `connector_url_snapshots` (new table) lets
 // this connector skip refetching a product detail page whose sitemap
 // `<lastmod>` hasn't moved since the last successful sync. The snapshot
-// repository is constructed lazily inside `fetch()` (not injected via the
+// repository is constructed lazily inside fetchStream() (not injected via the
 // constructor) because `IConnector` instances self-register at module load
 // time, in `crawler/bootstrap.ts`, before any Supabase client exists —
 // `getSupabaseServiceClient()` is safe to call anytime (env-based, no
@@ -38,6 +38,11 @@ const FALLBACK_CATEGORY_NAME = "Geral";
 // storage, only the vocabulary changed (url/lastmod -> key/checkpoint at
 // the domain boundary; storage columns unchanged, no migration). Behavior
 // for this connector is unchanged.
+// Mission Ω-Pipeline — fetchStream() is the real implementation now
+// (streamSitemapConnector, shared with the other 3 sitemap connectors —
+// this is also the connector whose full-catalog run OOM'd in production,
+// the concrete evidence this Mission responds to); fetch() is a thin
+// backward-compatible wrapper that drains it into an array.
 export class ShoppingChinaConnector implements IConnector {
   readonly metadata: ConnectorMetadata = {
     id: CFG.connectorId,
@@ -53,72 +58,50 @@ export class ShoppingChinaConnector implements IConnector {
   private readonly sitemapCrawler = new SitemapCrawler(this.fetcher);
   private readonly deltaEngine = new DeltaEngine();
 
+  fetchStream(options: ConnectorFetchOptions = {}): RawOfferStream {
+    return streamSitemapConnector({
+      connectorId: CFG.connectorId,
+      sitemapUrl: CFG.sitemapUrl,
+      timeoutMs: CFG.timeoutMs,
+      maxProducts: CFG.maxProducts,
+      dryRun: options.dryRun ?? false,
+      fetcher: this.fetcher,
+      sitemapCrawler: this.sitemapCrawler,
+      deltaEngine: this.deltaEngine,
+      deltaStateRepo: new SupabaseDeltaStateRepository(getSupabaseServiceClient()),
+      isProductUrl,
+      logPrefix: "ShoppingChina",
+      fetchAndParse: async (url: string): Promise<{ offer: RawOffer | null }> => {
+        const parsed = parseProductUrl(url);
+        if (!parsed) return { offer: null };
+
+        const detailResult = await this.fetcher.fetch(parsed.url, { timeoutMs: CFG.timeoutMs });
+        if (!detailResult.ok) {
+          console.warn(`[ShoppingChina] Failed to fetch product ${parsed.url}: ${detailResult.error}`);
+          return { offer: null };
+        }
+
+        const { offer, error } = parseDetailPage(
+          detailResult.html,
+          parsed.url,
+          CFG.storeSlug,
+          FALLBACK_CATEGORY_NAME,
+          parsed.externalId
+        );
+        if (!offer) {
+          console.warn(`[ShoppingChina] Parse error for ${parsed.url}: ${error}`);
+        }
+        return { offer };
+      },
+    });
+  }
+
   async fetch(options: ConnectorFetchOptions = {}): Promise<ConnectorBatch> {
     const fetchedAt = new Date().toISOString();
-    const allOffers: ConnectorBatch["items"] = [];
-
-    const deltaStateRepo = new SupabaseDeltaStateRepository(getSupabaseServiceClient());
-    const previousCheckpoints = await deltaStateRepo.getCheckpoints(CFG.connectorId);
-
-    const entries = await this.sitemapCrawler.collectEntries(CFG.sitemapUrl, {
-      timeoutMs: CFG.timeoutMs,
-      filter: isProductUrl,
-    });
-
-    const candidates = entries.map((e) => ({ key: e.url, checkpoint: e.lastmod }));
-    const plan = this.deltaEngine.plan(candidates, previousCheckpoints);
-    console.log(
-      `[ShoppingChina] Sitemap yielded ${entries.length} product URLs — Delta Import: ${plan.toFetch.length} to fetch, ${plan.skipped.length} skipped (unchanged since last sync)`
-    );
-
-    const checkpointByUrl = new Map(entries.map((e) => [e.url, e.lastmod]));
-    const toFetch = plan.toFetch.slice(0, CFG.maxProducts);
-    const fetchedSnapshots: DeltaStateEntry[] = [];
-
-    for (const url of toFetch) {
-      const parsed = parseProductUrl(url);
-      if (!parsed) continue;
-
-      const detailResult = await this.fetcher.fetch(parsed.url, { timeoutMs: CFG.timeoutMs });
-      if (!detailResult.ok) {
-        console.warn(`[ShoppingChina] Failed to fetch product ${parsed.url}: ${detailResult.error}`);
-        continue;
-      }
-
-      const { offer, error } = parseDetailPage(
-        detailResult.html,
-        parsed.url,
-        CFG.storeSlug,
-        FALLBACK_CATEGORY_NAME,
-        parsed.externalId
-      );
-
-      if (offer) {
-        allOffers.push(offer);
-        // Only a URL that was actually fetched AND parsed successfully gets
-        // its checkpoint recorded — a failed fetch/parse must stay eligible
-        // for retry next run, never silently marked "seen".
-        const checkpoint = checkpointByUrl.get(url);
-        if (checkpoint) fetchedSnapshots.push({ key: url, checkpoint });
-      } else {
-        console.warn(`[ShoppingChina] Parse error for ${parsed.url}: ${error}`);
-      }
+    const allOffers: RawOffer[] = [];
+    for await (const offer of this.fetchStream(options)) {
+      allOffers.push(offer);
     }
-
-    // Snapshot every successfully-processed URL this run, plus every URL the
-    // engine already confirmed unchanged (their stored checkpoint is still
-    // correct — re-saving just refreshes last_fetched_at bookkeeping).
-    const skippedSnapshots: DeltaStateEntry[] = plan.skipped
-      .map((url) => ({ key: url, checkpoint: checkpointByUrl.get(url) }))
-      .filter((e): e is DeltaStateEntry => !!e.checkpoint);
-
-    // Dry-run never writes — same invariant CatalogWriteStage/
-    // MarketChangeDetectionStage already enforce, extended to this
-    // connector's own side effect via ConnectorFetchOptions.dryRun.
-    if (!options.dryRun) {
-      await deltaStateRepo.saveCheckpoints(CFG.connectorId, [...fetchedSnapshots, ...skippedSnapshots]);
-    }
-
     return {
       connectorId: CFG.connectorId,
       connectorVersion: CFG.connectorVersion,
