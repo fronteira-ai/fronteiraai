@@ -34,3 +34,17 @@ You can check out [the Next.js GitHub repository](https://github.com/vercel/next
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+
+## Engineering Status
+
+**Architecture Version**: v1.0 — see `VERSION.md`
+
+**Architecture Status**: `docs/architecture/ARCHITECTURE_STATUS.md` — current frozen state, revalidated risks, and metrics under continuous monitoring.
+
+**Engineering Constitution**: `docs/engineering/ENGINEERING_CONSTITUTION.md` — permanent architectural principles, frozen components, and reopening criteria for the ParaguAI core (Product Identity, Marketplace Memory, Merge Engine, Product Signature, Universal Taxonomy Engine, Connector Platform, Canonical Catalog).
+
+**Architecture Decision**: ENGINEERING APPROVED WITH MONITORING (Program ΩΩ, Missions ΩΩ-1/ΩΩ-2). No structural failure found; no rewrite required. Full certificate: `docs/architecture/ARCHITECTURE_CERTIFICATE.md`.
+
+**Roadmap atual**: engineering-focused roadmap is closed. Current roadmap covers Marketplace Operations, Merchant Success, Catalog Expansion, Growth, Analytics, and Revenue — see `ROADMAP.md`.
+
+For the full knowledge base (foundation documents, architecture, product, engineering, operations, database), start at `docs/foundation/FOUNDATION_INDEX.md`.
