@@ -18,10 +18,17 @@ export async function getOffers(): Promise<Offer[]> {
 export async function getOffersByProduct(
   productId: string
 ): Promise<OfferWithStore[]> {
+  // Mission Ω-LAUNCH Fase 1 (item 1): esgotados nunca antes de disponíveis —
+  // in_stock desc é a chave primária, preço só desempata dentro de cada
+  // grupo. `available=false` (arquivada, ADR-008/DOMAIN_MODEL.md) nunca é a
+  // fonte da UI de disponibilidade, mas uma oferta arquivada também não deve
+  // aparecer numa lista de ofertas ativas.
   const { data, error } = await supabase
     .from("offers")
     .select("*, store:stores(*)")
     .eq("product_id", productId)
+    .eq("available", true)
+    .order("in_stock", { ascending: false })
     .order("price_usd", { ascending: true });
 
   if (error) {
@@ -35,10 +42,14 @@ export async function getOffersByProduct(
 export async function getOffersByStore(
   storeId: string
 ): Promise<OfferWithProduct[]> {
+  // Mission Ω-LAUNCH Fase 1 (item 1) — same stock-first ordering as
+  // getOffersByProduct above.
   const { data, error } = await supabase
     .from("offers")
     .select("*, product:products(*)")
     .eq("store_id", storeId)
+    .eq("available", true)
+    .order("in_stock", { ascending: false })
     .order("price_usd", { ascending: true });
 
   if (error) {

@@ -140,6 +140,21 @@ function toRankedOffers(
   });
 }
 
+// Mission Ω-LAUNCH Fase 1 (item 1): esgotados nunca antes de disponíveis na
+// tela, mesmo que OfferRankingService (Canonical Catalog, domínio — não
+// alterado aqui) só penalize indisponibilidade em 20% do rankScore e não
+// garanta a ordem estrita. Resort estável (preserva a ordem relativa dentro
+// de cada grupo in_stock) puramente de apresentação — rankScore e factors
+// continuam sendo o valor real computado pelo domínio, só o `rank` exibido é
+// renumerado para bater com a posição na tela.
+function sortForDisplay(rankedOffers: RankedOffer[]): RankedOffer[] {
+  const sorted = [...rankedOffers].sort((a, b) => {
+    if (a.offer.in_stock !== b.offer.in_stock) return a.offer.in_stock ? -1 : 1;
+    return 0;
+  });
+  return sorted.map((r, i) => ({ ...r, rank: i + 1 }));
+}
+
 function buildSummary(rankedOffers: RankedOffer[]): CompareSummary {
   if (rankedOffers.length === 0) {
     return {
@@ -219,7 +234,7 @@ async function buildCompareResult(productId: string, product: ProductWithRelatio
       : Promise.resolve(null),
   ]);
 
-  const rankedOffers = toRankedOffers(comparison.offers, storesById, offerExtrasById, metricsById);
+  const rankedOffers = sortForDisplay(toRankedOffers(comparison.offers, storesById, offerExtrasById, metricsById));
   const bestDealStoreName = bestDeal ? storesById.get(bestDeal.recommendedOffer.offer.storeId)?.name ?? bestDeal.recommendedOffer.offer.storeSlug : null;
   return {
     product,

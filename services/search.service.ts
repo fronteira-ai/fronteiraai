@@ -97,6 +97,18 @@ export async function searchEverything(search: string): Promise<SearchResponse> 
   const brands = (brandsResult.data ?? []) as Brand[];
   const categories = (categoriesResult.data ?? []) as Category[];
 
+  // Mission Ω-LAUNCH Fase 1 (itens 1-2): esgotados nunca antes de
+  // disponíveis; dentro de cada grupo, menor preço primeiro. Produtos sem
+  // nenhuma oferta com preço (lowestPriceUSD === null) vão ao final — não há
+  // preço real para ordenar por, e não inventamos um.
+  products.sort((a, b) => {
+    if (a.inStock !== b.inStock) return a.inStock ? -1 : 1;
+    if (a.lowestPriceUSD === null && b.lowestPriceUSD === null) return 0;
+    if (a.lowestPriceUSD === null) return 1;
+    if (b.lowestPriceUSD === null) return -1;
+    return a.lowestPriceUSD - b.lowestPriceUSD;
+  });
+
   return {
     query,
     products,
