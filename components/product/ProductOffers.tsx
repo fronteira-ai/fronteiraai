@@ -2,6 +2,7 @@ import { memo } from "react";
 import { OfferWithStore } from "@/types/offer";
 import { formatUSD, formatBRL } from "@/src/domains/exchange";
 import { formatOfferCondition } from "@/utils/offerPresentation";
+import OfferLink from "@/components/product/OfferLink";
 
 type Props = {
   offers: OfferWithStore[];
@@ -23,7 +24,7 @@ function ProductOffers({ offers }: Props) {
       ) : (
         <div className="mt-6 flex flex-col gap-4">
 
-          {offers.map((offer) => (
+          {offers.map((offer, index) => (
             <div
               key={offer.id}
               className="flex flex-col gap-4 rounded-2xl border border-slate-800 bg-slate-950/40 p-6 sm:flex-row sm:items-center sm:justify-between"
@@ -82,14 +83,17 @@ function ProductOffers({ offers }: Props) {
                 </p>
 
                 {offer.product_url ? (
-                  <a
-                    href={offer.product_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
+                  <OfferLink
+                    offerId={offer.id}
+                    productId={offer.product_id}
+                    storeId={offer.store_id}
+                    productUrl={offer.product_url}
+                    position={index + 1}
+                    source="product_page"
                     className="mt-3 inline-block rounded-full bg-blue-600 px-6 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-500"
                   >
                     Ver oferta
-                  </a>
+                  </OfferLink>
                 ) : null}
 
               </div>

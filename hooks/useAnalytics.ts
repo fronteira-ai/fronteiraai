@@ -97,6 +97,9 @@ export function useAnalytics(options: UseAnalyticsOptions = {}) {
         AnalyticsEventType.MerchantPhoneClicked,
         AnalyticsEventType.MerchantWebsiteClicked,
         AnalyticsEventType.OfferSaved,
+        // Sprint 2 — o clique de saída para a loja é o evento de conversão do
+        // produto; sai imediatamente em vez de esperar o batch de 2s.
+        AnalyticsEventType.OfferClicked,
       ]);
 
       if (HIGH_VALUE.has(eventType)) {
