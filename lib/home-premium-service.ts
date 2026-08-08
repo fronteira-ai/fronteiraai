@@ -74,7 +74,22 @@ const MARKET_PULSE_WINDOW_DAYS = 7;
 const MARKET_PULSE_LIMIT = 5;
 const SPARKLINE_DAYS = 7;
 
-async function getDailyChangeSeries(marketPulseService: ReturnType<typeof createRealtimeCommerceServices>["marketPulseService"]): Promise<number[]> {
+// Program Σ — Sprint 1 (Home Fan-out Reduction). Reads the one count the
+// sparkline actually plots, instead of computing a whole MarketPulseSnapshot
+// per day and discarding everything but `pricesChangedCount`.
+//
+// `MarketPulseService.computeForRange()` costs 5 indexed COUNTs plus one
+// `listInRange(..., BREAKDOWN_SAMPLE_LIMIT)` that fetches up to 3.000
+// `market_changes` rows to build the category/store breakdown — a breakdown
+// this function never reads. Seven days of that meant 35 COUNTs and 7
+// large row fetches to produce 7 integers.
+//
+// The value is bit-for-bit the same: `computeForRange` derives
+// `pricesChangedCount` from exactly this `countInRange` call with exactly
+// these change types (MarketPulseService.ts), and `countInRange` uses
+// `head: true` — an indexed COUNT that transfers no rows at all. Same
+// windows, same filter, same numbers; only the discarded work is gone.
+async function getDailyChangeSeries(changeRepo: ReturnType<typeof createRealtimeCommerceServices>["changeRepo"]): Promise<number[]> {
   const now = Date.now();
   const days = Array.from({ length: SPARKLINE_DAYS }, (_, i) => SPARKLINE_DAYS - 1 - i);
 
@@ -82,8 +97,9 @@ async function getDailyChangeSeries(marketPulseService: ReturnType<typeof create
     days.map(async (daysAgo) => {
       const dayEnd = new Date(now - daysAgo * 24 * 60 * 60 * 1000);
       const dayStart = new Date(dayEnd.getTime() - 24 * 60 * 60 * 1000);
-      const snapshot = await marketPulseService.computeForRange(dayStart, dayEnd);
-      return snapshot.pricesChangedCount;
+      return changeRepo.countInRange(dayStart, dayEnd, {
+        changeTypes: [ChangeType.PriceIncreased, ChangeType.PriceDecreased],
+      });
     })
   );
 
@@ -91,7 +107,7 @@ async function getDailyChangeSeries(marketPulseService: ReturnType<typeof create
 }
 
 export async function getMarketPulseHighlights(client: SupabaseClient): Promise<MarketPulseHighlights> {
-  const { marketPulseService, volatilityService } = createRealtimeCommerceServices(client);
+  const { marketPulseService, volatilityService, changeRepo } = createRealtimeCommerceServices(client);
 
   const to = new Date();
   const from = new Date(to.getTime() - MARKET_PULSE_WINDOW_DAYS * 24 * 60 * 60 * 1000);
@@ -101,7 +117,7 @@ export async function getMarketPulseHighlights(client: SupabaseClient): Promise<
     marketPulseService.getTopMovers(from, to, 30),
     marketPulseService.computeForRange(from, to),
     marketPulseService.computeForRange(todayStart, to),
-    getDailyChangeSeries(marketPulseService),
+    getDailyChangeSeries(changeRepo),
   ]);
 
   const toHighlight = (m: (typeof movers)[number]): MarketMoverHighlight => ({
