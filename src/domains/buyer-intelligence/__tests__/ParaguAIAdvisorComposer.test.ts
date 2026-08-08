@@ -159,6 +159,14 @@ describe("ParaguAIAdvisorComposer", () => {
     expect(result.conflicts.some((c) => c.signalB === "Confiança baixa")).toBe(false);
   });
 
+  it("never recommends buy_now for an out-of-stock offer, even with excellent price and full trust", () => {
+    const composer = new ParaguAIAdvisorComposer();
+    const outOfStock = makeBestDeal({ recommendedOffer: { ...makeRanked(), offer: { ...makeRanked().offer, inStock: false } } });
+    const result = composer.compose(outOfStock, makePurchaseTiming({ verdict: "buy_now" }), makeTrust({ isVerified: true }));
+    expect(result.recommendation).toBe("unavailable");
+    expect(result.headline).toBe("Esta oferta está sem estoque no momento");
+  });
+
   it("caps the Recommendation Summary at 5 lines", () => {
     const composer = new ParaguAIAdvisorComposer();
     const result = composer.compose(makeBestDeal(), makePurchaseTiming({ verdict: "better_wait" }), makeTrust({ isVerified: false }));

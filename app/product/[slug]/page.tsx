@@ -18,7 +18,7 @@ import TrustCard from "@/components/product/TrustCard";
 import ParaguAIAdvisor from "@/components/product/ParaguAIAdvisor";
 import RecommendationSummary from "@/components/product/RecommendationSummary";
 import { comparePath } from "@/constants/routes";
-import { ParaguAIAdvisorComposer } from "@/src/domains/buyer-intelligence";
+import { ParaguAIAdvisorComposer, buildSpecificationEntries } from "@/src/domains/buyer-intelligence";
 import { getCachedProduct, getCachedOffers, getCachedRelatedProducts, getCachedIntelligence, getCachedBestDeal, getCachedPurchaseTiming, getCachedTrust, getCachedMoneyPresentation } from "./_cache";
 
 // Objetivo 2/3 — pure, stateless, zero I/O: instantiated directly, no
@@ -38,7 +38,7 @@ export default async function ProductPage({ params }: { params: Params }) {
 
   const [offers, relatedProducts, intelligence] = await Promise.all([
     getCachedOffers(product.id),
-    getCachedRelatedProducts(product.category_id, product.id),
+    getCachedRelatedProducts(product),
     getCachedIntelligence(product.id),
   ]);
   const { bestDeal, storeName } = await getCachedBestDeal(intelligence.comparison);
@@ -48,6 +48,7 @@ export default async function ProductPage({ params }: { params: Params }) {
     getCachedMoneyPresentation(bestDeal),
   ]);
   const advisor = advisorComposer.compose(bestDeal, purchaseTiming, trust);
+  const specificationEntries = buildSpecificationEntries(product.specifications, intelligence.facts);
 
   return (
     <main className="min-h-screen bg-[#050816] text-white">
@@ -101,7 +102,7 @@ export default async function ProductPage({ params }: { params: Params }) {
           ) : null}
           <ShouldIBuyNowCard timing={purchaseTiming} />
           <TrustCard trust={trust} />
-          <ProductSpecifications specifications={product.specifications} />
+          <ProductSpecifications entries={specificationEntries} />
           <ProductOffers offers={offers} />
           <RelatedProducts products={relatedProducts} />
         </div>

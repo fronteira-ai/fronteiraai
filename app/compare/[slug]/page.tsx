@@ -57,7 +57,7 @@ export default async function ComparePage({ params }: Props) {
   const advisor = advisorComposer.compose(bestDeal, purchaseTiming, trust);
 
   const relatedProducts = product.category_id
-    ? await getRelatedProducts(product.category_id, product.id)
+    ? await getRelatedProducts(product)
     : [];
 
   const breadcrumbItems = [

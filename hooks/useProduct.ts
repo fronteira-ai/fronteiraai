@@ -43,7 +43,7 @@ export function useProduct(slug: string): UseProductResult {
 
       const [offersData, relatedData] = await Promise.all([
         getOffersByProduct(productData.id),
-        getRelatedProducts(productData.category_id, productData.id),
+        getRelatedProducts(productData),
       ]);
 
       if (!active) return;

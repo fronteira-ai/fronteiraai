@@ -14,7 +14,16 @@ const RECOMMENDATION_STYLE: Record<ParaguAIAdvisorResult["recommendation"], { bo
   buy_now: { border: "border-emerald-500/30", bg: "bg-emerald-500/5", text: "text-emerald-300" },
   good_deal_caution: { border: "border-amber-500/30", bg: "bg-amber-500/5", text: "text-amber-300" },
   wait: { border: "border-red-500/30", bg: "bg-red-500/5", text: "text-red-300" },
+  unavailable: { border: "border-slate-700", bg: "bg-slate-900/60", text: "text-slate-400" },
   insufficient_data: { border: "border-slate-700", bg: "bg-slate-900/60", text: "text-slate-400" },
+};
+
+const RECOMMENDATION_ICON: Record<ParaguAIAdvisorResult["recommendation"], string> = {
+  buy_now: "🏆",
+  good_deal_caution: "🏆",
+  wait: "🏆",
+  unavailable: "📦",
+  insufficient_data: "🏆",
 };
 
 // Release 2.0 — Fase 2 — Wave 5 (EI-5 — ParaguAI Advisor). Every value here
@@ -31,7 +40,7 @@ export default function ParaguAIAdvisor({ advisor, price, savings }: Props) {
   return (
     <div className={`rounded-3xl border ${style.border} ${style.bg} p-6`}>
       <div className="flex items-center gap-2">
-        <span className="text-2xl" aria-hidden>🏆</span>
+        <span className="text-2xl" aria-hidden>{RECOMMENDATION_ICON[advisor.recommendation]}</span>
         <h3 className={`text-lg font-bold ${style.text}`}>{advisor.headline}</h3>
       </div>
 

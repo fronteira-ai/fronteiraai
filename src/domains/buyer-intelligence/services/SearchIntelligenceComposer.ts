@@ -28,10 +28,10 @@ export class SearchIntelligenceComposer {
   async composeForProducts(inputs: SearchIntelligenceInput[]): Promise<Map<string, SearchIntelligenceBadge>> {
     const entries = await Promise.allSettled(
       inputs.map(async ({ productId, priceUSD }): Promise<[string, SearchIntelligenceBadge]> => {
-        if (priceUSD === null) return [productId, { productId, belowAveragePrice: false, isBestDeal: false }];
+        if (priceUSD === null) return [productId, { productId, belowAveragePrice: false, isBestDeal: false, savingsVsMedianPercent: 0 }];
 
         const canonicalProductId = await this.catalogRepo.findCanonicalProductIdByProductId(productId);
-        if (!canonicalProductId) return [productId, { productId, belowAveragePrice: false, isBestDeal: false }];
+        if (!canonicalProductId) return [productId, { productId, belowAveragePrice: false, isBestDeal: false, savingsVsMedianPercent: 0 }];
 
         const statistics = await this.priceIntelligenceService.getStatistics(canonicalProductId);
         const belowAveragePrice = !!statistics && priceUSD < statistics.medianPriceUSD * 0.9;
@@ -44,8 +44,15 @@ export class SearchIntelligenceComposer {
         // across a results grid, which this composer's own Wave 1 doc
         // comment already commits to avoiding).
         const isBestDeal = !!statistics && statistics.storeCount > 1 && priceUSD <= statistics.lowestPriceUSD;
+        // Mission Ω-LAUNCH Fase 1 (item 5) — same statistics call, no new
+        // query. Clamped to 0 rather than negative when priceUSD is above
+        // the median (never a "-5% savings" badge).
+        const savingsVsMedianPercent =
+          statistics && statistics.medianPriceUSD > 0 && priceUSD < statistics.medianPriceUSD
+            ? ((statistics.medianPriceUSD - priceUSD) / statistics.medianPriceUSD) * 100
+            : 0;
 
-        return [productId, { productId, belowAveragePrice, isBestDeal }];
+        return [productId, { productId, belowAveragePrice, isBestDeal, savingsVsMedianPercent }];
       })
     );
 

@@ -1,5 +1,4 @@
 import { ComparisonIntelligenceComposer } from "../services/ComparisonIntelligenceComposer";
-import { ProductIntelligenceComposer } from "../services/ProductIntelligenceComposer";
 import { CanonicalProductService, OfferRankingService, CanonicalPriceHistoryService, CompareFoundationService } from "@/src/domains/canonical-catalog";
 import type { ICanonicalCatalogRepository, ICanonicalPriceHistoryRepository, CanonicalProduct, CanonicalOfferView } from "@/src/domains/canonical-catalog";
 import { PriceIntelligenceService } from "@/src/domains/market-insights";
@@ -249,55 +248,7 @@ describe("ComparisonIntelligenceComposer", () => {
   });
 });
 
-describe("ProductIntelligenceComposer", () => {
-  it("returns an empty bundle when the product has no canonical link yet (Shadow Mode)", async () => {
-    const catalogRepo = makeCatalogRepo({ findCanonicalProductIdByProductId: jest.fn().mockResolvedValue(null) });
-    const compareFoundationService = new CompareFoundationService(
-      new CanonicalProductService(catalogRepo),
-      catalogRepo,
-      new OfferRankingService(),
-      new CanonicalPriceHistoryService(makePriceHistoryRepo())
-    );
-    const comparisonComposer = new ComparisonIntelligenceComposer(
-      compareFoundationService,
-      catalogRepo,
-      new PriceIntelligenceService(catalogRepo),
-      new FreshnessService(makeChangeRepo()),
-      makeStoreLinkRepo(),
-      new BadgeService(makeBadgeRepo(), makeTrustRepo(), makeTrustEventRepo())
-    );
-    const composer = new ProductIntelligenceComposer(catalogRepo, comparisonComposer);
-
-    const bundle = await composer.composeForProduct("product-without-canonical-link");
-    expect(bundle.comparison).toBeNull();
-  });
-
-  it("delegates to ComparisonIntelligenceComposer once the canonical link is resolved", async () => {
-    const canonicalProduct = makeCanonicalProduct();
-    const catalogRepo = makeCatalogRepo({
-      findCanonicalProductIdByProductId: jest.fn().mockResolvedValue(canonicalProduct.id),
-      findById: jest.fn().mockResolvedValue(canonicalProduct),
-      findBySlug: jest.fn().mockResolvedValue(canonicalProduct),
-      findOffersByCanonicalProductId: jest.fn().mockResolvedValue({ items: [makeOffer()], total: 1 }),
-    });
-    const compareFoundationService = new CompareFoundationService(
-      new CanonicalProductService(catalogRepo),
-      catalogRepo,
-      new OfferRankingService(),
-      new CanonicalPriceHistoryService(makePriceHistoryRepo())
-    );
-    const comparisonComposer = new ComparisonIntelligenceComposer(
-      compareFoundationService,
-      catalogRepo,
-      new PriceIntelligenceService(catalogRepo),
-      new FreshnessService(makeChangeRepo()),
-      makeStoreLinkRepo(),
-      new BadgeService(makeBadgeRepo(), makeTrustRepo(), makeTrustEventRepo())
-    );
-    const composer = new ProductIntelligenceComposer(catalogRepo, comparisonComposer);
-
-    const bundle = await composer.composeForProduct("product-1");
-    expect(bundle.comparison).not.toBeNull();
-    expect(bundle.comparison!.canonicalProduct).toBe(canonicalProduct);
-  });
-});
+// ProductIntelligenceComposer has its own dedicated test file
+// (ProductIntelligenceComposer.test.ts) — Mission 03 (Decision Engine) added
+// a constructor dependency (MarketplaceMemoryService) and a `facts` field to
+// its bundle, both exercised there instead of duplicating fixtures here.

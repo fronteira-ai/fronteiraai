@@ -16,3 +16,4 @@ export { PurchaseTimingComposer } from "./services/PurchaseTimingComposer";
 export { TrustComposer } from "./services/TrustComposer";
 export { ParaguAIAdvisorComposer } from "./services/ParaguAIAdvisorComposer";
 export { OpportunityEngine } from "./services/OpportunityEngine";
+export { buildSpecificationEntries } from "./services/ProductSpecificationsComposer";

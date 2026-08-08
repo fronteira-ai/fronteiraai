@@ -4,6 +4,7 @@ import type { FreshnessScore } from "@/src/domains/realtime-commerce";
 import type { ExchangeRate } from "@/src/domains/exchange";
 import type { MerchantBadgeRecord } from "@/src/domains/trust/types/trust.types";
 import type { TrustBadge } from "@/src/domains/trust/types/enums";
+import type { LearnedFact } from "@/src/domains/marketplace-memory";
 
 // Release 2.0 — Wave 1 (Buyer Intelligence Layer). Deliberately a pure DTO
 // module: every field here is read, never computed, by the composers in
@@ -40,6 +41,28 @@ export interface ProductIntelligenceBundle {
    * product yet (Product Identity, Shadow Mode) — never an error, the page
    * just renders without the canonical-dependent cards. */
   comparison: ComparisonIntelligenceBundle | null;
+  /** Mission 03 (Decision Engine). Marketplace Memory facts for this
+   * product's canonical entry — [] both when there is no canonical link yet
+   * and when a link exists but no fact was ever extracted, never an error.
+   * Deliberately available even when `comparison` is null: a product's
+   * specifications don't require a cross-merchant match to be worth
+   * showing, only the canonical bootstrap link (Product Identity), which is
+   * far more common than a real merge. */
+  facts: LearnedFact[];
+}
+
+/** A single standardized specification row ready for display — the merge of
+ * a merchant's raw `products.specifications` with this product's Marketplace
+ * Memory facts (Mission 03, Decision Engine). Built by
+ * ProductSpecificationsComposer, never inside a component. */
+export interface SpecificationEntry {
+  label: string;
+  value: string;
+  /** True for the handful of specs that actually drive a purchase decision
+   * (storage, RAM, screen, color, processor, GPU) — rendered first / more
+   * prominently. Never based on opinion, only on FACT_ORDER's fixed list. */
+  highlight: boolean;
+  source: "learned" | "raw";
 }
 
 export interface SearchIntelligenceBadge {
@@ -55,6 +78,12 @@ export interface SearchIntelligenceBadge {
    * the exact same PriceStatistics call as belowAveragePrice, never a
    * second query and never the full BestDealComposer pipeline. */
   isBestDeal: boolean;
+  /** Mission Ω-LAUNCH Fase 1 (item 5 — "Destacar economia"). How far below
+   * the cross-store median this price sits, in percent (0 when at/above
+   * median or when there's no statistics/canonical link) — reuses the exact
+   * `statistics.medianPriceUSD` already fetched for `belowAveragePrice`,
+   * never a second query or a new comparison. */
+  savingsVsMedianPercent: number;
 }
 
 // ── Release 2.0 — Wave 2 (Experience Iteration 2 — Best Deal). ──────────
@@ -241,7 +270,7 @@ export interface Opportunity {
 // which existing verdict to surface, via plain condition checks, never a
 // new weighted score.
 
-export type AdvisorRecommendation = "buy_now" | "good_deal_caution" | "wait" | "insufficient_data";
+export type AdvisorRecommendation = "buy_now" | "good_deal_caution" | "wait" | "unavailable" | "insufficient_data";
 
 /** Objetivo 4 — a conflict is two already-existing signals disagreeing
  * (e.g. bestDeal.savingsOpportunity > 0 vs. trust.isVerified === false).

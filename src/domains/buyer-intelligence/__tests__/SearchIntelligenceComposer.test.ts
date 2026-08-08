@@ -30,7 +30,7 @@ describe("SearchIntelligenceComposer", () => {
     const composer = new SearchIntelligenceComposer(catalogRepo, new PriceIntelligenceService(catalogRepo));
 
     const result = await composer.composeForProducts([{ productId: "p1", priceUSD: null }]);
-    expect(result.get("p1")).toEqual({ productId: "p1", belowAveragePrice: false, isBestDeal: false });
+    expect(result.get("p1")).toEqual({ productId: "p1", belowAveragePrice: false, isBestDeal: false, savingsVsMedianPercent: 0 });
   });
 
   it("marks belowAveragePrice=false for products with no canonical link yet", async () => {
@@ -38,7 +38,7 @@ describe("SearchIntelligenceComposer", () => {
     const composer = new SearchIntelligenceComposer(catalogRepo, new PriceIntelligenceService(catalogRepo));
 
     const result = await composer.composeForProducts([{ productId: "p1", priceUSD: 50 }]);
-    expect(result.get("p1")).toEqual({ productId: "p1", belowAveragePrice: false, isBestDeal: false });
+    expect(result.get("p1")).toEqual({ productId: "p1", belowAveragePrice: false, isBestDeal: false, savingsVsMedianPercent: 0 });
   });
 
   it("marks belowAveragePrice=true and isBestDeal=true when the given price is the group's lowest and well under the median", async () => {
@@ -56,9 +56,9 @@ describe("SearchIntelligenceComposer", () => {
 
     // Median/lowest of [100, 100] is 100; 50 is well under 90% of that and
     // <= the group's lowest, so both signals fire from the same statistics
-    // call — no second query for isBestDeal.
+    // call — no second query for isBestDeal. savingsVsMedianPercent = (100-50)/100 * 100 = 50.
     const result = await composer.composeForProducts([{ productId: "p1", priceUSD: 50 }]);
-    expect(result.get("p1")).toEqual({ productId: "p1", belowAveragePrice: true, isBestDeal: true });
+    expect(result.get("p1")).toEqual({ productId: "p1", belowAveragePrice: true, isBestDeal: true, savingsVsMedianPercent: 50 });
   });
 
   it("marks isBestDeal=false when this price is not the group's lowest, even if canonical-linked", async () => {

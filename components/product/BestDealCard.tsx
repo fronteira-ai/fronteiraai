@@ -36,8 +36,10 @@ export default function BestDealCard({ bestDeal, storeName, price, savings, comp
   return (
     <div className="rounded-3xl border border-blue-500/30 bg-blue-500/5 p-6">
       <div className="flex items-center gap-2">
-        <span className="text-2xl" aria-hidden>🏆</span>
-        <h3 className="text-lg font-bold text-white">Melhor compra agora</h3>
+        <span className="text-2xl" aria-hidden>{offer.inStock ? "🏆" : "📦"}</span>
+        <h3 className="text-lg font-bold text-white">
+          {offer.inStock ? "Melhor compra agora" : "Melhor oferta encontrada — sem estoque"}
+        </h3>
       </div>
 
       <div className="mt-4 flex flex-wrap items-baseline gap-3">

@@ -27,7 +27,7 @@ import { SupabaseAnalyticsEventRepository } from "@/src/domains/merchant-analyti
 // inline at each route today, e.g. app/api/trust/merchant/[merchantId]/
 // signals/route.ts) — mirrored here rather than introducing one repo-wide.
 export function createBuyerIntelligenceServices(client: SupabaseClient) {
-  const { catalogRepo, compareFoundationService } = createCanonicalCatalogServices(client);
+  const { catalogRepo, compareFoundationService, marketplaceMemoryService } = createCanonicalCatalogServices(client);
   const { priceIntelligenceService, volatilityRollupService } = createMarketInsightsServices(client);
   const { freshnessService } = createRealtimeCommerceServices(client);
   const { rateService, historyService } = createExchangeServices(client);
@@ -60,7 +60,7 @@ export function createBuyerIntelligenceServices(client: SupabaseClient) {
     merchantStoreLinkRepo,
     badgeService
   );
-  const productComposer = new ProductIntelligenceComposer(catalogRepo, comparisonComposer);
+  const productComposer = new ProductIntelligenceComposer(catalogRepo, comparisonComposer, marketplaceMemoryService);
   const searchComposer = new SearchIntelligenceComposer(catalogRepo, priceIntelligenceService);
   const bestDealComposer = new BestDealComposer(rateService);
   const purchaseTimingComposer = new PurchaseTimingComposer(volatilityRollupService, historyService);

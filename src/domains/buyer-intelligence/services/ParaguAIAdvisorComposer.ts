@@ -55,6 +55,11 @@ function decideRecommendation(
   conflicts: AdvisorConflict[]
 ): AdvisorRecommendation {
   if (!bestDeal) return "insufficient_data";
+  // A recommended offer that isn't in stock can never be "buy now" or
+  // "good deal, buy with caution" — those headlines both tell the buyer to
+  // purchase this exact listing, which isn't possible. Checked before
+  // conflicts/timing because it overrides both, not just price/trust tension.
+  if (!bestDeal.recommendedOffer.offer.inStock) return "unavailable";
   if (conflicts.length > 0) return "good_deal_caution";
   if (purchaseTiming?.verdict === "better_wait") return "wait";
   return "buy_now";
@@ -68,6 +73,8 @@ function buildHeadline(recommendation: AdvisorRecommendation): string {
       return "Preço vantajoso, com ressalvas — leia os detalhes";
     case "wait":
       return "Vale esperar antes de comprar";
+    case "unavailable":
+      return "Esta oferta está sem estoque no momento";
     case "insufficient_data":
       return "Ainda não há inteligência suficiente vinculada a este produto";
   }
@@ -82,7 +89,8 @@ function buildSummaryLines(
 ): AdvisorSummaryLine[] {
   const lines: AdvisorSummaryLine[] = [];
 
-  lines.push({ icon: "🏆", label: "Recomendação", value: buildHeadline(recommendation) });
+  const headlineIcon = recommendation === "unavailable" ? "📦" : "🏆";
+  lines.push({ icon: headlineIcon, label: "Recomendação", value: buildHeadline(recommendation) });
 
   if (bestDeal?.savingsOpportunity && bestDeal.savingsOpportunity.maxSavingsUSD > 0) {
     lines.push({

@@ -69,16 +69,28 @@ export async function getProductBySlug(
   return data as ProductWithRelations;
 }
 
+// Mission 03 (Decision Engine) — related products must never rank a
+// same-category, wildly-different-price-tier product above a same-brand,
+// same-tier one just because both happen to share a category. Takes the
+// reference Product itself (not loose ids) because ranking needs its brand
+// and its price, not only its category.
+//
+// Brand is the primary sort key and price proximity the secondary one: a
+// same-brand candidate always outranks a different-brand one, however close
+// the latter's price happens to be. Price distance only ever sorts a
+// candidate lower — it never excludes one (see the third case in
+// services/__tests__/product.service.test.ts).
 export async function getRelatedProducts(
-  categoryId: string,
-  excludeProductId: string,
+  product: Product,
   limit = 4
 ): Promise<Product[]> {
+  if (!product.category_id) return [];
+
   const { data, error } = await supabase
     .from("products")
     .select("*")
-    .eq("category_id", categoryId)
-    .neq("id", excludeProductId)
+    .eq("category_id", product.category_id)
+    .neq("id", product.id)
     .limit(limit);
 
   if (error) {
@@ -86,7 +98,52 @@ export async function getRelatedProducts(
     return [];
   }
 
-  return data as Product[];
+  const candidates = (data ?? []) as Product[];
+  if (candidates.length === 0) return [];
+
+  // Prices live on the offer, never on the product (DOMAIN_MODEL.md), so the
+  // reference price and every candidate price come from one batched read —
+  // never one query per candidate.
+  const { data: offerRows, error: offerError } = await supabase
+    .from("offers")
+    .select("product_id, price_usd")
+    .in("product_id", [product.id, ...candidates.map((candidate) => candidate.id)]);
+
+  if (offerError) {
+    console.error(offerError);
+  }
+
+  const lowestPriceByProductId = new Map<string, number>();
+  for (const row of (offerRows ?? []) as { product_id: string; price_usd: number }[]) {
+    if (typeof row.price_usd !== "number") continue;
+    const current = lowestPriceByProductId.get(row.product_id);
+    if (current === undefined || row.price_usd < current) {
+      lowestPriceByProductId.set(row.product_id, row.price_usd);
+    }
+  }
+
+  const referencePrice = lowestPriceByProductId.get(product.id);
+
+  // Infinity for anything unpriceable — sorts last, is never dropped.
+  function priceDistance(candidate: Product): number {
+    const candidatePrice = lowestPriceByProductId.get(candidate.id);
+    if (referencePrice === undefined || referencePrice <= 0 || candidatePrice === undefined) {
+      return Number.POSITIVE_INFINITY;
+    }
+    return Math.abs(candidatePrice - referencePrice) / referencePrice;
+  }
+
+  return [...candidates].sort((a, b) => {
+    const aSameBrand = a.brand_id === product.brand_id;
+    const bSameBrand = b.brand_id === product.brand_id;
+    if (aSameBrand !== bSameBrand) return aSameBrand ? -1 : 1;
+
+    const aDistance = priceDistance(a);
+    const bDistance = priceDistance(b);
+    // Equality guard keeps Infinity - Infinity (NaN) out of the comparator.
+    if (aDistance === bDistance) return 0;
+    return aDistance - bDistance;
+  });
 }
 
 export async function searchProducts(search: string) {
