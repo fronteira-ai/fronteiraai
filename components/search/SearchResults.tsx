@@ -6,6 +6,7 @@ import Chip from "@/components/ui/Chip";
 import EmptyState from "@/components/ui/EmptyState";
 import { SearchResponse } from "@/types/search";
 import type { SearchIntelligenceBadge, CompactTrustBadge } from "@/src/domains/buyer-intelligence";
+import type { MoneyPresentation } from "@/src/domains/exchange";
 
 type Props = {
   results: SearchResponse;
@@ -13,6 +14,13 @@ type Props = {
   /** Release 2.0 — Wave 4 (Trust Experience) — keyed by store id
    * (product.lowestPriceStoreId), not product id. */
   trustBadges?: Map<string, CompactTrustBadge>;
+  /** Mission Ω-LAUNCH Fase 1 (item 3 — preço em US$ e R$). The page already
+   * resolves this map (app/search/_cache.ts) and passes it down. Accepted
+   * here so the contract between page and component is honest, but not yet
+   * rendered: showing the BRL price in the results grid is a product change,
+   * not a bug fix, and is deliberately out of scope for the green-baseline
+   * recovery. Wiring it into ProductCard is the follow-up. */
+  moneyByProductId?: Map<string, MoneyPresentation>;
 };
 
 export default function SearchResults({ results, belowAveragePriceBadges, trustBadges }: Props) {

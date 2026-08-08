@@ -8,7 +8,7 @@ import SearchResultsSkeleton from "@/components/search/SearchResultsSkeleton";
 import SearchViewTracker from "@/components/search/SearchViewTracker";
 import { searchEverything } from "@/services/search.service";
 import { searchUrl } from "@/constants/routes";
-import { getCachedSearchIntelligenceBadges, getCachedSearchTrustBadges } from "./_cache";
+import { getCachedSearchIntelligenceBadges, getCachedSearchTrustBadges, getCachedSearchMoneyPresentation } from "./_cache";
 
 type SearchParams = Promise<{ q?: string | string[] }>;
 
@@ -60,11 +60,19 @@ export async function generateMetadata({
 
 async function SearchResultsAsync({ query }: { query: string }) {
   const results = await getCachedSearch(query);
-  const [belowAveragePriceBadges, trustBadges] = await Promise.all([
+  const [belowAveragePriceBadges, trustBadges, moneyByProductId] = await Promise.all([
     getCachedSearchIntelligenceBadges(results.products),
     getCachedSearchTrustBadges(results.products),
+    getCachedSearchMoneyPresentation(results.products),
   ]);
-  return <SearchResults results={results} belowAveragePriceBadges={belowAveragePriceBadges} trustBadges={trustBadges} />;
+  return (
+    <SearchResults
+      results={results}
+      belowAveragePriceBadges={belowAveragePriceBadges}
+      trustBadges={trustBadges}
+      moneyByProductId={moneyByProductId}
+    />
+  );
 }
 
 export default async function SearchPage({
