@@ -4,6 +4,7 @@ import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { formatUSD } from "@/src/domains/exchange";
 import { discountPercentage } from "@/utils/currency";
+import { resolveProductImage } from "@/utils/image";
 import { productPath } from "@/constants/routes";
 import { animations } from "@/styles/animations";
 
@@ -44,6 +45,7 @@ function ProductCard({
     originalPriceUSD && priceUSD
       ? discountPercentage(originalPriceUSD, priceUSD)
       : 0;
+  const realImageUrl = resolveProductImage(imageUrl);
 
   return (
     <Link
@@ -51,9 +53,9 @@ function ProductCard({
       className={`group flex flex-col overflow-hidden rounded-3xl border border-slate-800 bg-slate-900/60 ${animations.cardHover}`}
     >
       <div className="relative flex aspect-square w-full items-center justify-center overflow-hidden bg-slate-950">
-        {imageUrl ? (
+        {realImageUrl ? (
           <Image
-            src={imageUrl}
+            src={realImageUrl}
             alt={name}
             fill
             sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"

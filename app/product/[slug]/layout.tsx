@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { productUrl } from "@/constants/routes";
+import { resolveProductImage } from "@/utils/image";
 import { getCachedProduct, getCachedOffers } from "./_cache";
 
 type Params = Promise<{ slug: string }>;
@@ -29,7 +30,8 @@ export async function generateMetadata({
     : `Compare o preço de ${product.name} em várias lojas do Paraguai com o ParaguAI.`;
 
   const url = productUrl(product.slug);
-  const images = product.image_url ? [product.image_url] : [];
+  const realImageUrl = resolveProductImage(product.image_url);
+  const images = realImageUrl ? [realImageUrl] : [];
 
   return {
     title,
@@ -64,6 +66,7 @@ export default async function ProductLayout({
   const { slug } = await params;
   const product = await getCachedProduct(slug);
   const offers = product ? await getCachedOffers(product.id) : [];
+  const realImageUrl = product ? resolveProductImage(product.image_url) : null;
 
   const jsonLd = product
     ? {
@@ -71,7 +74,7 @@ export default async function ProductLayout({
         "@type": "Product",
         name: product.name,
         description: product.description,
-        image: product.image_url ? [product.image_url] : undefined,
+        image: realImageUrl ? [realImageUrl] : undefined,
         brand: product.brand
           ? { "@type": "Brand", name: product.brand.name }
           : undefined,

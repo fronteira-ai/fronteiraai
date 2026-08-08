@@ -2,14 +2,16 @@
 
 import { memo, useState } from "react";
 import Image from "next/image";
+import { isRealProductImage } from "@/utils/image";
 
 type Props = {
   images: string[];
   alt: string;
 };
 
-function ProductGallery({ images, alt }: Props) {
+function ProductGallery({ images: rawImages, alt }: Props) {
   const [active, setActive] = useState(0);
+  const images = rawImages.filter(isRealProductImage);
 
   if (images.length === 0) {
     return (
