@@ -43,3 +43,13 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Cópia órfã da primeira versão do projeto, com .git próprio. Preservada em
+# disco deliberadamente (histórico) e já excluída de tsconfig.json e
+# eslint.config.mjs — nunca deve entrar neste repositório.
+/fronteiraai-web/
+
+# Artefatos de ferramentas de agente (estado local, não código do projeto)
+/.reasonix/
+/reasonix.toml
+/memory/
