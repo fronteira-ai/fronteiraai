@@ -43,6 +43,10 @@ export default async function sitemap({
         { url: `${SITE_URL}/lojas`, lastModified: now, changeFrequency: "daily", priority: 0.9 },
         { url: `${SITE_URL}/para-lojistas`, lastModified: now, changeFrequency: "weekly", priority: 0.8 },
         { url: `${SITE_URL}/search`, lastModified: now, changeFrequency: "weekly", priority: 0.7 },
+        // Sprint 2 — Legal. Páginas estáticas, mudam raramente, mas precisam
+        // ser indexáveis: são o documento público de privacidade e de termos.
+        { url: `${SITE_URL}/privacidade`, lastModified: now, changeFrequency: "yearly", priority: 0.3 },
+        { url: `${SITE_URL}/termos`, lastModified: now, changeFrequency: "yearly", priority: 0.3 },
       ];
 
     case "lojas": {
