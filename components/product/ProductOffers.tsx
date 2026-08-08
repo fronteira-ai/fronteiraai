@@ -1,6 +1,7 @@
 import { memo } from "react";
 import { OfferWithStore } from "@/types/offer";
 import { formatUSD, formatBRL } from "@/src/domains/exchange";
+import { formatOfferCondition } from "@/utils/offerPresentation";
 
 type Props = {
   offers: OfferWithStore[];
@@ -42,8 +43,18 @@ function ProductOffers({ offers }: Props) {
                         : "rounded-full bg-red-500/20 px-3 py-1 text-red-300"
                     }
                   >
-                    {offer.in_stock ? "Em estoque" : "Sem estoque"}
+                    {offer.in_stock
+                      ? offer.stock_quantity !== null
+                        ? `Em estoque (${offer.stock_quantity})`
+                        : "Em estoque"
+                      : "Sem estoque"}
                   </span>
+
+                  {formatOfferCondition(offer.condition) ? (
+                    <span className="rounded-full border border-slate-700 px-3 py-1 text-slate-300">
+                      {formatOfferCondition(offer.condition)}
+                    </span>
+                  ) : null}
 
                   {offer.warranty ? (
                     <span className="rounded-full border border-slate-700 px-3 py-1 text-slate-300">
@@ -67,7 +78,7 @@ function ProductOffers({ offers }: Props) {
                 </p>
 
                 <p className="text-sm text-slate-400">
-                  {formatBRL(offer.price_brl)}
+                  {offer.price_brl > 0 ? formatBRL(offer.price_brl) : null}
                 </p>
 
                 {offer.product_url ? (
