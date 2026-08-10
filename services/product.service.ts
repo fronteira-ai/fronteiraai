@@ -232,6 +232,16 @@ type CatalogOfferRow = {
 
 type CatalogProductRow = ProductWithRelations & { offers: CatalogOfferRow[] };
 
+// Forma mínima do query builder do supabase-js que `applyOfferFilters`
+// precisa. Estrutural em vez de importar PostgrestFilterBuilder: os dois
+// builders usados (com e sem `count`) têm genéricos diferentes, e só estes
+// três métodos são chamados.
+interface OfferFilterable<T> {
+  eq(column: string, value: string | number | boolean): T;
+  gte(column: string, value: string | number): T;
+  lte(column: string, value: string | number): T;
+}
+
 // Catálogo de produtos (/products): combina os filtros de category/brand/
 // search (colunas nativas de "products") com os de store/availability/price
 // (colunas de "offers", já que preço/estoque pertencem à oferta, não ao
@@ -256,6 +266,129 @@ export async function getProductsCatalog(
   const needsOfferFilter = Boolean(store) || Boolean(filters.onlyInStock) || hasPriceFilter;
   const offersEmbed = needsOfferFilter ? "offers!inner" : "offers!left";
 
+  const from = (page - 1) * perPage;
+
+  // Sprint 7B (P2-1): os filtros de nível de oferta ficam num único lugar,
+  // aplicados igualmente à consulta padrão e à consulta da página ordenada
+  // por preço. Se divergissem, `lowestPriceUSD` mudaria conforme o `sort` —
+  // exatamente o tipo de inconsistência que a Sprint 5 acabou de fechar.
+  const applyOfferFilters = <T extends OfferFilterable<T>>(q: T): T => {
+    let out = q;
+    // `available=false` (arquivada) nunca forma preço — ver bloco original
+    // abaixo e ADR-008. Não é filtro opcional: é a definição de oferta ativa.
+    out = out.eq("offers.available", true);
+    if (store) out = out.eq("offers.store_id", store.id);
+    if (filters.onlyInStock) out = out.eq("offers.in_stock", true);
+    if (filters.minPriceUSD !== undefined) out = out.gte("offers.price_usd", filters.minPriceUSD);
+    if (filters.maxPriceUSD !== undefined) out = out.lte("offers.price_usd", filters.maxPriceUSD);
+    return out;
+  };
+
+  const mapRows = (rows: CatalogProductRow[]): ProductCatalogItem[] =>
+    rows.map((row) => {
+      const { offers, ...product } = row;
+      const prices = (offers ?? [])
+        .map((offer) => offer.price_usd)
+        .filter((price): price is number => typeof price === "number");
+      return {
+        ...product,
+        lowestPriceUSD: prices.length > 0 ? Math.min(...prices) : null,
+        inStock: (offers ?? []).some((offer) => offer.in_stock),
+      };
+    });
+
+  // ── Ordenação GLOBAL por preço (P2-1) ────────────────────────────────────
+  // "Preço do produto" é MIN(offers.price_usd) — uma agregação. O PostgREST
+  // recusa ordenar por agregação de relação to-many (PGRST118/PGRST123,
+  // verificado), então a ordem+paginação vão para a RPC
+  // `search_products_catalog` (migration 20260809120000), que filtra ->
+  // agrega -> ordena -> pagina nessa ordem, no banco. Antes, o `.range()`
+  // paginava por `created_at` e o preço só reordenava os 12 itens já
+  // buscados: o menor preço do catálogo caía na página 2 (ADR-011).
+  //
+  // A RPC devolve apenas os ids da página, já ordenados, mais o total. As
+  // linhas completas vêm da MESMA consulta embutida de sempre, com os MESMOS
+  // filtros — então `lowestPriceUSD`/`inStock` continuam sendo calculados
+  // pelo mesmo caminho, sem uma segunda definição de preço a manter.
+  if (filters.sort === "price_asc" || filters.sort === "price_desc") {
+    const rpcArgs = {
+      p_category_id: category?.id ?? null,
+      p_brand_id: brand?.id ?? null,
+      p_store_id: store?.id ?? null,
+      p_search: filters.search?.trim() ? escapeLikePattern(filters.search.trim()) : null,
+      p_only_in_stock: filters.onlyInStock ?? false,
+      p_min_price: filters.minPriceUSD ?? null,
+      p_max_price: filters.maxPriceUSD ?? null,
+      p_sort: filters.sort,
+      p_limit: perPage,
+      p_offset: from,
+    };
+
+    const { data: ranked, error: rpcError } = await supabase.rpc(
+      "search_products_catalog",
+      rpcArgs
+    );
+
+    if (rpcError) {
+      console.error(rpcError);
+      return { products: [], total: 0, page, perPage, totalPages: 0 };
+    }
+
+    const rankedRows = (ranked ?? []) as { product_id: string; total_count: number }[];
+
+    // Página além do total: o PostgREST devolvia 0 linhas mas mantinha o
+    // `count` exato, então a UI seguia mostrando "N produtos encontrados".
+    // A RPC não tem linhas para carregar o total nesse caso — uma segunda
+    // chamada barata (1 linha) preserva o comportamento anterior.
+    if (rankedRows.length === 0) {
+      const { data: probe } = await supabase.rpc("search_products_catalog", {
+        ...rpcArgs,
+        p_limit: 1,
+        p_offset: 0,
+      });
+      const total = ((probe ?? []) as { total_count: number }[])[0]?.total_count ?? 0;
+      return {
+        products: [],
+        total,
+        page,
+        perPage,
+        totalPages: Math.max(1, Math.ceil(total / perPage)),
+      };
+    }
+
+    const orderedIds = rankedRows.map((row) => row.product_id);
+    const total = Number(rankedRows[0].total_count);
+
+    let pageQuery = supabase
+      .from("products")
+      .select(`*, brand:brands(*), category:categories(*), offers!left(price_usd, in_stock)`)
+      .in("id", orderedIds);
+    pageQuery = applyOfferFilters(pageQuery);
+
+    const { data: pageRows, error: pageError } = await pageQuery;
+
+    if (pageError) {
+      console.error(pageError);
+      return { products: [], total: 0, page, perPage, totalPages: 0 };
+    }
+
+    // `.in()` não preserva ordem; reordena os <=12 itens da página conforme a
+    // ordem que o banco já decidiu. Isto não é ordenar o catálogo em
+    // JavaScript — a ordenação global aconteceu no ORDER BY da RPC.
+    const byId = new Map(mapRows((pageRows ?? []) as unknown as CatalogProductRow[]).map((p) => [p.id, p]));
+    const products = orderedIds
+      .map((id) => byId.get(id))
+      .filter((p): p is ProductCatalogItem => p !== undefined);
+
+    return {
+      products,
+      total,
+      page,
+      perPage,
+      totalPages: Math.max(1, Math.ceil(total / perPage)),
+    };
+  }
+
   let query = supabase
     .from("products")
     .select(
@@ -268,26 +401,18 @@ export async function getProductsCatalog(
   if (filters.search?.trim()) {
     query = query.ilike("name", `%${escapeLikePattern(filters.search.trim())}%`);
   }
-  if (store) query = query.eq("offers.store_id", store.id);
-  if (filters.onlyInStock) query = query.eq("offers.in_stock", true);
-  if (filters.minPriceUSD !== undefined) {
-    query = query.gte("offers.price_usd", filters.minPriceUSD);
-  }
-  if (filters.maxPriceUSD !== undefined) {
-    query = query.lte("offers.price_usd", filters.maxPriceUSD);
-  }
+  // Sprint 5 (P2-2): oferta arquivada (`available=false`) nunca pode formar o
+  // preço anunciado no catálogo — ver `applyOfferFilters` acima, hoje o único
+  // lugar onde esses filtros vivem, compartilhado com o caminho da RPC.
+  query = applyOfferFilters(query);
 
-  // Ordenação por preço é uma agregação (MIN das ofertas) que o PostgREST
-  // não resolve nativamente sem uma view/RPC dedicada (proposta em
-  // database/migrations/0003_proposed_product_catalog_price_view.sql, não
-  // aplicada — ver docs/operations/DECISIONS.md ADR-011). "best_selling"/"top_rated"
-  // ainda não têm coluna de apoio (estrutura preparada, conforme missão) —
-  // todos esses casos usam "created_at" como base e price_asc/price_desc é
-  // corrigido depois, reordenando a página já buscada (best effort: correto
-  // dentro da página exibida, não garante ordem global entre páginas).
+  // Caminho padrão (`newest`, `relevance`, `best_selling`, `top_rated`):
+  // inalterado. "best_selling"/"top_rated" ainda não têm coluna de apoio
+  // (estrutura preparada, conforme missão) e continuam caindo em
+  // `created_at`. `price_asc`/`price_desc` nunca chegam aqui — saem antes,
+  // pela RPC, que é o que os torna globalmente ordenados (P2-1/ADR-011).
   query = query.order("created_at", { ascending: false });
 
-  const from = (page - 1) * perPage;
   const to = from + perPage - 1;
   query = query.range(from, to);
 
@@ -298,30 +423,12 @@ export async function getProductsCatalog(
     return { products: [], total: 0, page, perPage, totalPages: 0 };
   }
 
-  const rows = (data ?? []) as unknown as CatalogProductRow[];
+  const products = mapRows((data ?? []) as unknown as CatalogProductRow[]);
 
-  let products: ProductCatalogItem[] = rows.map((row) => {
-    const { offers, ...product } = row;
-    const prices = (offers ?? [])
-      .map((offer) => offer.price_usd)
-      .filter((price): price is number => typeof price === "number");
-
-    return {
-      ...product,
-      lowestPriceUSD: prices.length > 0 ? Math.min(...prices) : null,
-      inStock: (offers ?? []).some((offer) => offer.in_stock),
-    };
-  });
-
-  if (filters.sort === "price_asc" || filters.sort === "price_desc") {
-    const direction = filters.sort === "price_asc" ? 1 : -1;
-    products = [...products].sort((a, b) => {
-      if (a.lowestPriceUSD === null && b.lowestPriceUSD === null) return 0;
-      if (a.lowestPriceUSD === null) return 1;
-      if (b.lowestPriceUSD === null) return -1;
-      return (a.lowestPriceUSD - b.lowestPriceUSD) * direction;
-    });
-  }
+  // Sprint 7B (P2-1): o reordenamento em JavaScript que existia aqui foi
+  // removido, não substituído. Ele só conseguia ordenar os 12 itens que o
+  // `.range()` já havia trazido — era a causa raiz do P2-1. Ordenação por
+  // preço agora sai pela RPC, acima, e nunca alcança este ponto.
 
   const total = count ?? 0;
 
