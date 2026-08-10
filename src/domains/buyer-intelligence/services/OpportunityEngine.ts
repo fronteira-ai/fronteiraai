@@ -1,5 +1,9 @@
 import type { ICanonicalCatalogRepository, CanonicalProduct, CanonicalOfferView } from "@/src/domains/canonical-catalog";
 import type { PriceIntelligenceService, SavingsOpportunity } from "@/src/domains/market-insights";
+// Sprint 8D (P2-4): a função PURA que `PriceIntelligenceService.getSavingsOpportunity`
+// já usava internamente. Importá-la é reutilizar a fórmula, não duplicá-la —
+// market-insights permanece intocado.
+import { computeSavingsOpportunity } from "@/src/domains/market-insights";
 import type { FreshnessService } from "@/src/domains/realtime-commerce";
 import { FreshnessClass } from "@/src/domains/realtime-commerce";
 import type { IMerchantStoreLinkRepository } from "@/src/domains/merchant-ownership/repositories/IMerchantStoreLinkRepository";
@@ -41,10 +45,21 @@ import type { Opportunity } from "../types/buyer-intelligence.types";
 // app/product/[slug]/_cache.ts's getProductBestDeal para o nome da loja.
 
 const CANDIDATE_SAMPLE = 50;
-// Sprint 8B (P2-4): teto de ofertas lidas por candidato. Extraído do literal
-// `{ limit: 50 }` que estava inline em evaluateCandidate — mesmo valor, agora
-// nomeado porque o lote precisa aplicá-lo por produto.
+// Sprint 8B (P2-4): teto de ofertas consideradas na busca da oferta vencedora
+// (`offers.find` em evaluateCandidate). Extraído do literal `{ limit: 50 }`
+// que estava inline naquele método — mesmo valor de sempre.
 const OFFER_LOOKUP_LIMIT = 50;
+// Sprint 8D (P2-4): teto do LOTE. Espelha `OFFER_FETCH_LIMIT = 500` de
+// PriceIntelligenceService, porque agora é o lote que alimenta o cálculo de
+// economia — antes feito por `getSavingsOpportunity`, que lia com 500.
+//
+// Os dois limites coexistem de propósito, e é isso que preserva a semântica
+// anterior exatamente: o caminho antigo emitia DUAS leituras com limites
+// diferentes (500 para a economia, 50 para a oferta vencedora). O lote busca
+// com 500 e o `.slice(0, OFFER_LOOKUP_LIMIT)` reproduz a segunda. Unificar os
+// dois num número só teria mudado resultado — exatamente o que a Sprint 8B
+// recusou fazer ao descartar a "opção A" de subir 50 para 500 às cegas.
+const SAVINGS_OFFER_FETCH_LIMIT = 500;
 /** Piso de economia — mesma disciplina de limiar documentado (não um score)
  * já usada em toda a Release 2.0 (ex.: banda de 10% do Best Deal, banda de
  * 2% do Purchase Timing). Calibrável em uma futura revisão, não uma
@@ -63,6 +78,11 @@ interface Candidate {
 export class OpportunityEngine {
   constructor(
     private readonly catalogRepo: ICanonicalCatalogRepository,
+    /** Sprint 8D (P2-4): deixou de ser chamado — a economia passou a sair de
+     * `computeSavingsOpportunity` sobre as ofertas já lidas em lote. Mantido
+     * no construtor de propósito: removê-lo exigiria alterar
+     * `lib/buyer-intelligence-factory.ts`, fora do escopo desta Sprint. Fica
+     * registrado como limpeza pendente, não como esquecimento. */
     private readonly priceIntelligenceService: PriceIntelligenceService,
     private readonly freshnessService: FreshnessService,
     private readonly merchantStoreLinkRepo: IMerchantStoreLinkRepository,
@@ -83,7 +103,7 @@ export class OpportunityEngine {
     // acontecem, nunca quais ofertas são consideradas.
     const offersByCanonicalId = await this.catalogRepo.findOffersByCanonicalProductIds(
       canonicalProducts.map((p) => p.id),
-      OFFER_LOOKUP_LIMIT
+      SAVINGS_OFFER_FETCH_LIMIT
     );
 
     const candidateResults = await Promise.allSettled(
@@ -119,10 +139,26 @@ export class OpportunityEngine {
      * Antes este método fazia a própria consulta, uma por candidato. */
     offers: CanonicalOfferView[]
   ): Promise<Candidate | null> {
-    const savings = await this.priceIntelligenceService.getSavingsOpportunity(product.id).catch((err) => {
-      console.error("[OpportunityEngine.evaluateCandidate] getSavingsOpportunity failed", product.id, err);
-      return null;
-    });
+    // Sprint 8D (P2-4): a economia é calculada a partir das ofertas que o
+    // lote já trouxe, em vez de `priceIntelligenceService.getSavingsOpportunity`,
+    // que emitia UMA consulta por candidato (50 das 61 consultas a `offers`
+    // de um render — medido na Sprint 8C).
+    //
+    // A fórmula NÃO foi copiada: `computeSavingsOpportunity` é a mesma função
+    // pura que o serviço usa internamente, importada de market-insights.
+    // Continua sendo a única fonte da fórmula.
+    //
+    // O preparo dos dados replica `PriceIntelligenceService.fetchOfferPrices`
+    // linha a linha: filtra `inStock` (oferta esgotada não forma preço) e
+    // projeta {storeId, storeSlug, priceUSD}. `available` continua sem
+    // participar aqui — nem antes nem agora (resíduo já registrado na
+    // Sprint 8C, deliberadamente fora do escopo desta).
+    const savings = computeSavingsOpportunity(
+      product.id,
+      offers
+        .filter((o) => o.inStock)
+        .map((o) => ({ storeId: o.storeId, storeSlug: o.storeSlug, priceUSD: o.priceUSD }))
+    );
     if (!savings) return null;
 
     // Objetivo 4/6: economia absoluta alta e economia percentual alta são
@@ -132,7 +168,13 @@ export class OpportunityEngine {
     // pequenos, e vice-versa (ver Exemplo B, OPPORTUNITY_ENGINE_ARCHITECTURE.md §4).
     if (savings.maxSavingsUSD < MIN_SAVINGS_USD && savings.maxSavingsPercent < MIN_SAVINGS_PERCENT) return null;
 
-    const winningOffer = offers.find((o) => o.storeId === savings.cheapestStoreId);
+    // Sprint 8D: `.slice(0, OFFER_LOOKUP_LIMIT)` reproduz a segunda leitura do
+    // caminho antigo (`findOffersByCanonicalProductId(id, { limit: 50 })`).
+    // Sem ele, a busca pela oferta vencedora passaria a enxergar até 500
+    // ofertas onde antes via 50 — mudança de resultado, não de transporte.
+    const winningOffer = offers
+      .slice(0, OFFER_LOOKUP_LIMIT)
+      .find((o) => o.storeId === savings.cheapestStoreId);
     if (!winningOffer) return null;
     if (!winningOffer.inStock) return null;
 

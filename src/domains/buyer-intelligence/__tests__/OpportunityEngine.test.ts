@@ -60,6 +60,51 @@ function makeSavings(overrides: Partial<SavingsOpportunity> = {}): SavingsOpport
   };
 }
 
+/**
+ * Sprint 8D (P2-4). O motor passou a derivar a economia das PRÓPRIAS ofertas
+ * (`computeSavingsOpportunity`, a mesma função pura que
+ * `PriceIntelligenceService.getSavingsOpportunity` já usava por dentro), em
+ * vez de pedir um `SavingsOpportunity` pronto ao serviço — que custava uma
+ * consulta por candidato.
+ *
+ * Consequência para estes fixtures: antes dava para injetar uma economia
+ * que NÃO correspondia às ofertas do mesmo canonical (o padrão declarava
+ * "store-1 a $90 vs store-2 a $120" enquanto `offersByProductId` continha
+ * uma única oferta de $100). Produção nunca teve essa liberdade — lá as duas
+ * pontas sempre saíram das mesmas ofertas. Este helper devolve as duas
+ * pontas de preço que produzem exatamente a economia declarada, derivando os
+ * valores de (maxSavingsUSD, maxSavingsPercent) em vez de exigir aritmética
+ * à mão em cada caso. A intenção de cada teste segue declarativa.
+ */
+function offersForSavings(
+  savings: SavingsOpportunity,
+  winningOverrides: Partial<CanonicalOfferView> = {}
+): CanonicalOfferView[] {
+  const mostExpensivePriceUSD =
+    savings.maxSavingsPercent > 0
+      ? savings.maxSavingsUSD / (savings.maxSavingsPercent / 100)
+      : savings.mostExpensivePriceUSD;
+  const cheapestPriceUSD = mostExpensivePriceUSD - savings.maxSavingsUSD;
+
+  return [
+    makeOffer({
+      offerId: `${savings.cheapestStoreId}-winning`,
+      productId: `product-${savings.cheapestStoreId}`,
+      storeId: savings.cheapestStoreId,
+      storeSlug: savings.cheapestStoreSlug,
+      priceUSD: cheapestPriceUSD,
+      ...winningOverrides,
+    }),
+    makeOffer({
+      offerId: `${savings.mostExpensiveStoreId}-expensive`,
+      productId: `product-${savings.mostExpensiveStoreId}`,
+      storeId: savings.mostExpensiveStoreId,
+      storeSlug: savings.mostExpensiveStoreSlug,
+      priceUSD: mostExpensivePriceUSD,
+    }),
+  ];
+}
+
 function makeCatalogRepo(products: CanonicalProduct[], offersByProductId: Record<string, CanonicalOfferView[]>): ICanonicalCatalogRepository {
   return {
     findAll: jest.fn().mockResolvedValue({ items: products, total: products.length }),
@@ -154,10 +199,9 @@ function buildEngine(opts: {
 describe("OpportunityEngine", () => {
   it("eliminates a candidate whose winning offer is out of stock, even with a huge percent discount", async () => {
     const product = makeCanonicalProduct();
-    const offer = makeOffer({ inStock: false });
     const engine = buildEngine({
       products: [product],
-      offersByProductId: { "canonical-1": [offer] },
+      offersByProductId: { "canonical-1": offersForSavings(makeSavings({ maxSavingsPercent: 90 }), { inStock: false }) },
       savingsByProductId: { "canonical-1": makeSavings({ maxSavingsPercent: 90 }) },
     });
 
@@ -167,10 +211,9 @@ describe("OpportunityEngine", () => {
 
   it("eliminates a candidate with a stale/old price", async () => {
     const product = makeCanonicalProduct();
-    const offer = makeOffer();
     const engine = buildEngine({
       products: [product],
-      offersByProductId: { "canonical-1": [offer] },
+      offersByProductId: { "canonical-1": offersForSavings(makeSavings()) },
       savingsByProductId: { "canonical-1": makeSavings() },
       freshness: FreshnessClass.Stale,
     });
@@ -183,7 +226,7 @@ describe("OpportunityEngine", () => {
     const bothLow = makeCanonicalProduct();
     const engineBothLow = buildEngine({
       products: [bothLow],
-      offersByProductId: { "canonical-1": [makeOffer()] },
+      offersByProductId: { "canonical-1": offersForSavings(makeSavings({ maxSavingsUSD: 1, maxSavingsPercent: 1 })) },
       savingsByProductId: { "canonical-1": makeSavings({ maxSavingsUSD: 1, maxSavingsPercent: 1 }) },
     });
     expect(await engineBothLow.getTopOpportunities(5)).toHaveLength(0);
@@ -195,7 +238,7 @@ describe("OpportunityEngine", () => {
     const highAbsoluteLowPercent = makeCanonicalProduct({ id: "canonical-2", canonicalSlug: "product-2" });
     const engineHighAbsolute = buildEngine({
       products: [highAbsoluteLowPercent],
-      offersByProductId: { "canonical-2": [makeOffer({ storeId: "store-2" })] },
+      offersByProductId: { "canonical-2": offersForSavings(makeSavings({ cheapestStoreId: "store-2", cheapestStoreSlug: "store-2", mostExpensiveStoreId: "store-2b", mostExpensiveStoreSlug: "store-2b", maxSavingsUSD: 19, maxSavingsPercent: 1.7 })) },
       savingsByProductId: { "canonical-2": makeSavings({ cheapestStoreId: "store-2", maxSavingsUSD: 19, maxSavingsPercent: 1.7 }) },
     });
     expect(await engineHighAbsolute.getTopOpportunities(5)).toHaveLength(1);
@@ -204,7 +247,7 @@ describe("OpportunityEngine", () => {
     const lowAbsoluteHighPercent = makeCanonicalProduct({ id: "canonical-3", canonicalSlug: "product-3" });
     const engineHighPercent = buildEngine({
       products: [lowAbsoluteHighPercent],
-      offersByProductId: { "canonical-3": [makeOffer({ storeId: "store-3" })] },
+      offersByProductId: { "canonical-3": offersForSavings(makeSavings({ cheapestStoreId: "store-3", cheapestStoreSlug: "store-3", mostExpensiveStoreId: "store-3b", mostExpensiveStoreSlug: "store-3b", maxSavingsUSD: 2, maxSavingsPercent: 50 })) },
       savingsByProductId: { "canonical-3": makeSavings({ cheapestStoreId: "store-3", maxSavingsUSD: 2, maxSavingsPercent: 50 }) },
     });
     expect(await engineHighPercent.getTopOpportunities(5)).toHaveLength(1);
@@ -212,10 +255,9 @@ describe("OpportunityEngine", () => {
 
   it("eliminates a candidate whose Purchase Timing verdict is better_wait — a real discount that is not a real opportunity", async () => {
     const product = makeCanonicalProduct();
-    const offer = makeOffer();
     const engine = buildEngine({
       products: [product],
-      offersByProductId: { "canonical-1": [offer] },
+      offersByProductId: { "canonical-1": offersForSavings(makeSavings({ maxSavingsPercent: 40 })) },
       savingsByProductId: { "canonical-1": makeSavings({ maxSavingsPercent: 40 }) },
       verdict: "better_wait",
     });
@@ -228,12 +270,13 @@ describe("OpportunityEngine", () => {
     const bigPercentSmallUSD = makeCanonicalProduct({ id: "canonical-a", canonicalSlug: "product-a", name: "Produto A" });
     const smallPercentBigUSD = makeCanonicalProduct({ id: "canonical-b", canonicalSlug: "product-b", name: "Produto B" });
 
-    const offerA = makeOffer({ offerId: "offer-a", productId: "product-a", storeId: "store-a" });
-    const offerB = makeOffer({ offerId: "offer-b", productId: "product-b", storeId: "store-b" });
 
     const engine = buildEngine({
       products: [bigPercentSmallUSD, smallPercentBigUSD],
-      offersByProductId: { "canonical-a": [offerA], "canonical-b": [offerB] },
+      offersByProductId: {
+        "canonical-a": offersForSavings(makeSavings({ cheapestStoreId: "store-a", cheapestStoreSlug: "store-a", mostExpensiveStoreId: "store-a-exp", mostExpensiveStoreSlug: "store-a-exp", maxSavingsUSD: 5, maxSavingsPercent: 90 })),
+        "canonical-b": offersForSavings(makeSavings({ cheapestStoreId: "store-b", cheapestStoreSlug: "store-b", mostExpensiveStoreId: "store-b-exp", mostExpensiveStoreSlug: "store-b-exp", maxSavingsUSD: 500, maxSavingsPercent: 15 })),
+      },
       savingsByProductId: {
         "canonical-a": makeSavings({ cheapestStoreId: "store-a", maxSavingsUSD: 5, maxSavingsPercent: 90 }),
         "canonical-b": makeSavings({ cheapestStoreId: "store-b", maxSavingsUSD: 500, maxSavingsPercent: 15 }),
@@ -249,12 +292,13 @@ describe("OpportunityEngine", () => {
     const productA = makeCanonicalProduct({ id: "canonical-a", canonicalSlug: "product-a", name: "Produto A" });
     const productB = makeCanonicalProduct({ id: "canonical-b", canonicalSlug: "product-b", name: "Produto B" });
 
-    const offerA = makeOffer({ offerId: "offer-a", productId: "product-a", storeId: "store-a" });
-    const offerB = makeOffer({ offerId: "offer-b", productId: "product-b", storeId: "store-b" });
 
     const engine = buildEngine({
       products: [productA, productB],
-      offersByProductId: { "canonical-a": [offerA], "canonical-b": [offerB] },
+      offersByProductId: {
+        "canonical-a": offersForSavings(makeSavings({ cheapestStoreId: "store-a", cheapestStoreSlug: "store-a", mostExpensiveStoreId: "store-a-exp", mostExpensiveStoreSlug: "store-a-exp", maxSavingsUSD: 100, maxSavingsPercent: 20 })),
+        "canonical-b": offersForSavings(makeSavings({ cheapestStoreId: "store-b", cheapestStoreSlug: "store-b", mostExpensiveStoreId: "store-b-exp", mostExpensiveStoreSlug: "store-b-exp", maxSavingsUSD: 100, maxSavingsPercent: 30 })),
+      },
       savingsByProductId: {
         "canonical-a": makeSavings({ cheapestStoreId: "store-a", maxSavingsUSD: 100, maxSavingsPercent: 20 }),
         "canonical-b": makeSavings({ cheapestStoreId: "store-b", maxSavingsUSD: 100, maxSavingsPercent: 30 }),
@@ -267,10 +311,9 @@ describe("OpportunityEngine", () => {
 
   it("reads isVerifiedStore but never eliminates on it — an unverified store still wins on savings", async () => {
     const product = makeCanonicalProduct();
-    const offer = makeOffer();
     const engine = buildEngine({
       products: [product],
-      offersByProductId: { "canonical-1": [offer] },
+      offersByProductId: { "canonical-1": offersForSavings(makeSavings()) },
       savingsByProductId: { "canonical-1": makeSavings() },
       merchantIdByStoreId: {}, // no merchant linked — isVerifiedStore should be false, not eliminating
     });
@@ -283,20 +326,34 @@ describe("OpportunityEngine", () => {
   it("isolates a per-candidate failure instead of failing the whole batch", async () => {
     const goodProduct = makeCanonicalProduct({ id: "canonical-good", canonicalSlug: "good", name: "Bom" });
     const brokenProduct = makeCanonicalProduct({ id: "canonical-broken", canonicalSlug: "broken", name: "Quebrado" });
-    const goodOffer = makeOffer({ offerId: "offer-good", productId: "product-good", storeId: "store-good" });
-
-    const priceIntelligenceService = {
-      getSavingsOpportunity: jest.fn().mockImplementation(async (id: string) => {
-        if (id === "canonical-broken") throw new Error("boom");
-        return makeSavings({ cheapestStoreId: "store-good" });
+    // Sprint 8D (P2-4): a falha era simulada fazendo
+    // `priceIntelligenceService.getSavingsOpportunity` lançar. O motor não
+    // chama mais esse serviço (a economia sai de `computeSavingsOpportunity`
+    // sobre as ofertas já lidas em lote), então esse mecanismo deixou de
+    // existir. A INTENÇÃO do teste é preservada integralmente — "uma falha
+    // num candidato não derruba o lote" — apenas exercitada por um ponto que
+    // ainda pode rejeitar de verdade: `resolveIsVerified`, único trecho de
+    // `evaluateCandidate` sem `catch` próprio, protegido pelo
+    // `Promise.allSettled` de `getTopOpportunities`.
+    const linkRepo = {
+      findMerchantIdsByStoreIds: jest.fn().mockImplementation(async (storeIds: string[]) => {
+        if (storeIds.includes("store-broken")) throw new Error("boom");
+        return new Map<string, string>();
       }),
-    } as unknown as PriceIntelligenceService;
+    } as unknown as IMerchantStoreLinkRepository;
 
     const engine = new OpportunityEngine(
-      makeCatalogRepo([goodProduct, brokenProduct], { "canonical-good": [goodOffer], "canonical-broken": [] }),
-      priceIntelligenceService,
+      makeCatalogRepo([goodProduct, brokenProduct], {
+        "canonical-good": offersForSavings(
+          makeSavings({ cheapestStoreId: "store-good", cheapestStoreSlug: "store-good", mostExpensiveStoreId: "store-good-exp", mostExpensiveStoreSlug: "store-good-exp" })
+        ),
+        "canonical-broken": offersForSavings(
+          makeSavings({ cheapestStoreId: "store-broken", cheapestStoreSlug: "store-broken", mostExpensiveStoreId: "store-broken-exp", mostExpensiveStoreSlug: "store-broken-exp" })
+        ),
+      }),
+      makePriceIntelligenceService({}),
       makeFreshnessService(),
-      makeLinkRepo(),
+      linkRepo,
       makeBadgeService(),
       makeComparisonComposer(),
       makePurchaseTimingComposer(),
@@ -306,5 +363,114 @@ describe("OpportunityEngine", () => {
     const result = await engine.getTopOpportunities(5);
     expect(result).toHaveLength(1);
     expect(result[0].canonicalProductId).toBe("canonical-good");
+  });
+  // ── Sprint 8D (P2-4) — contrato do lote ───────────────────────────────
+  // A prova de que os resultados não mudaram está na comparação contra o
+  // banco local (50 canonicals, 0 divergências) e nos 8 casos acima, que
+  // seguem passando. O que só um teste unitário garante é que o motor
+  // realmente parou de emitir uma consulta por candidato.
+
+  it("usa o lote e nunca a leitura individual — nem uma consulta por candidato", async () => {
+    const products = Array.from({ length: 5 }, (_, i) =>
+      makeCanonicalProduct({ id: `canonical-${i}`, canonicalSlug: `slug-${i}`, name: `Produto ${i}` })
+    );
+    const offersByProductId: Record<string, CanonicalOfferView[]> = {};
+    for (let i = 0; i < 5; i++) {
+      offersByProductId[`canonical-${i}`] = offersForSavings(
+        makeSavings({ cheapestStoreId: `store-${i}`, cheapestStoreSlug: `store-${i}`, mostExpensiveStoreId: `store-${i}-exp`, mostExpensiveStoreSlug: `store-${i}-exp` })
+      );
+    }
+    const catalogRepo = makeCatalogRepo(products, offersByProductId);
+    const priceIntelligenceService = makePriceIntelligenceService({});
+
+    const engine = new OpportunityEngine(
+      catalogRepo, priceIntelligenceService, makeFreshnessService(), makeLinkRepo(),
+      makeBadgeService(), makeComparisonComposer(), makePurchaseTimingComposer(), makeAnalyticsEventRepository()
+    );
+    await engine.getTopOpportunities(5);
+
+    expect(catalogRepo.findOffersByCanonicalProductIds).toHaveBeenCalledTimes(1);
+    expect(catalogRepo.findOffersByCanonicalProductId).not.toHaveBeenCalled();
+    // A economia deixou de vir do serviço — vem da função pura sobre o lote.
+    expect(priceIntelligenceService.getSavingsOpportunity).not.toHaveBeenCalled();
+  });
+
+  it("pede o lote com os 5 ids de uma vez e com o teto por produto de 500", async () => {
+    const products = Array.from({ length: 5 }, (_, i) =>
+      makeCanonicalProduct({ id: `canonical-${i}`, canonicalSlug: `slug-${i}` })
+    );
+    const catalogRepo = makeCatalogRepo(products, {});
+    const engine = new OpportunityEngine(
+      catalogRepo, makePriceIntelligenceService({}), makeFreshnessService(), makeLinkRepo(),
+      makeBadgeService(), makeComparisonComposer(), makePurchaseTimingComposer(), makeAnalyticsEventRepository()
+    );
+    await engine.getTopOpportunities(5);
+
+    expect(catalogRepo.findOffersByCanonicalProductIds).toHaveBeenCalledWith(
+      ["canonical-0", "canonical-1", "canonical-2", "canonical-3", "canonical-4"],
+      500
+    );
+  });
+
+  it("candidato ausente do lote não fabrica resultado", async () => {
+    const product = makeCanonicalProduct();
+    const engine = buildEngine({ products: [product], offersByProductId: {}, savingsByProductId: {} });
+    expect(await engine.getTopOpportunities(5)).toEqual([]);
+  });
+
+  it("canonical com uma única oferta não gera economia (mínimo de 2 pontas)", async () => {
+    const product = makeCanonicalProduct();
+    const engine = buildEngine({
+      products: [product],
+      offersByProductId: { "canonical-1": [makeOffer({ storeId: "store-1", priceUSD: 100 })] },
+      savingsByProductId: {},
+    });
+    expect(await engine.getTopOpportunities(5)).toEqual([]);
+  });
+
+  it("calcula cheapest/mostExpensive/savings a partir das ofertas do lote, sem contaminar canonicals", async () => {
+    const a = makeCanonicalProduct({ id: "canonical-a", canonicalSlug: "a", name: "A" });
+    const b = makeCanonicalProduct({ id: "canonical-b", canonicalSlug: "b", name: "B" });
+    const engine = buildEngine({
+      products: [a, b],
+      offersByProductId: {
+        "canonical-a": [
+          makeOffer({ offerId: "a1", storeId: "store-a1", storeSlug: "store-a1", priceUSD: 80 }),
+          makeOffer({ offerId: "a2", storeId: "store-a2", storeSlug: "store-a2", priceUSD: 100 }),
+        ],
+        "canonical-b": [
+          makeOffer({ offerId: "b1", storeId: "store-b1", storeSlug: "store-b1", priceUSD: 500 }),
+          makeOffer({ offerId: "b2", storeId: "store-b2", storeSlug: "store-b2", priceUSD: 1000 }),
+        ],
+      },
+      savingsByProductId: {},
+    });
+
+    const result = await engine.getTopOpportunities(5);
+    const byId = new Map(result.map((r) => [r.canonicalProductId, r]));
+
+    // canonical-a: 100 -> 80 = 20 (20%); canonical-b: 1000 -> 500 = 500 (50%)
+    expect(byId.get("canonical-a")).toMatchObject({ newPriceUSD: 80, oldPriceUSD: 100, savingsUSD: 20, savingsPercent: 20, cheapestStoreSlug: "store-a1" });
+    expect(byId.get("canonical-b")).toMatchObject({ newPriceUSD: 500, oldPriceUSD: 1000, savingsUSD: 500, savingsPercent: 50, cheapestStoreSlug: "store-b1" });
+  });
+
+  it("ignora oferta esgotada no cálculo do preço, sem descartar o canonical", async () => {
+    const product = makeCanonicalProduct();
+    const engine = buildEngine({
+      products: [product],
+      offersByProductId: {
+        "canonical-1": [
+          makeOffer({ offerId: "o1", storeId: "s1", storeSlug: "s1", priceUSD: 10, inStock: false }),
+          makeOffer({ offerId: "o2", storeId: "s2", storeSlug: "s2", priceUSD: 80 }),
+          makeOffer({ offerId: "o3", storeId: "s3", storeSlug: "s3", priceUSD: 100 }),
+        ],
+      },
+      savingsByProductId: {},
+    });
+
+    const [top] = await engine.getTopOpportunities(5);
+    // $10 está esgotada: não pode virar o "menor preço" (mesma regra de
+    // PriceIntelligenceService.fetchOfferPrices, preservada).
+    expect(top).toMatchObject({ newPriceUSD: 80, oldPriceUSD: 100, cheapestStoreSlug: "s2" });
   });
 });
