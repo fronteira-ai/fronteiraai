@@ -80,6 +80,35 @@ export async function getProductBySlug(
 // the latter's price happens to be. Price distance only ever sorts a
 // candidate lower — it never excludes one (see the third case in
 // services/__tests__/product.service.test.ts).
+// Sprint 6 (P2-3): teto de candidatos lidos ANTES do ranking. Não é o `limit`
+// pedido pelo chamador — é a proteção de volume que substitui o `.limit(limit)`
+// que truncava o conjunto antes de rankear.
+//
+// 120 não é número redondo escolhido a esmo; é o menor teto que satisfaz as
+// três restrições medidas:
+//
+//  1. LIMITE REAL DE URI (medido no stack local). A leitura de preços abaixo
+//     usa `.in("product_id", [...])`, um UUID (36 chars) por candidato na
+//     query string. Bisecção contra o PostgREST local: 210 ids = 7.851 bytes
+//     → HTTP 200; 220 ids = 8.221 bytes → HTTP 414 URI Too Long. O teto duro
+//     é o limite de 8 KB do Kong. 120 ids ≈ 4.5 KB deixa ~45% de folga para o
+//     produto de referência e para qualquer filtro futuro.
+//  2. CATEGORIAS REAIS. No banco local a maior categoria tem 11 produtos
+//     (média 6). Em produção, `docs/product/CATEGORY_INVENTORY_REPORT.md`
+//     mede que apenas as ~11 maiores das 929 categorias passam de 120 — e
+//     essas são buckets de fallback do merchant (GENERAL 2.142,
+//     ELECTRONICOS 519, os buckets de perfume), não categorias de produto de
+//     verdade. Para >98% das categorias o ranking passa a ser exato.
+//  3. CUSTO. `products_category_id_idx` já existe (database/migrations/0004),
+//     então a leitura é um index scan limitado a 120 linhas — não um seq scan.
+//
+// Limitação que permanece, nomeada em vez de escondida: nas ~11 categorias
+// acima de 120 produtos a truncagem continua existindo (e sem ORDER BY, o
+// subconjunto é arbitrário). Resolver isso exige buscar candidatos da mesma
+// marca em consulta própria — mudança de estratégia de busca, fora do escopo
+// desta missão, que é "rankear antes de limitar".
+const RELATED_CANDIDATE_CAP = 120;
+
 export async function getRelatedProducts(
   product: Product,
   limit = 4
@@ -91,7 +120,7 @@ export async function getRelatedProducts(
     .select("*")
     .eq("category_id", product.category_id)
     .neq("id", product.id)
-    .limit(limit);
+    .limit(RELATED_CANDIDATE_CAP);
 
   if (error) {
     console.error(error);
@@ -133,17 +162,27 @@ export async function getRelatedProducts(
     return Math.abs(candidatePrice - referencePrice) / referencePrice;
   }
 
-  return [...candidates].sort((a, b) => {
-    const aSameBrand = a.brand_id === product.brand_id;
-    const bSameBrand = b.brand_id === product.brand_id;
-    if (aSameBrand !== bSameBrand) return aSameBrand ? -1 : 1;
+  // Sprint 6 (P2-3): `.slice(limit)` vem DEPOIS do sort. Antes, o corte
+  // acontecia na query (`.limit(limit)`), então o ranking só reordenava um
+  // subconjunto arbitrário que o banco tinha devolvido — a prioridade de
+  // marca e a proximidade de preço nunca chegavam a ser aplicadas sobre a
+  // categoria inteira. Caso concreto: para o iPhone 16 Pro, o iPhone 16 Plus
+  // (mesma marca, distância de preço 0,025 — a menor de todas) era descartado
+  // antes de ser comparado, e entravam dois Samsung com distância 0,17 e 0,21.
+  // A fórmula de ranking abaixo é a original, inalterada.
+  return [...candidates]
+    .sort((a, b) => {
+      const aSameBrand = a.brand_id === product.brand_id;
+      const bSameBrand = b.brand_id === product.brand_id;
+      if (aSameBrand !== bSameBrand) return aSameBrand ? -1 : 1;
 
-    const aDistance = priceDistance(a);
-    const bDistance = priceDistance(b);
-    // Equality guard keeps Infinity - Infinity (NaN) out of the comparator.
-    if (aDistance === bDistance) return 0;
-    return aDistance - bDistance;
-  });
+      const aDistance = priceDistance(a);
+      const bDistance = priceDistance(b);
+      // Equality guard keeps Infinity - Infinity (NaN) out of the comparator.
+      if (aDistance === bDistance) return 0;
+      return aDistance - bDistance;
+    })
+    .slice(0, limit);
 }
 
 export async function searchProducts(search: string) {
