@@ -157,6 +157,78 @@ export class SupabaseCanonicalCatalogRepository implements ICanonicalCatalogRepo
     return { items, total: count ?? items.length };
   }
 
+  // Sprint 8B (P2-4). Colunas e mapeamento compartilhados entre a leitura
+  // individual e a em lote — se divergissem, o lote deixaria de ser uma
+  // substituição fiel da consulta que ele elimina.
+  private static readonly OFFER_COLUMNS =
+    "id, product_id, store_id, price_usd, in_stock, stock_quantity, updated_at, condition, warranty, product_url, stores(slug)";
+
+  private static mapOfferRow(row: Record<string, unknown>): CanonicalOfferView {
+    const storeRelation = row.stores as { slug: string } | { slug: string }[] | null;
+    const store = Array.isArray(storeRelation) ? storeRelation[0] : storeRelation;
+    return {
+      offerId: row.id as string,
+      productId: row.product_id as string,
+      storeId: row.store_id as string,
+      storeSlug: store?.slug ?? "",
+      priceUSD: row.price_usd as number,
+      inStock: row.in_stock as boolean,
+      stockQuantity: (row.stock_quantity as number | null) ?? null,
+      updatedAt: row.updated_at as string,
+      condition: (row.condition as string | null) ?? null,
+      warranty: (row.warranty as string | null) ?? null,
+      productUrl: (row.product_url as string | null) ?? null,
+    };
+  }
+
+  /** Sprint 8B (P2-4) — ver ICanonicalCatalogRepository para o contrato.
+   *
+   * Um `.in(...)` carrega um UUID (36 chars) por id na query string. A
+   * Sprint 6 mediu o teto real do Kong contra este mesmo stack: 210 ids =
+   * 7.851 bytes → HTTP 200; 220 ids = 8.221 bytes → HTTP 414. O chunk de
+   * 150 fica bem abaixo disso e ainda assim transforma os 50 candidatos do
+   * OpportunityEngine numa única viagem. */
+  private static readonly ID_CHUNK = 150;
+
+  async findOffersByCanonicalProductIds(
+    canonicalProductIds: string[],
+    perProductLimit: number
+  ): Promise<Map<string, CanonicalOfferView[]>> {
+    const grouped = new Map<string, CanonicalOfferView[]>();
+    const ids = [...new Set(canonicalProductIds)].filter(Boolean);
+    if (ids.length === 0) return grouped;
+
+    for (let i = 0; i < ids.length; i += SupabaseCanonicalCatalogRepository.ID_CHUNK) {
+      const chunk = ids.slice(i, i + SupabaseCanonicalCatalogRepository.ID_CHUNK);
+      const { data, error } = await this.client
+        .from("offers")
+        .select(`canonical_product_id, ${SupabaseCanonicalCatalogRepository.OFFER_COLUMNS}`)
+        .in("canonical_product_id", chunk);
+
+      if (error) {
+        console.error("[SupabaseCanonicalCatalogRepository.findOffersByCanonicalProductIds]", error.message);
+        // Mesmo contrato de falha do método individual: degrada para vazio,
+        // nunca lança — o motor trata ausência de ofertas como candidato
+        // eliminado, e nunca como erro fatal do render.
+        continue;
+      }
+
+      for (const row of (data ?? []) as Record<string, unknown>[]) {
+        const key = row.canonical_product_id as string;
+        const bucket = grouped.get(key) ?? [];
+        // Reproduz o truncamento por produto do método individual
+        // (`.range(0, limit-1)`): o lote não pode devolver mais ofertas por
+        // produto do que a consulta que ele substitui devolveria.
+        if (bucket.length < perProductLimit) {
+          bucket.push(SupabaseCanonicalCatalogRepository.mapOfferRow(row));
+        }
+        grouped.set(key, bucket);
+      }
+    }
+
+    return grouped;
+  }
+
   async findAll(pagination: PaginationParams): Promise<PaginatedResult<CanonicalProduct>> {
     const { limit, offset } = pagination;
     const { data, error, count } = await this.client

@@ -15,6 +15,7 @@ function makeCatalogRepo(overrides: Partial<ICanonicalCatalogRepository> = {}): 
     findCategorySlugsByIds: jest.fn().mockResolvedValue(new Map()),
     findAll: jest.fn(),
     linkOffer: jest.fn(),
+    findOffersByCanonicalProductIds: jest.fn().mockResolvedValue(new Map()),
     findOffersByCanonicalProductId: jest.fn(),
     findOfferIdsByCanonicalProductId: jest.fn(),
     reassignOffers: jest.fn(),
@@ -41,6 +42,7 @@ describe("VolatilityRollupService", () => {
   describe("getCanonicalVolatility", () => {
     it("returns null when the canonical product has no linked offers", async () => {
       const catalogRepo = makeCatalogRepo({
+        findOffersByCanonicalProductIds: jest.fn().mockResolvedValue(new Map()),
         findOffersByCanonicalProductId: jest.fn().mockResolvedValue({ items: [], total: 0 }),
       });
       const volatilityService = { computeForProduct: jest.fn() } as unknown as VolatilityService;
@@ -51,6 +53,7 @@ describe("VolatilityRollupService", () => {
 
     it("averages VolatilityEngine scores across every distinct raw product linked to the canonical product", async () => {
       const catalogRepo = makeCatalogRepo({
+        findOffersByCanonicalProductIds: jest.fn().mockResolvedValue(new Map()),
         findOffersByCanonicalProductId: jest.fn().mockResolvedValue({
           items: [
             { offerId: "o1", productId: "p1", storeId: "s1", storeSlug: "s1", priceUSD: 1, inStock: true, stockQuantity: null, updatedAt: "", condition: null, warranty: null, productUrl: null },
@@ -76,6 +79,7 @@ describe("VolatilityRollupService", () => {
 
     it("excludes products with fewer than 2 price points from the average", async () => {
       const catalogRepo = makeCatalogRepo({
+        findOffersByCanonicalProductIds: jest.fn().mockResolvedValue(new Map()),
         findOffersByCanonicalProductId: jest.fn().mockResolvedValue({
           items: [{ offerId: "o1", productId: "p1", storeId: "s1", storeSlug: "s1", priceUSD: 1, inStock: true, stockQuantity: null, updatedAt: "", condition: null, warranty: null, productUrl: null }],
           total: 1,
@@ -157,6 +161,7 @@ describe("VolatilityRollupService", () => {
 
       const catalogRepo = makeCatalogRepo({
         findByCategoryId: jest.fn().mockResolvedValue(products),
+        findOffersByCanonicalProductIds: jest.fn().mockResolvedValue(new Map()),
         findOffersByCanonicalProductId,
       });
 

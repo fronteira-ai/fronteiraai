@@ -63,6 +63,18 @@ function makeSavings(overrides: Partial<SavingsOpportunity> = {}): SavingsOpport
 function makeCatalogRepo(products: CanonicalProduct[], offersByProductId: Record<string, CanonicalOfferView[]>): ICanonicalCatalogRepository {
   return {
     findAll: jest.fn().mockResolvedValue({ items: products, total: products.length }),
+    // Sprint 8B (P2-4): o motor passou a ler as ofertas dos candidatos em
+    // lote. Este mock devolve exatamente o mesmo conteúdo que o mock
+    // individual abaixo — é o que faz esta suíte continuar sendo a prova
+    // ponta-a-ponta de que a otimização não mudou nenhum resultado.
+    findOffersByCanonicalProductIds: jest.fn().mockImplementation(async (ids: string[]) => {
+      const map = new Map<string, CanonicalOfferView[]>();
+      for (const id of ids) {
+        const offers = offersByProductId[id];
+        if (offers?.length) map.set(id, offers);
+      }
+      return map;
+    }),
     findOffersByCanonicalProductId: jest.fn().mockImplementation(async (id: string) => ({
       items: offersByProductId[id] ?? [],
       total: (offersByProductId[id] ?? []).length,

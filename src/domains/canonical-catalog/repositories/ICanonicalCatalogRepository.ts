@@ -34,6 +34,21 @@ export interface ICanonicalCatalogRepository {
     canonicalProductId: string,
     pagination: PaginationParams
   ): Promise<PaginatedResult<CanonicalOfferView>>;
+  /** Sprint 8B (P2-4). Versão em lote de `findOffersByCanonicalProductId`,
+   * para quem avalia muitos canônicos de uma vez — hoje só o
+   * `OpportunityEngine`, que percorria 50 candidatos e emitia uma consulta
+   * por candidato (N+1 medido: ~45 das ~150 queries de um render da Home).
+   *
+   * Mesmas colunas e mesma semântica por produto do método individual,
+   * inclusive o truncamento em `perProductLimit` — a diferença é só quantas
+   * viagens ao banco acontecem, nunca quais ofertas são consideradas.
+   *
+   * Ids sem oferta simplesmente não aparecem no Map (nunca uma entrada
+   * vazia fabricada), igual ao precedente de `findCategorySlugsByIds`. */
+  findOffersByCanonicalProductIds(
+    canonicalProductIds: string[],
+    perProductLimit: number
+  ): Promise<Map<string, CanonicalOfferView[]>>;
   /** Release 1.8 — Program C — Market Intelligence Engine. The reverse
    * lookup of `findOffersByCanonicalProductId` — given a raw `products.id`
    * (the identifier `market_changes`/`VolatilityEngine` key on), find which

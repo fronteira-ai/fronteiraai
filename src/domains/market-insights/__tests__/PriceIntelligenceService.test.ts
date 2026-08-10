@@ -82,6 +82,7 @@ describe("PriceIntelligenceService", () => {
       findCategorySlugsByIds: jest.fn().mockResolvedValue(new Map()),
       findAll: jest.fn(),
       linkOffer: jest.fn(),
+      findOffersByCanonicalProductIds: jest.fn().mockResolvedValue(new Map()),
       findOffersByCanonicalProductId: jest.fn().mockResolvedValue({
         items: offers.map((o, i) => ({
           offerId: `offer-${i}`,
@@ -118,6 +119,7 @@ describe("PriceIntelligenceService", () => {
       findCategorySlugsByIds: jest.fn().mockResolvedValue(new Map()),
       findAll: jest.fn(),
       linkOffer: jest.fn(),
+      findOffersByCanonicalProductIds: jest.fn().mockResolvedValue(new Map()),
       findOffersByCanonicalProductId: jest.fn().mockResolvedValue({
         items: [
           { offerId: "1", productId: "p1", storeId: "s1", storeSlug: "s1", priceUSD: 100, inStock: true, stockQuantity: null, updatedAt: "", condition: null, warranty: null, productUrl: null },

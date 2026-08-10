@@ -41,6 +41,10 @@ import type { Opportunity } from "../types/buyer-intelligence.types";
 // app/product/[slug]/_cache.ts's getProductBestDeal para o nome da loja.
 
 const CANDIDATE_SAMPLE = 50;
+// Sprint 8B (P2-4): teto de ofertas lidas por candidato. Extraído do literal
+// `{ limit: 50 }` que estava inline em evaluateCandidate — mesmo valor, agora
+// nomeado porque o lote precisa aplicá-lo por produto.
+const OFFER_LOOKUP_LIMIT = 50;
 /** Piso de economia — mesma disciplina de limiar documentado (não um score)
  * já usada em toda a Release 2.0 (ex.: banda de 10% do Best Deal, banda de
  * 2% do Purchase Timing). Calibrável em uma futura revisão, não uma
@@ -71,7 +75,20 @@ export class OpportunityEngine {
   async getTopOpportunities(limit: number): Promise<Opportunity[]> {
     const { items: canonicalProducts } = await this.catalogRepo.findAll({ limit: CANDIDATE_SAMPLE, offset: 0 });
 
-    const candidateResults = await Promise.allSettled(canonicalProducts.map((p) => this.evaluateCandidate(p)));
+    // Sprint 8B (P2-4): as ofertas dos CANDIDATE_SAMPLE candidatos vêm numa
+    // única consulta em lote. Antes, `evaluateCandidate` emitia uma consulta
+    // por candidato — ~45 das ~150 queries de um render da Home, para dados
+    // que o lote traz de uma vez. Mesmo `perProductLimit` (OFFER_LOOKUP_LIMIT),
+    // mesmas colunas, mesma semântica: muda quantas viagens ao banco
+    // acontecem, nunca quais ofertas são consideradas.
+    const offersByCanonicalId = await this.catalogRepo.findOffersByCanonicalProductIds(
+      canonicalProducts.map((p) => p.id),
+      OFFER_LOOKUP_LIMIT
+    );
+
+    const candidateResults = await Promise.allSettled(
+      canonicalProducts.map((p) => this.evaluateCandidate(p, offersByCanonicalId.get(p.id) ?? []))
+    );
     const candidates = candidateResults
       .filter((r): r is PromiseFulfilledResult<Candidate | null> => r.status === "fulfilled")
       .map((r) => r.value)
@@ -96,7 +113,12 @@ export class OpportunityEngine {
   /** Gates 1-3 (estoque, frescor, economia real) — cheap, run for every
    * candidate in parallel. Returns null (never throws) when the candidate
    * is eliminated or its data is incomplete. */
-  private async evaluateCandidate(product: CanonicalProduct): Promise<Candidate | null> {
+  private async evaluateCandidate(
+    product: CanonicalProduct,
+    /** Sprint 8B (P2-4): ofertas já lidas em lote por `getTopOpportunities`.
+     * Antes este método fazia a própria consulta, uma por candidato. */
+    offers: CanonicalOfferView[]
+  ): Promise<Candidate | null> {
     const savings = await this.priceIntelligenceService.getSavingsOpportunity(product.id).catch((err) => {
       console.error("[OpportunityEngine.evaluateCandidate] getSavingsOpportunity failed", product.id, err);
       return null;
@@ -110,7 +132,6 @@ export class OpportunityEngine {
     // pequenos, e vice-versa (ver Exemplo B, OPPORTUNITY_ENGINE_ARCHITECTURE.md §4).
     if (savings.maxSavingsUSD < MIN_SAVINGS_USD && savings.maxSavingsPercent < MIN_SAVINGS_PERCENT) return null;
 
-    const { items: offers } = await this.catalogRepo.findOffersByCanonicalProductId(product.id, { limit: 50, offset: 0 });
     const winningOffer = offers.find((o) => o.storeId === savings.cheapestStoreId);
     if (!winningOffer) return null;
     if (!winningOffer.inStock) return null;

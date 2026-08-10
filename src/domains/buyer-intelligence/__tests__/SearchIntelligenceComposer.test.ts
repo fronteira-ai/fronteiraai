@@ -14,6 +14,7 @@ function makeCatalogRepo(overrides: Partial<ICanonicalCatalogRepository> = {}): 
     findCategorySlugsByIds: jest.fn().mockResolvedValue(new Map()),
     findAll: jest.fn(),
     linkOffer: jest.fn(),
+    findOffersByCanonicalProductIds: jest.fn().mockResolvedValue(new Map()),
     findOffersByCanonicalProductId: jest.fn().mockResolvedValue({ items: [], total: 0 }),
     findOfferIdsByCanonicalProductId: jest.fn(),
     reassignOffers: jest.fn(),
@@ -44,6 +45,7 @@ describe("SearchIntelligenceComposer", () => {
   it("marks belowAveragePrice=true and isBestDeal=true when the given price is the group's lowest and well under the median", async () => {
     const catalogRepo = makeCatalogRepo({
       findCanonicalProductIdByProductId: jest.fn().mockResolvedValue("canonical-1"),
+      findOffersByCanonicalProductIds: jest.fn().mockResolvedValue(new Map()),
       findOffersByCanonicalProductId: jest.fn().mockResolvedValue({
         items: [
           { offerId: "a", productId: "p1", storeId: "s1", storeSlug: "s1", priceUSD: 100, inStock: true, stockQuantity: 1, updatedAt: new Date().toISOString(), condition: null, warranty: null, productUrl: null },
@@ -64,6 +66,7 @@ describe("SearchIntelligenceComposer", () => {
   it("marks isBestDeal=false when this price is not the group's lowest, even if canonical-linked", async () => {
     const catalogRepo = makeCatalogRepo({
       findCanonicalProductIdByProductId: jest.fn().mockResolvedValue("canonical-1"),
+      findOffersByCanonicalProductIds: jest.fn().mockResolvedValue(new Map()),
       findOffersByCanonicalProductId: jest.fn().mockResolvedValue({
         items: [
           { offerId: "a", productId: "p1", storeId: "s1", storeSlug: "s1", priceUSD: 80, inStock: true, stockQuantity: 1, updatedAt: new Date().toISOString(), condition: null, warranty: null, productUrl: null },

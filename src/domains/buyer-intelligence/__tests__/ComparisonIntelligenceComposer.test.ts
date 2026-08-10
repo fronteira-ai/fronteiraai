@@ -57,6 +57,7 @@ function makeCatalogRepo(overrides: Partial<ICanonicalCatalogRepository> = {}): 
     findCategorySlugsByIds: jest.fn().mockResolvedValue(new Map()),
     findAll: jest.fn(),
     linkOffer: jest.fn(),
+    findOffersByCanonicalProductIds: jest.fn().mockResolvedValue(new Map()),
     findOffersByCanonicalProductId: jest.fn().mockResolvedValue({ items: [], total: 0 }),
     findOfferIdsByCanonicalProductId: jest.fn(),
     reassignOffers: jest.fn(),
@@ -151,6 +152,7 @@ describe("ComparisonIntelligenceComposer", () => {
     ];
     const catalogRepo = makeCatalogRepo({
       findBySlug: jest.fn().mockResolvedValue(canonicalProduct),
+      findOffersByCanonicalProductIds: jest.fn().mockResolvedValue(new Map()),
       findOffersByCanonicalProductId: jest.fn().mockResolvedValue({ items: offers, total: 2 }),
     });
 
@@ -216,6 +218,7 @@ describe("ComparisonIntelligenceComposer", () => {
     const offers = [makeOffer({ offerId: "a", storeId: "store-1", priceUSD: 100 })];
     const catalogRepo = makeCatalogRepo({
       findBySlug: jest.fn().mockResolvedValue(canonicalProduct),
+      findOffersByCanonicalProductIds: jest.fn().mockResolvedValue(new Map()),
       findOffersByCanonicalProductId: jest.fn().mockResolvedValue({ items: offers, total: 1 }),
     });
     const compareFoundationService = new CompareFoundationService(
