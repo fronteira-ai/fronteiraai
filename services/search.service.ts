@@ -42,6 +42,13 @@ export async function searchEverything(search: string): Promise<SearchResponse> 
       supabase
         .from("products")
         .select("*, brand:brands(*), category:categories(*), offers!left(price_usd, in_stock, store_id)")
+        // Sprint 5 (P2-2): oferta arquivada (`available=false`) nunca pode
+        // formar o preço anunciado na busca. `getOffersByProduct` já a exclui
+        // (services/offer.service.ts), então sem isto o grid mostrava um
+        // preço menor do que a própria página do produto oferece.
+        // `available=false` ≠ `in_stock=false`: esgotada continua ativa e
+        // segue participando normalmente (ADR-008).
+        .eq("offers.available", true)
         .ilike("name", pattern)
         .limit(RESULTS_PER_SECTION),
 
