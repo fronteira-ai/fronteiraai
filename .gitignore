@@ -33,12 +33,24 @@ yarn-error.log*
 # env files (.env.example is intentionally committed as a template)
 .env*
 !.env.example
+# Sprint 16: template do ambiente self-hosted. `.env*` acima o pegaria, e a
+# negação anterior casa apenas com o nome exato `.env.example`. O arquivo
+# real (`.env.selfhosted`, sem `.example`) continua ignorado — que é o
+# ponto: o template entra no Git, os segredos nunca.
+!.env.selfhosted.example
 
 # vercel
 .vercel
 
 # supabase CLI local cache (contains live connection strings)
 /supabase/.temp/
+# estado local do stack em Docker, criado por `supabase start` (Sprint 3C)
+/supabase/.branches/
+
+# Claude Code: settings.local.json é permissão por máquina (caminhos absolutos
+# do usuário), nunca compartilhável. launch.json é config de projeto e fica
+# versionado de propósito. (Sprint 3D)
+/.claude/settings.local.json
 
 # typescript
 *.tsbuildinfo

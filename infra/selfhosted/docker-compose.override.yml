@@ -1,0 +1,106 @@
+# ParaguAI — deltas sobre o stack OFICIAL do Supabase self-hosted.
+#
+# DELIBERADAMENTE um override, não um compose completo. O stack do Supabase
+# tem ~10 serviços fortemente acoplados (Kong, GoTrue, PostgREST, Storage,
+# imgproxy, meta, analytics, pooler...) cujas versões e variáveis mudam
+# junto. Reescrevê-lo de memória produziria um arquivo que parece certo e
+# quebra em detalhes — e que nunca mais acompanharia o upstream.
+#
+# Base (fixada num commit, nunca `main` flutuante):
+#   git clone --depth 1 https://github.com/supabase/supabase /opt/supabase-src
+#   cp -r /opt/supabase-src/docker /opt/paraguai/supabase
+#   cp infra/selfhosted/docker-compose.override.yml /opt/paraguai/supabase/
+#   cd /opt/paraguai/supabase && docker compose up -d
+#
+# O que este arquivo muda, e por quê:
+#
+#  1. `realtime` desligado. A auditoria da Fase 0 não encontrou UM uso de
+#     Supabase Realtime no ParaguAI: zero `.channel(`, zero
+#     `postgres_changes`, zero `removeChannel`. O domínio chamado
+#     `realtime-commerce` é nome de negócio, não a feature. Manter o
+#     serviço custaria RAM e superfície de ataque por nada. Se algum dia
+#     for usado, basta remover este bloco.
+#
+#  2. PostgreSQL NUNCA publicado na Internet. O upstream expõe 5432 no
+#     host; aqui o bind é explicitamente 127.0.0.1, então o acesso externo
+#     exige túnel SSH. Regra da Fase 9.
+#
+#  3. Studio idem: só via loopback, alcançável por túnel ou atrás do
+#     reverse proxy com Basic Auth. Um painel de administração aberto na
+#     Internet é a forma mais rápida de perder o banco.
+#
+#  4. Limites de memória por serviço, para que um vazamento no Storage não
+#     leve o Postgres junto por OOM no mesmo VPS.
+#
+#  5. Healthchecks e política de restart, para o healthcheck.sh ter o que
+#     observar.
+
+services:
+  realtime:
+    # Não usado pelo ParaguAI (ver comentário 1). `replicas: 0` mantém a
+    # definição do upstream intacta em vez de removê-la, para o dia em que
+    # for preciso reativar.
+    deploy:
+      replicas: 0
+    profiles: ["disabled"]
+
+  db:
+    restart: unless-stopped
+    ports:
+      # 127.0.0.1 é o ponto: sem isto, o Postgres fica exposto na Internet.
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - /srv/paraguai/postgres:/var/lib/postgresql/data
+    shm_size: 512mb
+    deploy:
+      resources:
+        limits:
+          memory: 3G
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+
+  studio:
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:3000:3000"
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+
+  storage:
+    restart: unless-stopped
+    volumes:
+      - /srv/paraguai/storage:/var/lib/storage
+    deploy:
+      resources:
+        limits:
+          memory: 768M
+
+  auth:
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 384M
+
+  rest:
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+
+  kong:
+    restart: unless-stopped
+    ports:
+      # Único serviço que fala com o mundo — e ainda assim atrás do
+      # reverse proxy (Caddy), que termina o TLS.
+      - "127.0.0.1:8000:8000"
+    deploy:
+      resources:
+        limits:
+          memory: 512M

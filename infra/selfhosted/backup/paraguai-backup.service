@@ -1,0 +1,22 @@
+[Unit]
+Description=ParaguAI — backup do PostgreSQL self-hosted
+Documentation=file:///opt/paraguai/infra/selfhosted/README.md
+After=network-online.target docker.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+# Segredos vêm de um arquivo com permissão 0600 fora do Git (ver
+# .env.example). Nunca de variáveis versionadas.
+EnvironmentFile=/etc/paraguai/backup.env
+ExecStart=/opt/paraguai/infra/selfhosted/backup/backup.sh
+User=paraguai
+Group=paraguai
+# O script já falha explicitamente; isto garante que uma falha apareça em
+# `systemctl --failed` e no monitoramento, em vez de passar em silêncio.
+TimeoutStartSec=3600
+Nice=10
+IOSchedulingClass=idle
+
+[Install]
+WantedBy=multi-user.target

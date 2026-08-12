@@ -1,0 +1,224 @@
+# Infraestrutura Self-Hosted — Fluence VPS + Supabase
+
+> Sprint 16. Documento de **preparação**, não de migração. O Supabase Cloud
+> permanece a fonte de verdade até que uma Sprint posterior autorize
+> explicitamente a troca.
+
+## 1. Por que
+
+| Restrição atual (Supabase Free) | Efeito |
+|---|---|
+| Egress acumulado 21,46 GB | Projeto **bloqueado por `exceed_egress_quota`** (HTTP 402) |
+| Database 400,42 MB / 500 MB | **80% do teto**; o catálogo real ainda nem foi importado |
+| Free **não oferece backup de projeto** | Um catálogo de ~18 mil produtos **sem nenhuma cópia** |
+
+O bloqueio de egress é reversível; a ausência de backup não. Esta é a
+motivação principal — a economia de custo é consequência, não objetivo.
+
+## 2. Inventário do que o ParaguAI usa do Supabase (auditado, Fase 0)
+
+| Recurso | Uso real | Consequência para o self-hosted |
+|---|---|---|
+| **PostgreSQL** | 69 tabelas, 232 índices, 803 constraints, 2 materialized views | Serviço central |
+| **Migrations** | 26 em `supabase/migrations/` + 17 em `database/migrations/` | Ordem e baselines precisam ser respeitadas |
+| **RLS** | 68 de 69 tabelas com RLS, 49 policies ativas | Papéis `anon`/`authenticated`/`service_role` obrigatórios |
+| **Auth (GoTrue)** | e-mail/senha, `signUp`, `signOut`, `getUser`, `exchangeCodeForSession` | **GoTrue obrigatório** |
+| **`auth.users` / `auth.uid()`** | **18 FKs** e **92 usos em policies** | ⚠️ Ver §3 — restrição de ordem |
+| **Storage** | 1 bucket: `catalog`, público para leitura | Serviço obrigatório |
+| **PostgREST** | Todo acesso a dados | Serviço obrigatório |
+| **Realtime** | **ZERO uso** — nenhum `.channel(`, `postgres_changes` ou `removeChannel` | **Desligado** (o domínio `realtime-commerce` é nome de negócio) |
+| **Edge Functions** | Nenhuma (`supabase/functions/` não existe) | Não instalar |
+| **Cron** | Vercel Cron + GitHub Actions, via HTTP | Nenhum `pg_cron`; nada a migrar no banco |
+| **Extensões** | `pgcrypto`, `uuid-ossp`, `pg_net`, `pg_stat_statements`, `supabase_vault` | Todas presentes na imagem `supabase/postgres` |
+| **`gen_random_uuid()`** | 99 usos | Nativo no PG ≥ 13 — sem dependência de extensão |
+| **`storage.*` / `vault` / `pg_cron` / `net.http` em migrations** | Zero | Schema **não** acoplado a features gerenciadas |
+
+### 3. Incompatibilidades e restrições encontradas
+
+1. **⚠️ Ordem de inicialização (bloqueante).** O schema referencia
+   `auth.users` (18 FKs) e `auth.uid()` (92 policies). No Cloud o schema
+   `auth` já existe. No self-hosted, **quem o cria é o GoTrue**: aplicar as
+   migrations antes de o GoTrue subir **falha**. Ordem obrigatória:
+   `db` → `auth` (cria `auth`) → migrations do ParaguAI → demais serviços.
+2. **Papéis do banco.** `anon`, `authenticated`, `service_role`,
+   `authenticator` precisam existir antes das policies. O stack oficial os
+   cria no init; um Postgres "puro" não.
+3. **`pg_net` não existe no `postgres:*` oficial.** Confirmado no teste de
+   restauração (§6). Use a imagem `supabase/postgres`.
+4. **As chaves mudam.** `ANON_KEY`/`SERVICE_ROLE_KEY` do self-hosted são
+   JWTs assinados com **outro** `JWT_SECRET` — as chaves do Cloud não
+   funcionam, e vice-versa.
+5. **SMTP.** Com `ENABLE_EMAIL_AUTOCONFIRM=false` e sem SMTP configurado,
+   cadastros ficam presos em "pendente de confirmação".
+6. **Usuários existentes.** `auth.users` do Cloud não vem no `pg_dump` do
+   schema `public`. Migrar contas é um passo próprio da Sprint de migração.
+
+## 4. Arquitetura
+
+```
+                        INTERNET
+                           │  443/TCP (só isto entra)
+                           ▼
+                  ┌──────────────────┐
+                  │  Caddy (proxy)   │  TLS automático (Let's Encrypt)
+                  └────────┬─────────┘
+                           │ 127.0.0.1
+              ┌────────────┴────────────┐
+              ▼                         ▼
+      ┌───────────────┐         ┌───────────────┐
+      │ Kong :8000    │         │ Studio :3000  │ Basic Auth
+      └───────┬───────┘         └───────────────┘
+     ┌────────┼─────────┬──────────────┐
+     ▼        ▼         ▼              ▼
+  PostgREST  GoTrue   Storage      (Realtime: DESLIGADO)
+     └────────┴─────────┴──────────────┘
+                    ▼
+        ┌────────────────────────┐
+        │ PostgreSQL :5432       │  bind 127.0.0.1 — NUNCA público
+        │ /srv/paraguai/postgres │
+        └───────────┬────────────┘
+                    │ pg_dump -Fc (a cada 3 dias)
+                    ▼
+        /backups/paraguai/<data>/   ──rclone──▶  destino externo (§8)
+```
+
+A aplicação ParaguAI (Next.js) **permanece na Vercel** nesta fase. Só o
+backend de dados sai do Cloud — decisão deliberada: reduz o escopo da
+migração e mantém o rollback trivial (trocar duas variáveis de ambiente).
+
+## 5. Sizing
+
+Dimensionado a partir de números **medidos**, não estimados no vácuo:
+
+| Fonte | Valor |
+|---|---|
+| Database no Cloud hoje | 400,42 MB |
+| Dump comprimido do schema completo (medido, seed local) | 621 KB para 977 linhas |
+| Tabelas / índices / constraints | 69 / 232 / 803 |
+| Catálogo alvo | ~18 mil produtos + ofertas + `price_history` + `market_changes` |
+
+**Recomendação: 4 vCPU / 8 GB RAM / 80–100 GB SSD.**
+
+| Componente | RAM |
+|---|---|
+| PostgreSQL (limite no compose) | 3,0 GB |
+| Storage | 768 MB |
+| Kong + PostgREST | 1,0 GB |
+| GoTrue | 384 MB |
+| Studio | 512 MB |
+| SO + Docker + folga | ~2 GB |
+| **Total** | **~8 GB** |
+
+Disco: banco (~2–5 GB com crescimento de 1 ano e 232 índices) + Storage de
+imagens (~10–20 GB) + **10 backups retidos** (~2–3 GB) + WAL + SO ⇒ 80 GB
+com folga real. O maior consumidor de disco a médio prazo é o Storage de
+imagens, não o banco.
+
+Início com 2 vCPU / 7 GB é viável para validação, mas **8 GB é o alvo**: os
+limites acima somados não cabem confortavelmente em 7 GB com o SO.
+
+## 6. Backup — o requisito central
+
+`infra/selfhosted/backup/`
+
+| Item | Decisão |
+|---|---|
+| Formato | `pg_dump --format=custom --compress=9` (restauração seletiva + índice verificável) |
+| Cadência | **3 dias**, via systemd timer com `Persistent=true` (não pula ciclo após reboot) |
+| Retenção | 10 cópias ≈ 30 dias |
+| Integridade | sha256 + `metadata.json` por backup |
+| Cópia externa | `rclone`; **ausência é ALERTA**, nunca silêncio |
+
+**Um backup só é declarado bem-sucedido depois de quatro provas**: `pg_dump`
+sair 0; o arquivo passar de um tamanho mínimo; **`pg_restore --list`
+conseguir ler o índice** (prova de que não está truncado); e o sha256 ser
+gravado. A retenção só apaga o antigo **depois** disso.
+
+### Teste de restauração — executado, não descrito
+
+`restore-verify.sh` restaura num PostgreSQL **descartável** e verifica.
+Resultado real desta Sprint, contra o banco local:
+
+```
+✅ sha256 confere
+✅ índice legível — 118 tabelas com dados no dump
+✅ PostgreSQL pronto e aceitando conexão
+   tabelas=69 indices=232 constraints=803 funcoes=51 triggers=3 rls=68 policies=49
+   total de linhas restauradas: 977
+✅ RESTORE VERIFICADO — backup é restaurável
+```
+
+Os 23 erros do `pg_restore` foram inspecionados e são benignos: `schema
+"auth" already exists` (o stub que a própria verificação cria) e
+`extension "pg_net" is not available` (ausente na imagem `postgres` pura —
+motivo de usar `supabase/postgres` na restauração real).
+
+> **BACKUP ≠ arquivo existente. BACKUP VÁLIDO = backup restaurável.**
+
+## 7. Segurança (Fase 9)
+
+- **Somente 443 aberta.** SSH em porta alternativa, apenas por chave,
+  `PermitRootLogin no`, `PasswordAuthentication no`.
+- **PostgreSQL jamais público**: bind `127.0.0.1`; acesso administrativo só
+  por túnel SSH. É o item nº 1 da Fase 9 e está codificado no override.
+- **Studio** em loopback + Basic Auth no proxy.
+- **Segredos fora do Git**, garantido por construção: `.gitignore` mantém
+  `.env*` ignorado e libera **apenas** os `*.example`. Verificado —
+  `.env.selfhosted` e `infra/selfhosted/.env` dão `IGNORADO`.
+- `unattended-upgrades` para patches de segurança do SO.
+- `fail2ban` no SSH.
+
+## 8. Cópia externa — opções e custos
+
+Backup no mesmo VPS **não é backup**: não sobrevive à perda do VPS.
+
+| Opção | Custo/mês (~5 GB) | Prós | Contras |
+|---|---|---|---|
+| **Cloudflare R2** | **US$ 0** até 10 GB; sem taxa de egress | Sem custo de saída, S3-compatível | Exige conta Cloudflare |
+| Backblaze B2 | ~US$ 0,03 | Barato, S3-compatível | Egress cobrado acima de 3× o armazenado |
+| Hetzner Storage Box | ~€ 3,20 (1 TB) | Muito espaço, SFTP/rsync | Preço fixo alto para 5 GB |
+| Segundo VPS Fluence | ~US$ 10,78 | Mesmo provedor | Caro para a finalidade; correlacionado |
+
+**Recomendo Cloudflare R2**: nesta escala é gratuito, e a ausência de taxa
+de egress é exatamente a falha que nos trouxe até aqui.
+
+## 9. Custos estimados
+
+| Item | Mensal |
+|---|---|
+| Fluence VPS (base medida: 2 vCPU/4 GB/25 GB = **US$ 10,78**) | US$ 11–25 conforme o tier de 4 vCPU/8 GB |
+| Cloudflare R2 (< 10 GB) | US$ 0 |
+| Domínio/TLS (Let's Encrypt) | US$ 0 |
+| **Total** | **~US$ 11–25** |
+
+**Bandwidth na Fluence é ilimitado, sem taxa de egress** — o que remove
+estruturalmente a causa do bloqueio atual.
+
+> O tier exato de 4 vCPU / 8 GB não está publicado no site; só o console
+> mostra. Os dois pontos conhecidos são US$ 10,78 (2 vCPU/4 GB/25 GB) e
+> US$ 15,24 (2 vCPU/7 GB/50 GB). **Confirme no console antes de fechar o
+> orçamento.**
+
+Fontes: [Fluence — Virtual Servers](https://www.fluence.network/virtual-servers) ·
+[Fluence — DigitalOcean vs Fluence](https://www.fluence.network/blog/digitalocean-droplets-vs-fluence/)
+
+## 10. Ordem de instalação
+
+1. Provisionar VPS (Ubuntu LTS), criar usuário `paraguai`, endurecer SSH.
+2. `ufw`: permitir 443 e a porta do SSH; **negar o resto**.
+3. Docker + Compose.
+4. Clonar o stack oficial num commit fixo, aplicar o override.
+5. Preencher `.env` a partir do `.env.example` (segredos via `openssl rand`).
+6. `docker compose up -d db` → `auth` (**cria o schema `auth`**) → resto.
+7. Aplicar migrations **nesta ordem** (ver §3.1).
+8. Criar o bucket `catalog` (público para leitura).
+9. Instalar timer de backup; **rodar o primeiro backup à mão**.
+10. **Rodar `restore-verify.sh` antes de confiar em qualquer coisa.**
+11. Caddy + TLS + Basic Auth no Studio.
+12. `healthcheck.sh` no cron horário.
+
+## 11. O que esta Sprint deliberadamente NÃO fez
+
+Sem tocar no Cloud, sem migração de produção, sem trocar `.env.local`, sem
+DNS, sem commit/push. `.env.selfhosted.example` é template — a aplicação
+continua apontando para onde apontava.

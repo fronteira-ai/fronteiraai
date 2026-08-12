@@ -1,0 +1,19 @@
+[Unit]
+Description=ParaguAI — dispara o backup do PostgreSQL a cada 3 dias
+Documentation=file:///opt/paraguai/infra/selfhosted/README.md
+
+[Timer]
+# Cadência de 3 dias exigida pela Sprint 16. `OnCalendar` com passo de 3
+# dias a partir do dia 1 é preferível a `OnUnitActiveSec=3d` porque não
+# deriva no relógio a cada reboot — o backup cai sempre em horário previsível.
+OnCalendar=*-*-01/3 03:30:00 UTC
+# Se o VPS estava desligado na hora marcada, roda assim que voltar em vez
+# de simplesmente pular o ciclo — três dias sem backup por causa de um
+# reboot é exatamente o buraco que esta Sprint existe para fechar.
+Persistent=true
+# Espalha o início em até 10 min para não competir com outros jobs.
+RandomizedDelaySec=600
+Unit=paraguai-backup.service
+
+[Install]
+WantedBy=timers.target
