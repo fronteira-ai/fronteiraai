@@ -1,0 +1,87 @@
+#!/bin/bash
+# ParaguAI — extração privilegiada do volume `db-config` (Sprint 23).
+#
+# PROBLEMA QUE ESTE ARQUIVO RESOLVE
+# O backup roda como `paraguai`, que deliberadamente NÃO tem acesso ao
+# Docker: não está no grupo `docker`, não lê /var/run/docker.sock nem
+# /var/lib/docker. Mas o volume `db-config` guarda a root key do pgsodium
+# — a única chave verdadeiramente irrecuperável do sistema. Sem ela, um
+# banco restaurado devolve colunas cifradas como texto ilegível, para
+# sempre.
+#
+# A saída é dar a `paraguai` UMA capacidade, não acesso ao Docker:
+# executar exatamente este programa, sem argumentos, via sudoers dedicado.
+#
+# CONTRATO
+#   entrada : nenhuma. Zero argumentos, zero variáveis de ambiente.
+#   saída   : tar.gz do conteúdo do volume, em STDOUT.
+#   efeito  : nenhum. Não escreve em disco, não cria volume, não cria
+#             container, não altera o Docker.
+#
+# DECISÕES DE SEGURANÇA
+#
+#  1. STDOUT, nunca arquivo. Não há temporário: some a classe inteira de
+#     ataque de race em /tmp e de symlink apontando para o destino. Quem
+#     chama decide onde gravar, com o próprio privilégio (não o nosso).
+#
+#  2. SEM `-h`/`--dereference`. É o detalhe que impede leitura arbitrária:
+#     o tar arquiva o symlink COMO symlink. Se algo dentro do volume
+#     apontar para /etc/shadow, o que sai é um link simbólico de 20 bytes,
+#     não o conteúdo do arquivo. Dereferenciar aqui transformaria este
+#     wrapper num "leia qualquer arquivo como root".
+#
+#  3. Nome do volume descoberto INTERNAMENTE, por padrão constante. O
+#     backup.sh aceita DB_CONFIG_VOLUME do ambiente; este wrapper NÃO —
+#     senão o valor viria de /etc/paraguai/backup.env e viraria entrada
+#     controlável dentro de um contexto root.
+#
+#  4. Zero argumentos, verificado nos DOIS lados: aqui e no sudoers (que
+#     usa a forma `comando ""`). Defesa em profundidade — uma regra
+#     sudoers frouxa sozinha não deve bastar para abrir a porta.
+#
+#  5. PATH fixo e binários por caminho absoluto: sem PATH hijacking.
+#
+#  6. Falha fechada: qualquer condição inesperada sai != 0 sem produzir
+#     saída parcial que pudesse ser confundida com um backup válido.
+set -euo pipefail
+umask 077
+
+PATH=/usr/sbin:/usr/bin:/sbin:/bin
+export PATH
+unset IFS BASH_ENV CDPATH ENV GLOBIGNORE
+
+readonly DOCKER=/usr/bin/docker
+readonly TAR=/usr/bin/tar
+readonly GREP=/usr/bin/grep
+readonly HEAD=/usr/bin/head
+readonly ID=/usr/bin/id
+
+# Padrão constante: o Compose prefixa o volume com o nome do projeto
+# (ex.: `docker_db-config`). Ancorado nas duas pontas de propósito.
+readonly VOLUME_RE='(^|_)db-config$'
+
+die() { printf 'paraguai-dbconfig-dump: %s\n' "$1" >&2; exit "$2"; }
+
+# ── 1. nenhum argumento ──────────────────────────────────────────────────
+[ "$#" -eq 0 ] || die "este comando nao aceita argumentos" 64
+
+# ── 2. precisa ser root (chegou pelo sudoers, não por outro caminho) ─────
+[ "$("$ID" -u)" -eq 0 ] || die "precisa ser executado como root" 77
+
+# ── 3. descoberta do volume, sem entrada externa ─────────────────────────
+vol="$("$DOCKER" volume ls --quiet 2>/dev/null | "$GREP" -E "$VOLUME_RE" | "$HEAD" -n 1 || true)"
+[ -n "$vol" ] || die "volume db-config nao encontrado (stack nunca iniciado?)" 2
+
+# `--` encerra as opções: um volume cujo nome comece com '-' não vira flag.
+mp="$("$DOCKER" volume inspect --format '{{ .Mountpoint }}' -- "$vol" 2>/dev/null || true)"
+[ -n "$mp" ] || die "mountpoint do volume ${vol} nao pode ser lido" 3
+[ -d "$mp" ] || die "mountpoint ${mp} nao e um diretorio" 3
+
+# ── 4. tar determinístico para STDOUT ────────────────────────────────────
+# Mesmos flags do backup.sh: dois arquivamentos de um conteúdo idêntico
+# produzem o mesmo sha256, o que torna a verificação de integridade e a
+# detecção de mudança confiáveis.
+exec "$TAR" --create --gzip --file=- \
+     --sort=name --owner=0 --group=0 --numeric-owner \
+     --mtime='UTC 2020-01-01' \
+     --directory="$mp" .

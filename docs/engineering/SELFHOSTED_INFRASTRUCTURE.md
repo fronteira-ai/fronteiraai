@@ -163,6 +163,37 @@ sair 0; o arquivo passar de um tamanho mínimo; **`pg_restore --list`
 conseguir ler o índice** (prova de que não está truncado); e o sha256 ser
 gravado. A retenção só apaga o antigo **depois** disso.
 
+### 6.3 Fronteira de privilégio do backup
+
+O backup roda como `paraguai`: `nologin`, sem `sudo`, **fora do grupo
+`docker`**, sem leitura de `/var/run/docker.sock` nem de `/var/lib/docker`.
+Mas capturar o `db-config` exige root. Em vez de afrouxar o usuário de
+serviço, o privilégio foi isolado num único componente auditado:
+
+```
+Git                                        ← fonte da verdade
+ └─ infra/selfhosted/privilege/            wrapper + regra sudoers
+ └─ infra/selfhosted/provision/            instalador (exige root)
+        ↓  install-backup-privilege.sh
+   /usr/local/sbin/paraguai-dbconfig-dump  root:root 0755
+   /etc/sudoers.d/paraguai-dbconfig        root:root 0440
+        ↓  sudo -n, zero argumentos, tar.gz em STDOUT
+   backup.sh (como paraguai, sem Docker)
+```
+
+O wrapper não aceita argumento algum — verificado nos dois lados: a regra
+usa a forma `comando ""` e o próprio script sai com 64 se receber qualquer
+coisa. Não escreve em disco (transporte é STDOUT, o que elimina temporário
+e race) e **não usa `-h`/`--dereference`**, então um symlink dentro do
+volume é arquivado como symlink, nunca seguido — sem isso, o wrapper viraria
+um "leia qualquer arquivo como root".
+
+**Por que o instalador existe:** o Git não preserva dono nem modo
+privilegiado. Sem `install-backup-privilege.sh`, uma VM reconstruída teria
+a fronteira apenas *descrita* no repositório, não *instalada* — e o backup
+voltaria a rodar degradado, sem a root key. O script é idempotente e tem
+modo `--check` para auditar um host existente sem alterá-lo.
+
 ### Teste de restauração — executado, não descrito
 
 `restore-verify.sh` restaura num PostgreSQL **descartável** e verifica.

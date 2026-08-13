@@ -61,7 +61,11 @@ BACKUP_ROOT="${BACKUP_ROOT:-/backups/paraguai}"
 RETENTION_COUNT="${RETENTION_COUNT:-10}"     # ~30 dias com cadência de 3 dias
 MIN_DUMP_BYTES="${MIN_DUMP_BYTES:-10240}"
 STORAGE_PATH="${STORAGE_PATH:-/srv/paraguai/storage}"
-DB_CONFIG_VOLUME="${DB_CONFIG_VOLUME:-}"     # vazio = detecção automática
+# DB_CONFIG_VOLUME foi removido na Sprint 24: a descoberta do volume passou
+# a acontecer DENTRO do wrapper privilegiado, por padrão constante. Aceitar
+# o nome do volume por variável de ambiente aqui significaria empurrar um
+# valor externo para dentro de um contexto root — exatamente o que a
+# fronteira de privilégio existe para impedir.
 LOG_FILE="${LOG_FILE:-${BACKUP_ROOT}/backup.log}"
 LAST_RESULT_FILE="${LAST_RESULT_FILE:-${BACKUP_ROOT}/last_result.json}"
 
@@ -139,34 +143,64 @@ DB_STATUS="ok"
 log "banco OK: ${DUMP_SIZE} bytes, ${TABLE_COUNT} tabelas com dados, sha256=${DUMP_SHA:0:16}..."
 
 # ── 2. db-config (pgsodium root key + configuração do Postgres) ──────────
-# Lemos o volume pelo mountpoint em vez de subir um container só para ler
-# um diretório: menos peça móvel, e o backup não passa a depender de uma
-# imagem auxiliar. Exige leitura de /var/lib/docker (root).
+# Este script roda como `paraguai`, que NÃO tem acesso ao Docker por decisão
+# de arquitetura (Sprint 23): fora do grupo `docker`, sem leitura de
+# /var/run/docker.sock nem de /var/lib/docker. Ler o volume exigiria root.
+#
+# A saída não foi afrouxar o backup, e sim isolar o privilégio num único
+# componente auditado, sem argumentos e sem entrada externa:
+#
+#     sudo -n /usr/local/sbin/paraguai-dbconfig-dump   →   tar.gz em STDOUT
+#
+# Aqui só redirecionamos esse STDOUT para o artefato. Nenhuma chamada a
+# Docker acontece neste arquivo — o wrapper é a única superfície privilegiada.
+#
+# CONTRATO DE EXIT CODE (definido pelo wrapper; ver privilege/):
+#    0  sucesso
+#    2  volume db-config ainda não existe   → ESPERADO antes do 1º boot
+#    3  mountpoint do volume inacessível
+#   64  recebeu argumento (não deve acontecer a partir daqui)
+#   77  não estava rodando como root
+#    1  sudo negou (regra ausente/alterada) ou o tar falhou
+#
+# O código 2 é traduzido para `absent:*` e não para `failed:*`: antes do
+# primeiro boot o volume legitimamente não existe, e chamar isso de falha
+# treinaria a equipe a ignorar o alerta que realmente importa.
+readonly DBCONFIG_WRAPPER=/usr/local/sbin/paraguai-dbconfig-dump
+
 capture_db_config() {
-  command -v docker >/dev/null 2>&1 || { DBCONF_STATUS="skipped:no-docker"; degrade "docker indisponível — db-config não capturado"; return; }
-
-  local vol="$DB_CONFIG_VOLUME"
-  if [ -z "$vol" ]; then
-    vol=$(docker volume ls --quiet 2>/dev/null | grep -E '(^|_)db-config$' | head -1 || true)
-  fi
-  if [ -z "$vol" ]; then
-    DBCONF_STATUS="absent:no-volume"; degrade "volume db-config não existe (stack nunca iniciado?)"; return
+  if [ ! -x "$DBCONFIG_WRAPPER" ]; then
+    DBCONF_STATUS="skipped:no-wrapper"
+    degrade "wrapper ausente — rode infra/selfhosted/provision/install-backup-privilege.sh"
+    return
   fi
 
-  local mp
-  mp=$(docker volume inspect -f '{{ .Mountpoint }}' "$vol" 2>/dev/null || true)
-  if [ -z "$mp" ] || [ ! -d "$mp" ]; then
-    DBCONF_STATUS="failed:no-mountpoint"; degrade "mountpoint de ${vol} inacessível"; return
-  fi
-  if [ ! -r "$mp" ]; then
-    DBCONF_STATUS="failed:permission"; degrade "sem permissão de leitura em ${mp} (executar como root)"; return
+  local rc=0
+  # Sem `|| true` e sem `2>/dev/null`: erro do wrapper precisa chegar ao log
+  # e ao exit code. `-n` garante que o sudo nunca fique esperando senha
+  # dentro de um serviço systemd.
+  sudo -n "$DBCONFIG_WRAPPER" > "$DBCONF" 2>>"$LOG_FILE" || rc=$?
+
+  if [ "$rc" -ne 0 ]; then
+    # Um arquivo truncado ou vazio é pior que arquivo nenhum: pareceria
+    # backup. Removemos antes de sair.
+    rm -f "$DBCONF"
+    case "$rc" in
+      2)  DBCONF_STATUS="absent:no-volume"; degrade "volume db-config não existe (stack nunca iniciado?)" ;;
+      3)  DBCONF_STATUS="failed:mountpoint"; degrade "mountpoint do volume db-config inacessível" ;;
+      64) DBCONF_STATUS="failed:usage";      degrade "wrapper recusou os argumentos (contrato violado)" ;;
+      77) DBCONF_STATUS="failed:notroot";    degrade "wrapper não obteve privilégio" ;;
+      1)  DBCONF_STATUS="failed:sudo";       degrade "sudo negou o wrapper ou o tar falhou — verifique /etc/sudoers.d/paraguai-dbconfig" ;;
+      *)  DBCONF_STATUS="failed:rc${rc}";    degrade "wrapper retornou código inesperado ${rc}" ;;
+    esac
+    return
   fi
 
-  # tar determinístico: ordem estável e sem metadado volátil, para que dois
-  # backups de um conteúdo idêntico produzam o mesmo sha256.
-  if ! tar --sort=name --owner=0 --group=0 --numeric-owner \
-           --mtime='UTC 2020-01-01' -czf "$DBCONF" -C "$mp" . 2>>"$LOG_FILE"; then
-    DBCONF_STATUS="failed:tar"; degrade "tar de db-config falhou"; return
+  [ -s "$DBCONF" ] || { rm -f "$DBCONF"; DBCONF_STATUS="failed:empty"; degrade "wrapper saiu 0 mas não produziu dados"; return; }
+
+  # Prova de legibilidade do arquivo recebido pelo pipe.
+  if ! tar -tzf "$DBCONF" >/dev/null 2>>"$LOG_FILE"; then
+    rm -f "$DBCONF"; DBCONF_STATUS="failed:corrupt"; degrade "arquivo db-config recebido está corrompido"; return
   fi
 
   # A razão de ser deste artefato. Se a chave não estiver aqui, dizemos —
@@ -181,7 +215,7 @@ capture_db_config() {
   DBCONF_SIZE=$(wc -c < "$DBCONF")
   DBCONF_SHA=$(sha256sum "$DBCONF" | awk '{print $1}')
   DBCONF_STATUS="ok"
-  log "db-config OK: volume=${vol} ${DBCONF_SIZE} bytes pgsodiumKey=${DBCONF_HAS_KEY}"
+  log "db-config OK: ${DBCONF_SIZE} bytes pgsodiumKey=${DBCONF_HAS_KEY}"
 }
 capture_db_config
 
