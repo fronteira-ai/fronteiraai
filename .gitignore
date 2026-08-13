@@ -38,6 +38,23 @@ yarn-error.log*
 # real (`.env.selfhosted`, sem `.example`) continua ignorado — que é o
 # ponto: o template entra no Git, os segredos nunca.
 !.env.selfhosted.example
+# Sprint 21: `.env*` casa apenas nomes que COMEÇAM com `.env` — auditoria da
+# Sprint 20 provou que `infra/selfhosted/backup.env`, `secrets.json`, `id_rsa`
+# e `*.key` entrariam no commit. As regras abaixo fecham isso; as negações
+# preservam os templates, que continuam versionados de propósito.
+*.env
+!*.env.example
+secrets*.json
+id_rsa*
+id_ecdsa*
+id_ed25519*
+*.key
+!*.key.example
+# Bundle de segredos cifrado (Sprint 20/21): mesmo cifrado, não vai para o
+# Git — o repositório é o lugar errado para custódia, e um bundle versionado
+# vira histórico permanente que nenhuma rotação apaga.
+*.age
+paraguai-secrets*
 
 # vercel
 .vercel

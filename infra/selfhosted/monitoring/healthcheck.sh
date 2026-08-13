@@ -67,6 +67,28 @@ else
   else
     ok "último backup há ${AGE_H}h, status=${STATUS}"
   fi
+
+  # ── 5b. Cobertura por artefato (Sprint 21) ─────────────────────────────
+  # O dump do banco não recupera o ambiente sozinho. Estes dois artefatos
+  # são checados SEPARADAMENTE porque falham por motivos diferentes e têm
+  # consequências diferentes — e porque uma lacuna aqui é invisível: o
+  # backup do banco continua verde enquanto o sistema fica irrecuperável.
+  field() { grep -o "\"$1\"[^,}]*" "$LAST_RESULT" | head -1 | cut -d'"' -f4; }
+
+  DBCONF_ST=$(field dbConfig)
+  case "${DBCONF_ST:-}" in
+    ok)          ok "db-config (root key do pgsodium) incluído no backup" ;;
+    ""|absent:*) alert "db-config NÃO está no backup (${DBCONF_ST:-ausente}) — a root key do pgsodium não tem cópia" ;;
+    *)           alert "db-config com problema: ${DBCONF_ST}" ;;
+  esac
+
+  STOR_ST=$(field storage)
+  case "${STOR_ST:-}" in
+    ok)          ok "Storage replicado para o destino externo" ;;
+    local-only)  alert "Storage SEM cópia externa — os objetos não sobrevivem à perda do VPS" ;;
+    ""|absent:*) alert "Storage não coberto pelo backup (${STOR_ST:-ausente})" ;;
+    *)           alert "Storage com problema: ${STOR_ST}" ;;
+  esac
 fi
 
 # ── 6. Espaço ocupado pelos backups e nº de cópias retidas ───────────────

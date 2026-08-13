@@ -126,8 +126,37 @@ limites acima somados não cabem confortavelmente em 7 GB com o SO.
 | Formato | `pg_dump --format=custom --compress=9` (restauração seletiva + índice verificável) |
 | Cadência | **3 dias**, via systemd timer com `Persistent=true` (não pula ciclo após reboot) |
 | Retenção | 10 cópias ≈ 30 dias |
-| Integridade | sha256 + `metadata.json` por backup |
+| Integridade | sha256 por artefato + `SHA256SUMS` + `manifest.json` |
 | Cópia externa | `rclone`; **ausência é ALERTA**, nunca silêncio |
+
+### 6.1 Três artefatos, não um (auditoria da Sprint 20)
+
+O dump lógico do PostgreSQL é **necessário e insuficiente**. Faltavam duas
+coisas para reconstruir o ambiente, e nenhuma delas está dentro do banco:
+
+| Artefato | O que salva | Por que o `pg_dump` não resolve |
+|---|---|---|
+| `database.dump` | dados e schema | — |
+| `db-config.tar.gz` | `/etc/postgresql-custom` do volume Docker `db-config`, onde vive a **root key do pgsodium** | o dump exporta colunas cifradas como **texto cifrado**: sem a chave, o dado restaurado existe e é ilegível |
+| `storage.manifest` + `rclone sync` | objetos do Storage (`/srv/paraguai/storage`, projeção 10–20 GB) | as imagens do catálogo nunca estiveram no banco |
+
+O `manifest.json` amarra os três (timestamp UTC, hostname, commit do Git,
+tamanho e sha256 de cada um) e é o que detecta o erro mais traiçoeiro:
+**mistura de versões** — um dump de uma data com um `db-config` de outra.
+Nenhum segredo entra no manifesto.
+
+> ⚠️ O volume `db-config` precisa ser restaurado **antes** do primeiro boot
+> do `db`. Se o Postgres inicializar sozinho, gera uma root key nova e o
+> dado cifrado antigo fica inacessível para sempre.
+
+### 6.2 Estados: `ok`, `degraded`, `failed`
+
+`degraded` sai com código 0 **de propósito** — o backup do banco é real e
+não deve ser marcado como falho porque o R2 ainda não foi configurado.
+Quem transforma cada lacuna em ALERTA é o `healthcheck.sh`, que lê o
+`last_result.json` e checa `dbConfig` e `storage` **separadamente**: falham
+por motivos diferentes e têm consequências diferentes. O que não pode
+existir é lacuna silenciosa.
 
 **Um backup só é declarado bem-sucedido depois de quatro provas**: `pg_dump`
 sair 0; o arquivo passar de um tamanho mínimo; **`pg_restore --list`
@@ -217,7 +246,68 @@ Fontes: [Fluence — Virtual Servers](https://www.fluence.network/virtual-server
 11. Caddy + TLS + Basic Auth no Studio.
 12. `healthcheck.sh` no cron horário.
 
-## 11. O que esta Sprint deliberadamente NÃO fez
+## 11. Custódia de segredos e recuperação de desastre
+
+Arquitetura aprovada na Sprint 20 (**modelo F + E**). A regra que a
+sustenta: **a chave que decifra a cópia de recuperação nunca toca o VPS.**
+Comprometer o servidor expõe os segredos em uso, mas não a capacidade de
+decifrar o backup deles.
+
+```
+RAIZ (fora do VPS, fora do Git)
+  identidade age  +  credenciais R2
+  → password manager  +  1 cópia offline
+        │ decifra
+        ▼
+BUNDLE  paraguai-secrets.age
+  [A] .env do Supabase   [B] backup.env   [C] secrets operacionais
+  → réplicas: R2 (junto dos backups) e laptop
+        │ materializa
+        ▼
+OPERAÇÃO (VPS), separados por domínio — um vazamento não expõe os demais
+  /opt/supabase-stack/docker/.env      0600 root:root
+  /etc/paraguai/backup.env             0600 paraguai:paraguai
+  ~paraguai/.config/rclone/rclone.conf 0600 paraguai:paraguai
+```
+
+**Fora do bundle, deliberadamente:** `rclone.conf` (é o *bootstrap* do
+disaster recovery — se estivesse dentro do bundle que está no R2, seria
+preciso a credencial do R2 para buscar a credencial do R2), chaves SSH,
+certificados TLS (o ACME reemite) e arquivos do sistema.
+
+**Ferramenta:** [`age`](https://github.com/FiloSottile/age) ≥ 1.1
+(binário estático, sem servidor, sem daemon). A identidade privada vive no
+password manager e numa cópia offline; o VPS conhece no máximo o
+*recipient* público. Nenhuma identidade foi criada ainda.
+
+### 11.1 O que é insubstituível
+
+A Sprint 19 desligou `realtime`, `supavisor` e `functions` — e isso tornou
+**inertes** três das quatro chaves de criptografia (`SECRET_KEY_BASE`,
+`VAULT_ENC_KEY`, `REALTIME_DB_ENC_KEY`), que continuam obrigatórias apenas
+porque o compose as interpola. Sobra **uma** chave verdadeiramente
+irrecuperável: a **root key do pgsodium**. `PG_META_CRYPTO_KEY` é ativa
+mas regenerável (perde-se apenas as conexões salvas do Studio).
+
+Rotação: `SUPABASE_PUBLISHABLE_KEY`/`SECRET_KEY` e senhas rotacionam sem
+downtime; `JWT_SECRET` e `POSTGRES_PASSWORD` exigem janela coordenada
+(invalidam chaves derivadas e credenciais de serviço); a root key do
+pgsodium **não rotaciona** sem re-cifrar o conteúdo do Vault.
+
+### 11.2 Recuperação após perda total do VPS
+
+VM → SSH → Docker → swap → firewall → dependências (`postgresql-client`
+**≥ 17**, `rclone`, `age`, Caddy) → **credencial R2 do password manager** →
+baixar dump + `db-config.tar.gz` + bundle → decifrar segredos →
+`git clone` nas refs fixas (`/opt/paraguai`, `/opt/supabase-stack`) →
+diretórios e usuário → **restaurar `db-config` ANTES do 1º boot** →
+`db` → `auth` (cria o schema `auth`) → migrations → demais serviços →
+`pg_restore` → `rclone sync` do Storage → Caddy/TLS → DNS →
+`restore-verify.sh` + `healthcheck.sh`.
+
+RTO estimado 2–4 h. RPO: até 3 dias (banco), 24 h (Storage).
+
+## 12. O que esta Sprint deliberadamente NÃO fez
 
 Sem tocar no Cloud, sem migração de produção, sem trocar `.env.local`, sem
 DNS, sem commit/push. `.env.selfhosted.example` é template — a aplicação
