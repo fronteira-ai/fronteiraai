@@ -1,105 +1,173 @@
 # ParaguAI — deltas sobre o stack OFICIAL do Supabase self-hosted.
 #
 # DELIBERADAMENTE um override, não um compose completo. O stack do Supabase
-# tem ~10 serviços fortemente acoplados (Kong, GoTrue, PostgREST, Storage,
-# imgproxy, meta, analytics, pooler...) cujas versões e variáveis mudam
+# tem ~11 serviços fortemente acoplados (Kong, GoTrue, PostgREST, Storage,
+# imgproxy, meta, functions, supavisor...) cujas versões e variáveis mudam
 # junto. Reescrevê-lo de memória produziria um arquivo que parece certo e
 # quebra em detalhes — e que nunca mais acompanharia o upstream.
 #
-# Base (fixada num commit, nunca `main` flutuante):
-#   git clone --depth 1 https://github.com/supabase/supabase /opt/supabase-src
-#   cp -r /opt/supabase-src/docker /opt/paraguai/supabase
-#   cp infra/selfhosted/docker-compose.override.yml /opt/paraguai/supabase/
-#   cd /opt/paraguai/supabase && docker compose up -d
+# ── REF FIXA (Sprint 18) ─────────────────────────────────────────────────
+#   repo:   https://github.com/supabase/supabase
+#   ref:    self-hosted/v0.7.2
+#   commit: 549db119c44c25167461812041ba198bde2b31a4
 #
-# O que este arquivo muda, e por quê:
+# Este arquivo foi auditado contra ESSA ref. Trocar a ref exige reauditar:
+# o contrato do upstream mudou de forma silenciosa entre a Sprint 16 e a 18
+# (ver "supavisor" abaixo), e uma mudança dessas não aparece como erro —
+# aparece como porta de banco aberta na Internet.
 #
-#  1. `realtime` desligado. A auditoria da Fase 0 não encontrou UM uso de
-#     Supabase Realtime no ParaguAI: zero `.channel(`, zero
-#     `postgres_changes`, zero `removeChannel`. O domínio chamado
-#     `realtime-commerce` é nome de negócio, não a feature. Manter o
-#     serviço custaria RAM e superfície de ataque por nada. Se algum dia
-#     for usado, basta remover este bloco.
+# ── COMPOSIÇÃO (sem copiar arquivo por cima do upstream) ─────────────────
+#   /opt/supabase-stack  = checkout limpo do upstream na ref acima
+#   /opt/paraguai        = este repositório
 #
-#  2. PostgreSQL NUNCA publicado na Internet. O upstream expõe 5432 no
-#     host; aqui o bind é explicitamente 127.0.0.1, então o acesso externo
-#     exige túnel SSH. Regra da Fase 9.
+#   Em /opt/supabase-stack/docker/.env:
+#     COMPOSE_FILE=docker-compose.yml:/opt/paraguai/infra/selfhosted/docker-compose.override.yml
 #
-#  3. Studio idem: só via loopback, alcançável por túnel ou atrás do
-#     reverse proxy com Basic Auth. Um painel de administração aberto na
-#     Internet é a forma mais rápida de perder o banco.
+#   O mecanismo é o oficial (COMPOSE_FILE, lista separada por ':', arquivo
+#   base primeiro). O checkout do upstream permanece intocado e atualizável
+#   por `git checkout <nova-ref>`; os caminhos relativos (./volumes/...)
+#   continuam resolvendo em /opt/supabase-stack/docker, que é o diretório do
+#   projeto. Por isso todo caminho DESTE arquivo é absoluto.
 #
-#  4. Limites de memória por serviço, para que um vazamento no Storage não
-#     leve o Postgres junto por OOM no mesmo VPS.
+# ── O QUE ESTE ARQUIVO MUDA, E POR QUÊ ───────────────────────────────────
 #
-#  5. Healthchecks e política de restart, para o healthcheck.sh ter o que
-#     observar.
+#  1. supavisor DESLIGADO. É a correção mais importante. O upstream não
+#     publica mais porta no serviço `db`; quem publica é o pooler:
+#         ports: ["${POSTGRES_PORT}:5432", "${POOLER_PROXY_PORT_TRANSACTION}:6543"]
+#     Sem bind explícito, isso é 0.0.0.0 — PostgreSQL exposto à Internet, e
+#     o UFW não fecha isso (o Docker escreve DNAT em nat/PREROUTING, avaliado
+#     antes da cadeia INPUT). Além disso colidiria com a publicação de `db`
+#     abaixo, na mesma porta 5432 do host.
+#     O ParaguAI não usa pooler: o acesso é via PostgREST/Kong, e as únicas
+#     conexões PG diretas são o pg_dump do backup e as migrations, ambos
+#     locais. Auditoria: zero connection string `postgres://` no código.
+#     Nenhum serviço tem depends_on supavisor — desligá-lo é seguro.
+#
+#  2. PostgreSQL publicado APENAS em 127.0.0.1. O upstream não publica nada;
+#     nós publicamos deliberadamente em loopback porque backup.sh (pg_dump)
+#     e as migrations rodam no host. Acesso externo exige túnel SSH.
+#     Regra da Fase 9.
+#
+#  3. imgproxy passa a acompanhar o storage. O upstream monta o MESMO
+#     diretório nos dois serviços (./volumes/storage). Redirecionar só o
+#     `storage` para /srv/paraguai/storage faria os dois olharem para
+#     lugares diferentes e quebraria a transformação de imagens do bucket
+#     `catalog` — silenciosamente.
+#
+#  4. functions (Edge Runtime) DESLIGADO. A auditoria da Fase 0 não
+#     encontrou Edge Functions no projeto: `supabase/functions/` não existe,
+#     zero `functions.invoke`, zero `/functions/v1`. Nenhum serviço depende
+#     dele. Mantê-lo custaria RAM num host sem swap.
+#
+#  5. realtime DESLIGADO. Zero `.channel(`, zero `postgres_changes`, zero
+#     `removeChannel` no ParaguAI. O domínio `realtime-commerce` é nome de
+#     negócio, não a feature.
+#
+#  6. Studio e Kong só em loopback. Kong fica atrás do reverse proxy
+#     (Caddy), que termina o TLS em 443. Um painel de administração aberto
+#     na Internet é a forma mais rápida de perder o banco.
+#
+#  7. Limites de memória por serviço, para que um vazamento no Storage não
+#     leve o Postgres junto por OOM no mesmo VPS. Cobrem também imgproxy e
+#     meta, que a versão anterior deste arquivo ignorava.
+#
+# NOTA: o healthcheck de `db` NÃO é mais redefinido aqui. O upstream passou
+# a trazer o seu (pg_isready, interval 5s, retries 10) e os `depends_on:
+# condition: service_healthy` dependem dele; sobrescrever com um intervalo
+# maior só atrasaria o boot sem ganho algum.
 
 services:
+  # ── DESLIGADOS ─────────────────────────────────────────────────────────
+  # `profiles` mantém a definição do upstream intacta em vez de removê-la:
+  # o serviço só sobe se o perfil for explicitamente pedido. Para reativar,
+  # basta apagar o bloco correspondente.
+
   realtime:
-    # Não usado pelo ParaguAI (ver comentário 1). `replicas: 0` mantém a
-    # definição do upstream intacta em vez de removê-la, para o dia em que
-    # for preciso reativar.
+    profiles: ["disabled"]
     deploy:
       replicas: 0
+
+  supavisor:
+    # Ver comentário 1. NÃO reativar sem antes fixar o bind em 127.0.0.1
+    # nas DUAS portas (5432 e 6543) e resolver a colisão com `db`.
     profiles: ["disabled"]
+    deploy:
+      replicas: 0
+
+  functions:
+    profiles: ["disabled"]
+    deploy:
+      replicas: 0
+
+  # ── DADOS ──────────────────────────────────────────────────────────────
 
   db:
-    restart: unless-stopped
     ports:
       # 127.0.0.1 é o ponto: sem isto, o Postgres fica exposto na Internet.
       - "127.0.0.1:5432:5432"
     volumes:
-      - /srv/paraguai/postgres:/var/lib/postgresql/data
+      # Substitui APENAS o PGDATA (mesmo alvo => mesma entrada). Os scripts
+      # de init do upstream (roles.sql, jwt.sql, webhooks.sql, _supabase.sql,
+      # logs.sql, pooler.sql, realtime.sql) e o volume db-config seguem
+      # intactos — são eles que criam anon/authenticated/service_role.
+      - /srv/paraguai/postgres:/var/lib/postgresql/data:Z
     shm_size: 512mb
     deploy:
       resources:
         limits:
           memory: 3G
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
-      interval: 30s
-      timeout: 5s
-      retries: 5
-
-  studio:
-    restart: unless-stopped
-    ports:
-      - "127.0.0.1:3000:3000"
-    deploy:
-      resources:
-        limits:
-          memory: 512M
 
   storage:
-    restart: unless-stopped
     volumes:
-      - /srv/paraguai/storage:/var/lib/storage
+      - /srv/paraguai/storage:/var/lib/storage:z
     deploy:
       resources:
         limits:
           memory: 768M
 
+  imgproxy:
+    volumes:
+      # MESMO diretório do storage — ver comentário 3.
+      - /srv/paraguai/storage:/var/lib/storage:z
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+
+  # ── API ────────────────────────────────────────────────────────────────
+
+  kong:
+    ports: !override
+      # !override descarta a lista do upstream em vez de somar a ela: sem
+      # isso, a publicação 0.0.0.0 do upstream continuaria valendo ao lado
+      # da nossa. 8443 não é publicado — quem termina TLS é o Caddy, em 443.
+      - "127.0.0.1:8000:8000/tcp"
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+
   auth:
-    restart: unless-stopped
     deploy:
       resources:
         limits:
           memory: 384M
 
   rest:
-    restart: unless-stopped
     deploy:
       resources:
         limits:
           memory: 512M
 
-  kong:
-    restart: unless-stopped
-    ports:
-      # Único serviço que fala com o mundo — e ainda assim atrás do
-      # reverse proxy (Caddy), que termina o TLS.
-      - "127.0.0.1:8000:8000"
+  meta:
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+
+  studio:
+    ports: !override
+      - "127.0.0.1:3000:3000"
     deploy:
       resources:
         limits:
