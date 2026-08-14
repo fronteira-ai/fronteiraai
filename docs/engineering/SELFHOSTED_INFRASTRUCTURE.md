@@ -355,7 +355,44 @@ downtime; `JWT_SECRET` e `POSTGRES_PASSWORD` exigem janela coordenada
 (invalidam chaves derivadas e credenciais de serviço); a root key do
 pgsodium **não rotaciona** sem re-cifrar o conteúdo do Vault.
 
-### 11.2 Recuperação após perda total do VPS
+### 11.2 Provisionamento reprodutível do host
+
+Até a Sprint 28, a resposta a *"um `git clone` reconstrói a infraestrutura?"*
+era **não**: wrappers, sudoers e units eram versionados, mas usuário de
+serviço, diretórios, permissões, swap e firewall existiam apenas como
+comandos digitados uma vez. Um runbook em prosa não é infraestrutura.
+
+```bash
+sudo infra/selfhosted/provision/install-host.sh --check     # padrão: só verifica
+sudo infra/selfhosted/provision/install-host.sh --install   # aplica
+```
+
+O modo padrão é **verificar, nunca alterar** — um provisionador que modifica
+o host quando executado sem argumento é uma armadilha esperando um dedo
+distraído. Ambos os modos são idempotentes: a segunda execução não reporta
+alteração alguma.
+
+| O script reproduz | O script **nunca** toca |
+|---|---|
+| usuário `paraguai` (nologin, sem sudo, fora do grupo docker) | segredos de qualquer tipo |
+| `/srv/paraguai/{postgres,storage}`, `/backups/paraguai`, `/etc/paraguai` com dono e modo | `backup.env`, `rclone.conf` |
+| swap 4 GiB + `swappiness=10` + `fstab` | identidade privada `age` |
+| UFW: deny incoming, `22/tcp` liberado | Docker, containers, volumes |
+| wrappers e sudoers (delegando aos instaladores existentes) | primeiro boot |
+| as 4 units systemd + `daemon-reload` | habilitar timers |
+
+Três decisões que o script encapsula: **não destrói** — divergência de swap
+ou regra de firewall desconhecida é *reportada*, nunca removida, porque
+apagar às cegas é como um provisionador derruba um host; **não duplica** —
+os wrappers vêm dos instaladores já versionados, e duas implementações do
+mesmo procedimento divergem justamente no dia do desastre; e **não habilita
+os timers**, porque ambos dependem do `backup.env`, que é gate de segredo.
+
+Configuração externa (`age-recipient`, `rclone.conf`, `backup.env`) é
+reportada como `external credential/configuration not provisioned` — ausência
+ali não é defeito de infraestrutura, é etapa humana pendente.
+
+### 11.3 Recuperação após perda total do VPS
 
 VM → SSH → Docker → swap → firewall → dependências (`postgresql-client`
 **≥ 17**, `rclone`, `age`, Caddy) → **credencial R2 do password manager** →
