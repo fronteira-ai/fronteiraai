@@ -49,6 +49,15 @@ SWAPPINESS=10
 SYSCTL_FILE=/etc/sysctl.d/99-paraguai.conf
 SSH_PORT=22
 
+# Recipient AGE — chave PÚBLICA, versionada de propósito (Sprint 29A).
+# Versionar a metade pública é o que torna a camada não-secreta 100%
+# reproduzível: sem isso, uma VM nova até subiria, mas não saberia PARA QUEM
+# cifrar os backups, e a etapa mais fácil de esquecer num desastre é a que
+# não está em lugar nenhum. A metade privada continua fora do VPS e fora do
+# Git — é ela que decifra, e é por isso que o servidor nunca a vê.
+AGE_RECIPIENT_SRC="${INFRA}/age/age-recipient"
+AGE_RECIPIENT_DST=/etc/paraguai/age-recipient
+
 # path:owner:group:mode
 DIRS=(
   "/srv/paraguai:root:root:0755"
@@ -299,17 +308,58 @@ fi
 # ── 7. Configuração externa (NUNCA provisionada aqui) ───────────────────
 # Estes arquivos contêm ou dependem de material que não pertence ao Git.
 # Ausência aqui não é defeito de infraestrutura: é etapa humana pendente.
-sec "configuração externa (fora do escopo deste script)"
-for f in /etc/paraguai/age-recipient /etc/paraguai/rclone.conf; do
-  if [ -f "$f" ]; then
-    cur="$(stat -c '%U:%G %a' "$f")"
-    [ "$cur" = "root:${SERVICE_USER} 640" ] \
-      && ok "$(basename "$f") presente (${cur})" \
-      || bad "$(basename "$f") está '${cur}', esperado 'root:${SERVICE_USER} 640'"
+sec "recipient AGE (chave pública, versionada)"
+if [ ! -f "$AGE_RECIPIENT_SRC" ]; then
+  bad "fonte ausente: ${AGE_RECIPIENT_SRC}"
+else
+  # Guarda de sanidade: se algum dia uma identidade PRIVADA for colada aqui
+  # por engano, o provisionamento recusa em vez de espalhá-la pelo host.
+  if grep -q 'AGE-SECRET-KEY' "$AGE_RECIPIENT_SRC"; then
+    bad "o arquivo versionado contém uma identidade PRIVADA — abortando a instalação do recipient"
+  elif ! grep -qE '^age1[0-9a-z]+$' "$AGE_RECIPIENT_SRC"; then
+    bad "conteúdo versionado não parece um recipient público (esperado uma linha 'age1…')"
+  elif [ -f "$AGE_RECIPIENT_DST" ] && cmp -s "$AGE_RECIPIENT_SRC" "$AGE_RECIPIENT_DST"; then
+    ok "recipient instalado e idêntico ao versionado (sha256 $(sha256sum "$AGE_RECIPIENT_DST" | cut -c1-16)…)"
+  elif [ "$MODE" = install ]; then
+    install -o root -g "$SERVICE_USER" -m 0640 "$AGE_RECIPIENT_SRC" "$AGE_RECIPIENT_DST"
+    fix "recipient instalado em ${AGE_RECIPIENT_DST}"
+  elif [ -f "$AGE_RECIPIENT_DST" ]; then
+    bad "recipient instalado DIVERGE do versionado"
   else
-    warn "$(basename "$f"): external credential/configuration not provisioned"
+    bad "recipient AUSENTE em ${AGE_RECIPIENT_DST}"
   fi
-done
+
+  if [ -f "$AGE_RECIPIENT_DST" ]; then
+    cur="$(stat -c '%U:%G %a' "$AGE_RECIPIENT_DST")"
+    [ "$cur" = "root:${SERVICE_USER} 640" ] \
+      && ok "recipient root:${SERVICE_USER} 0640" \
+      || { if [ "$MODE" = install ]; then
+             chown "root:${SERVICE_USER}" "$AGE_RECIPIENT_DST"; chmod 0640 "$AGE_RECIPIENT_DST"
+             fix "recipient: ${cur} -> root:${SERVICE_USER} 640"
+           else bad "recipient está '${cur}', esperado 'root:${SERVICE_USER} 640'"; fi; }
+  fi
+fi
+
+# O VPS conhece o recipient (cifra) mas nunca a identidade (decifra). Se uma
+# identidade privada aparecer aqui, o modelo de custódia inteiro caiu.
+if find /etc/paraguai -maxdepth 1 -type f -exec grep -l 'AGE-SECRET-KEY' {} + 2>/dev/null | grep -q .; then
+  bad "IDENTIDADE PRIVADA AGE encontrada em /etc/paraguai — incidente de custódia"
+else
+  ok "nenhuma identidade privada AGE no host"
+fi
+
+# ── 8. Configuração externa (NUNCA provisionada aqui) ───────────────────
+# Contêm material que não pertence ao Git. Ausência não é defeito de
+# infraestrutura: é etapa humana pendente.
+sec "configuração externa (fora do escopo deste script)"
+if [ -f /etc/paraguai/rclone.conf ]; then
+  cur="$(stat -c '%U:%G %a' /etc/paraguai/rclone.conf)"
+  [ "$cur" = "root:${SERVICE_USER} 640" ] \
+    && ok "rclone.conf presente (${cur})" \
+    || bad "rclone.conf está '${cur}', esperado 'root:${SERVICE_USER} 640'"
+else
+  warn "rclone.conf: external credential/configuration not provisioned"
+fi
 [ -f /etc/paraguai/backup.env ] || warn "backup.env: external credential/configuration not provisioned"
 
 # ── Veredito ────────────────────────────────────────────────────────────

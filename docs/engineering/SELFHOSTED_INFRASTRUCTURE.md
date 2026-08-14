@@ -380,6 +380,15 @@ alteração alguma.
 | UFW: deny incoming, `22/tcp` liberado | Docker, containers, volumes |
 | wrappers e sudoers (delegando aos instaladores existentes) | primeiro boot |
 | as 4 units systemd + `daemon-reload` | habilitar timers |
+| **recipient AGE público** (`infra/selfhosted/age/age-recipient`) | **identidade AGE privada** |
+
+Sobre o recipient: a metade **pública** é versionada de propósito. Sem ela,
+uma VM nova subiria sem saber *para quem* cifrar os backups — e a etapa mais
+fácil de esquecer num desastre é a que não está em lugar nenhum. A metade
+**privada** continua fora do VPS e fora do Git; é ela que decifra, e é por
+isso que o servidor nunca a vê. O provisionamento tem uma guarda explícita:
+se o arquivo versionado contiver `AGE-SECRET-KEY`, ele **recusa instalar**
+em vez de espalhar material privado pelo host.
 
 Três decisões que o script encapsula: **não destrói** — divergência de swap
 ou regra de firewall desconhecida é *reportada*, nunca removida, porque
