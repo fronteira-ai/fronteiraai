@@ -1,0 +1,108 @@
+#!/bin/bash
+# ParaguAI — estado dos containers críticos, para o healthcheck (Sprint 27).
+#
+# PROBLEMA QUE ESTE ARQUIVO RESOLVE
+# O healthcheck roda como `paraguai`, que deliberadamente NÃO tem acesso ao
+# Docker: fora do grupo `docker`, sem leitura de /var/run/docker.sock. Sem
+# isso, dois checks (containers críticos e prontidão do PostgreSQL) alertavam
+# para sempre — inclusive com o stack saudável. Um monitoramento que grita
+# todo hora sem motivo treina a equipe a ignorar o alerta que importa.
+#
+# A saída não é dar Docker ao usuário de serviço, e sim expor UMA leitura
+# fixa e sanitizada, por um programa sem entrada.
+#
+# CONTRATO
+#   entrada : nenhuma. Zero argumentos, zero variáveis de ambiente.
+#   saída   : uma linha por container, em STDOUT:
+#                 <nome> <status> <health>
+#             nome   — da lista FIXA abaixo, nunca do chamador
+#             status — running | exited | created | paused | restarting |
+#                      dead | absent | unknown
+#             health — healthy | unhealthy | starting | none | unknown
+#   efeito  : nenhum. Não escreve em disco, não cria/inicia/para nada.
+#
+# DECISÕES DE SEGURANÇA
+#
+#  1. SEM `docker exec`. A versão anterior do healthcheck rodava
+#     `docker exec supabase-db pg_isready`. Expor exec por trás de um sudo
+#     seria entregar execução arbitrária dentro de um container — e o
+#     container do banco roda como superusuário do Postgres.
+#     O compose oficial já define um healthcheck no serviço `db`
+#     (pg_isready a cada 5s), então o Docker JÁ mantém esse estado: basta
+#     lê-lo com `inspect`. Mesma informação, sem superfície de execução.
+#
+#  2. Objetos FIXOS no código. Nenhum nome de container vem do chamador nem
+#     do ambiente. O healthcheck aceita `CRITICAL_CONTAINERS` por variável;
+#     aqui isso seria um vetor — o valor viria de um arquivo lido em
+#     contexto root. A lista abaixo é a fonte da verdade.
+#
+#  3. Saída SANITIZADA. Os valores vêm do Docker, não de nós: cada campo é
+#     validado contra uma allowlist de letras minúsculas antes de sair. Um
+#     nome de container ou label hostil não consegue injetar nada na saída
+#     que o healthcheck vai interpretar.
+#
+#  4. Um único subcomando, `inspect`, sempre com `--` antes do objeto: nem
+#     mesmo um nome iniciado por `-` vira flag. Não há caminho para `ps`,
+#     `logs`, `cp`, `run`, `volume` ou `network` — este programa não pode
+#     virar um proxy do Docker.
+#
+#  5. Zero argumentos, verificado nos DOIS lados: aqui e no sudoers (forma
+#     `comando ""`). Defesa em profundidade.
+#
+#  6. Nada é escrito em disco: sem temporário, sem race, sem alvo de symlink.
+set -euo pipefail
+umask 077
+
+PATH=/usr/sbin:/usr/bin:/sbin:/bin
+export PATH
+unset IFS BASH_ENV CDPATH ENV GLOBIGNORE
+
+readonly DOCKER=/usr/bin/docker
+
+# Lista FIXA. Alterá-la é uma mudança de código, revisada e versionada —
+# nunca uma variável de ambiente.
+readonly CONTAINERS=(
+  supabase-db
+  supabase-rest
+  supabase-auth
+  supabase-storage
+  supabase-kong
+)
+
+die() { printf 'paraguai-container-status: %s\n' "$1" >&2; exit "$2"; }
+
+# ── 1. nenhum argumento ──────────────────────────────────────────────────
+[ "$#" -eq 0 ] || die "este comando nao aceita argumentos" 64
+
+# ── 2. precisa ser root (chegou pelo sudoers, não por outro caminho) ─────
+[ "$(/usr/bin/id -u)" -eq 0 ] || die "precisa ser executado como root" 77
+
+# ── 3. Docker precisa estar utilizável ───────────────────────────────────
+[ -x "$DOCKER" ] || die "docker indisponivel" 3
+
+# Aceita apenas letras minúsculas e hífen; qualquer outra coisa vira
+# "unknown" em vez de ser repassada adiante.
+sanitize() {
+  case "$1" in
+    ''|*[!a-z-]*) printf 'unknown' ;;
+    *)            printf '%s' "$1" ;;
+  esac
+}
+
+for c in "${CONTAINERS[@]}"; do
+  # Um único inspect por container, formato fixo. Se o container não existe,
+  # o inspect falha e o estado é "absent" — que é informação legítima, não
+  # erro do wrapper.
+  raw="$("$DOCKER" inspect \
+          --format '{{.State.Status}} {{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}}' \
+          -- "$c" 2>/dev/null)" || raw=""
+
+  if [ -z "$raw" ]; then
+    printf '%s absent none\n' "$c"
+    continue
+  fi
+
+  status="${raw%% *}"
+  health="${raw##* }"
+  printf '%s %s %s\n' "$c" "$(sanitize "$status")" "$(sanitize "$health")"
+done

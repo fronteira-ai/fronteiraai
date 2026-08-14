@@ -1,0 +1,12 @@
+# ParaguAI — Sprint 27. Segunda capacidade concedida ao usuário de serviço.
+#
+# Mesma forma da regra do db-config: o par de aspas vazias exige que o
+# comando seja invocado SEM NENHUM argumento. Sem ele, `NOPASSWD: /caminho`
+# permitiria qualquer argumento — e um wrapper que aceitasse argumentos
+# viraria escalada de privilégio. Aqui, sudo e wrapper rejeitam argumentos
+# de forma independente.
+#
+# Não há wildcard, não há shell, não há ALL, não há variável. O usuário
+# `paraguai` continua fora do grupo docker: esta regra concede a leitura de
+# um estado fixo, não acesso ao Docker.
+paraguai ALL=(root) NOPASSWD: /usr/local/sbin/paraguai-container-status ""

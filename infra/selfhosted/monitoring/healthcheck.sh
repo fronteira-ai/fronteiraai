@@ -13,7 +13,10 @@ set -uo pipefail
 BACKUP_ROOT="${BACKUP_ROOT:-/backups/paraguai}"
 DISK_THRESHOLD="${DISK_THRESHOLD:-80}"
 MAX_BACKUP_AGE_HOURS="${MAX_BACKUP_AGE_HOURS:-84}"   # 3 dias + 12h de folga
-CRITICAL_CONTAINERS="${CRITICAL_CONTAINERS:-supabase-db supabase-rest supabase-auth supabase-storage supabase-kong}"
+# A lista de containers críticos NÃO é mais configurável aqui: ela vive
+# fixa dentro do wrapper privilegiado (Sprint 27). Aceitar o conjunto por
+# variável de ambiente significaria empurrar um valor externo — vindo de um
+# EnvironmentFile — para dentro de um contexto root.
 
 ALERTS=0
 alert() { echo "🔴 ALERTA: $*"; ALERTS=$((ALERTS + 1)); }
@@ -36,19 +39,54 @@ MEM=$(free | awk '/Mem:/ {printf "%.0f", $3/$2*100}')
 ok "load average:$(cut -d' ' -f1-3 /proc/loadavg | sed 's/^/ /')"
 
 # ── 3. Containers críticos ───────────────────────────────────────────────
-for c in $CRITICAL_CONTAINERS; do
-  STATE=$(docker inspect -f '{{.State.Status}}' "$c" 2>/dev/null || echo "ausente")
-  if [ "$STATE" != "running" ]; then
-    alert "container ${c} não está rodando (estado: ${STATE})"
-  fi
-done
-[ "$ALERTS" -eq 0 ] && ok "containers críticos rodando"
+# Este script roda como `paraguai`, que NÃO tem acesso ao Docker (fora do
+# grupo `docker`, sem leitura do socket) — e isso é decisão de arquitetura,
+# não limitação. O estado vem de um wrapper privilegiado sem argumentos, que
+# devolve apenas `<nome> <status> <health>` para uma lista FIXA de
+# containers. Ver infra/selfhosted/privilege/.
+CONTAINER_STATUS_WRAPPER=/usr/local/sbin/paraguai-container-status
+STATUS_OUT=""
+if [ ! -x "$CONTAINER_STATUS_WRAPPER" ]; then
+  alert "wrapper de status ausente — rode provision/install-healthcheck-privilege.sh"
+elif ! STATUS_OUT=$(sudo -n "$CONTAINER_STATUS_WRAPPER" 2>/dev/null); then
+  alert "não foi possível consultar o estado dos containers (sudo/wrapper falhou)"
+  STATUS_OUT=""
+fi
+
+DB_STATE=""; DB_HEALTH=""
+if [ -n "$STATUS_OUT" ]; then
+  # Contador local: o veredito desta seção não pode depender de alertas de
+  # disco ou memória emitidos antes dela.
+  CONTAINER_ALERTS=0
+  while read -r NAME STATE HEALTH; do
+    [ -n "${NAME:-}" ] || continue
+    if [ "$NAME" = "supabase-db" ]; then DB_STATE="$STATE"; DB_HEALTH="$HEALTH"; fi
+    if [ "$STATE" != "running" ]; then
+      alert "container ${NAME} não está rodando (estado: ${STATE})"
+      CONTAINER_ALERTS=$((CONTAINER_ALERTS + 1))
+    fi
+  done <<< "$STATUS_OUT"
+  [ "$CONTAINER_ALERTS" -eq 0 ] && ok "containers críticos rodando"
+fi
 
 # ── 4. PostgreSQL responde ───────────────────────────────────────────────
-if docker exec supabase-db pg_isready -U postgres >/dev/null 2>&1; then
-  ok "PostgreSQL aceitando conexão"
+# Sem `docker exec`: o compose oficial já define um healthcheck no serviço
+# `db` (pg_isready a cada 5s), então o próprio Docker mantém esse estado.
+# Lê-lo é a mesma informação sem expor execução dentro do container.
+#
+# Os casos são separados porque significam coisas diferentes para quem está
+# de plantão: container fora do ar, container no ar sem healthcheck, e
+# container no ar reprovando o healthcheck exigem respostas distintas.
+if [ -z "$STATUS_OUT" ]; then
+  alert "PostgreSQL: estado indisponível (não foi possível consultar os containers)"
+elif [ "$DB_STATE" != "running" ]; then
+  alert "PostgreSQL: não verificável — container supabase-db está '${DB_STATE}'"
 else
-  alert "PostgreSQL NÃO responde a pg_isready"
+  case "$DB_HEALTH" in
+    healthy) ok "PostgreSQL aceitando conexão" ;;
+    none)    alert "PostgreSQL: container sem healthcheck definido — prontidão não verificável" ;;
+    *)       alert "PostgreSQL NÃO está saudável (health=${DB_HEALTH})" ;;
+  esac
 fi
 
 # ── 5. Último backup: existe, é recente e teve sucesso ───────────────────
