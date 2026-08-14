@@ -1,0 +1,48 @@
+[Unit]
+Description=ParaguAI — healthcheck do stack self-hosted
+Documentation=file:///opt/paraguai/docs/engineering/SELFHOSTED_INFRASTRUCTURE.md
+After=network-online.target docker.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=paraguai
+Group=paraguai
+
+# Mesmo EnvironmentFile do backup, de propósito: o healthcheck precisa de
+# RCLONE_CONFIG e RCLONE_REMOTE para verificar o destino externo, e de
+# BACKUP_ROOT para ler o last_result.json. Duas configurações separadas
+# divergiriam em silêncio — e um monitoramento que olha para o lugar errado
+# é pior que monitoramento nenhum.
+#
+# SEM o prefixo `-`: se o arquivo não existir, a unit FALHA em vez de rodar
+# com metade do ambiente e reportar "destino externo inacessível" como se
+# fosse falha de rede. Falha explícita, nunca alarme falso.
+EnvironmentFile=/etc/paraguai/backup.env
+
+ExecStart=/opt/paraguai/infra/selfhosted/monitoring/healthcheck.sh
+WorkingDirectory=/
+TimeoutStartSec=300
+Nice=10
+
+# O script sai 1 quando há alertas — isso é o funcionamento normal, não uma
+# falha da unit. `SuccessExitStatus` evita que cada alerta polua
+# `systemctl --failed` e mascare uma falha real de execução.
+SuccessExitStatus=0 1
+
+# ── Endurecimento ────────────────────────────────────────────────────────
+# O healthcheck só lê: nenhum caminho de escrita é concedido.
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+RestrictRealtime=true
+LockPersonality=true
+SystemCallArchitectures=native
+
+[Install]
+WantedBy=multi-user.target

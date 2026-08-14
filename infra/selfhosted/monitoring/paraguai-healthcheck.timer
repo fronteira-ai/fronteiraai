@@ -1,0 +1,22 @@
+[Unit]
+Description=ParaguAI — dispara o healthcheck a cada hora
+Documentation=file:///opt/paraguai/docs/engineering/SELFHOSTED_INFRASTRUCTURE.md
+
+[Timer]
+# Cadência horária. O backup roda a cada 3 dias; o healthcheck precisa ser
+# muito mais frequente, porque é ele quem detecta que o backup PAROU de
+# rodar — um alerta que chega três dias depois não previne nada.
+OnCalendar=hourly
+
+# Se o VPS estava desligado na hora marcada, roda assim que voltar em vez de
+# pular o ciclo.
+Persistent=true
+
+# Espalha o início em até 5 min para não competir com o timer de backup nem
+# cair sempre no mesmo minuto cheio.
+RandomizedDelaySec=300
+
+Unit=paraguai-healthcheck.service
+
+[Install]
+WantedBy=timers.target
