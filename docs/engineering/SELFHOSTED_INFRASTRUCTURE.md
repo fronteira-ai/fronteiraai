@@ -441,7 +441,52 @@ público e não tem como decifrar. O `--self-test` prova isso executando um
 `age -d` que **deve falhar** — comprometer o servidor dá acesso aos segredos
 em uso, não à cópia de recuperação.
 
-### 11.4 Recuperação após perda total do VPS
+### 11.4 Modelo de JWT: só o legado HS256
+
+Decisão da Sprint 31, com base no compose da ref fixa. **Todos** os serviços
+ativos consomem `JWT_SECRET` incondicionalmente; **toda** referência a
+`JWT_KEYS`/`JWT_JWKS` está comentada (notas de Podman) ou tem fallback —
+`PGRST_JWT_SECRET: ${JWT_JWKS:-${JWT_SECRET}}`. As chaves assimétricas são
+**estritamente opcionais**.
+
+Portanto o stack sobe completo com o modelo legado, e `add-new-auth-keys.sh`
+**não será executado**: ele exige Node ≥16 (ausente) ou cai no fallback
+Docker, que criaria o primeiro container antes do gate de boot. Pior, ele
+grava as chaves em `$tmpdir/output` sob `/tmp` — **disco persistente**, não
+tmpfs. Instalar Node e aceitar escrita de chave em disco só para habilitar
+uma opção que o projeto não usa seria custo e risco sem benefício.
+
+`generate-keys.sh`, ao contrário, usa **apenas `openssl`**: zero Docker, zero
+Node, nenhum temporário em disco. É o único gerador que rodaremos.
+
+> ⚠️ Ele **imprime todos os valores em stdout** por design (12 linhas
+> `echo "VAR=…"`). A execução real deve redirecionar a saída direto para o
+> destino protegido, nunca para o terminal.
+
+### 11.5 Procedimento do primeiro boot
+
+Ordem obrigatória. Cada passo existe porque o anterior o torna seguro.
+
+| # | Passo | Por quê |
+|---|---|---|
+| 1 | Sincronizar o VPS e rodar `install-host.sh --check` | a ferramenta que protege os segredos precisa existir **antes** deles |
+| 2 | `build-secrets-bundle.sh --check` | prova recipient, R2 e tmpfs antes de gerar qualquer valor |
+| 3 | `generate-keys.sh` com saída redirecionada ao `.env` | gerar e proteger no mesmo ato, sem passar pelo terminal |
+| 4 | Completar `.env` e criar `backup.env` (`root:paraguai 0640`) | configuração legível pelo serviço, imutável para ele |
+| 5 | `--build` + `--upload` + `--verify` | **os segredos ficam protegidos antes de o stack existir** |
+| 6 | `docker compose up -d db` → aguardar `healthy` | o boot cria a root key do pgsodium |
+| 7 | **Capturar a root key imediatamente** (`db-config`) | é o único material irrecuperável do sistema |
+| 8 | Cifrar e enviar essa captura ao R2, conferir sha256 | fecha a janela aberta no passo 6 |
+| 9 | Subir `auth` → aplicar migrations → demais serviços | `auth` cria o schema que as 92 policies referenciam |
+| 10 | Primeiro backup real + `restore-verify.sh` | backup só vale depois de provado restaurável |
+
+**A janela do pgsodium é o intervalo entre 6 e 8.** É a única fase em que
+existe material insubstituível sem cópia. Ela deve ser medida em minutos e
+executada com o passo 8 já preparado — não improvisado depois.
+
+Nenhum passo desta tabela foi executado.
+
+### 11.6 Recuperação após perda total do VPS
 
 VM → SSH → Docker → swap → firewall → dependências (`postgresql-client`
 **≥ 17**, `rclone`, `age`, Caddy) → **credencial R2 do password manager** →
