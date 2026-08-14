@@ -401,7 +401,47 @@ Configuração externa (`age-recipient`, `rclone.conf`, `backup.env`) é
 reportada como `external credential/configuration not provisioned` — ausência
 ali não é defeito de infraestrutura, é etapa humana pendente.
 
-### 11.3 Recuperação após perda total do VPS
+### 11.3 Bundle cifrado de segredos
+
+A Sprint 20 desenhou a cópia cifrada; a Sprint 28 constatou que nada a
+produzia. `infra/selfhosted/secrets/build-secrets-bundle.sh` fecha isso:
+
+```bash
+sudo infra/selfhosted/secrets/build-secrets-bundle.sh --check      # pré-requisitos
+sudo infra/selfhosted/secrets/build-secrets-bundle.sh --build      # coleta, valida, cifra
+sudo infra/selfhosted/secrets/build-secrets-bundle.sh --upload     # envia e confere ida/volta
+sudo infra/selfhosted/secrets/build-secrets-bundle.sh --verify     # rebaixa e compara sha256
+sudo infra/selfhosted/secrets/build-secrets-bundle.sh --cleanup    # destrói os artefatos
+sudo infra/selfhosted/secrets/build-secrets-bundle.sh --self-test  # ciclo com dados sintéticos
+```
+
+**Onde o texto em claro vive:** `/run/paraguai` — `/run` é **tmpfs**
+(`noexec,nosuid,nodev`). O plaintext existe só durante a operação e **nunca
+toca disco persistente**: não há setor para recuperar depois. Ele é destruído
+com `shred` imediatamente após a cifragem, antes mesmo do upload.
+
+**Fontes fixas no código** (`docker/.env` e `backup.env`). Aceitar caminhos
+por argumento ou ambiente transformaria um script que roda como root num
+"cifre qualquer arquivo do sistema e mande para fora".
+
+**`rclone.conf` fica FORA do bundle, de propósito** — é a credencial de
+*bootstrap*: se a chave do R2 estivesse dentro do bundle que está no R2,
+seria preciso a credencial do R2 para buscar a credencial do R2. Ela mora no
+gerenciador de senhas. A identidade privada AGE também fica fora, por
+definição.
+
+**Validação antes de cifrar:** cada arquivo precisa ser `KEY=VALUE` válido,
+sem duplicatas, sem placeholder `<<GERAR>>` remanescente e não-vazio. Erros
+citam nome de variável e número de linha — **nunca o valor**. Cifrar um
+`.env` ainda com placeholders produziria um backup de aparência válida e
+conteúdo inútil.
+
+**A assimetria que sustenta o modelo:** o script cifra para o recipient
+público e não tem como decifrar. O `--self-test` prova isso executando um
+`age -d` que **deve falhar** — comprometer o servidor dá acesso aos segredos
+em uso, não à cópia de recuperação.
+
+### 11.4 Recuperação após perda total do VPS
 
 VM → SSH → Docker → swap → firewall → dependências (`postgresql-client`
 **≥ 17**, `rclone`, `age`, Caddy) → **credencial R2 do password manager** →
