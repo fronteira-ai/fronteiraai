@@ -188,6 +188,32 @@ e race) e **não usa `-h`/`--dereference`**, então um symlink dentro do
 volume é arquivado como symlink, nunca seguido — sem isso, o wrapper viraria
 um "leia qualquer arquivo como root".
 
+### 6.4 Onde vive a configuração do R2
+
+O `backup.sh` chama `rclone` sem passar caminho de configuração, então quem
+decide o arquivo é o ambiente. Deixado no padrão, o rclone resolveria
+`$HOME/.config/rclone/rclone.conf` — para o usuário de serviço, um caminho
+que **ele mesmo pode criar e reescrever**. O serviço poderia, na prática,
+apontar os próprios backups para um destino sob seu controle.
+
+Por isso o caminho é explícito e fica fora do alcance de escrita do serviço:
+
+| Item | Valor |
+|---|---|
+| Arquivo | `/etc/paraguai/rclone.conf` |
+| Dono / modo | `root:paraguai 0640` — serviço **lê**, não **escreve** |
+| Mecanismo | `RCLONE_CONFIG=/etc/paraguai/rclone.conf` no `backup.env` (`EnvironmentFile`) |
+| Destino | `RCLONE_REMOTE=<remote>:<bucket>` |
+
+Nenhuma alteração de código foi necessária: `RCLONE_CONFIG` é lido pelo
+próprio rclone, e o `EnvironmentFile` já existia na unit. O token R2 é
+restrito ao bucket e **não tem `CreateBucket`** — por isso as operações de
+envio usam `--s3-no-check-bucket`.
+
+> O `healthcheck.sh` também usa o remote (`rclone lsd`). O mecanismo que o
+> agendar precisa carregar o **mesmo** `EnvironmentFile`, senão alerta falta
+> de configuração como se fosse falha de destino.
+
 **Por que o instalador existe:** o Git não preserva dono nem modo
 privilegiado. Sem `install-backup-privilege.sh`, uma VM reconstruída teria
 a fronteira apenas *descrita* no repositório, não *instalada* — e o backup
@@ -297,9 +323,13 @@ BUNDLE  paraguai-secrets.age
         ▼
 OPERAÇÃO (VPS), separados por domínio — um vazamento não expõe os demais
   /opt/supabase-stack/docker/.env      0600 root:root
-  /etc/paraguai/backup.env             0600 paraguai:paraguai
-  ~paraguai/.config/rclone/rclone.conf 0600 paraguai:paraguai
+  /etc/paraguai/backup.env             0640 root:paraguai
+  /etc/paraguai/rclone.conf            0640 root:paraguai
 ```
+
+Os três são **legíveis** pelo processo que precisa deles e **imutáveis**
+para ele: root é o dono. Um serviço que pode reescrever a própria
+configuração pode redirecionar o próprio backup — ver §6.4.
 
 **Fora do bundle, deliberadamente:** `rclone.conf` (é o *bootstrap* do
 disaster recovery — se estivesse dentro do bundle que está no R2, seria
