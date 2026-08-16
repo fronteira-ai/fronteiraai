@@ -27,7 +27,7 @@ OFFLINE=0
 if [ "${1:-}" = "--offline" ]; then OFFLINE=1; shift; fi
 
 BACKUP_DIR="${1:?uso: restore-verify.sh [--offline] <dir-do-backup> [imagem]}"
-PG_IMAGE="${2:-supabase/postgres:17.6.1.136}"
+PG_IMAGE="${2:-postgres:17-alpine}"
 DUMP="${BACKUP_DIR}/database.dump"
 DBCONF="${BACKUP_DIR}/db-config.tar.gz"
 MANIFEST="${BACKUP_DIR}/manifest.json"
@@ -105,7 +105,11 @@ else
   if tar -tzf "$DBCONF" >/dev/null 2>&1; then
     N=$(tar -tzf "$DBCONF" 2>/dev/null | wc -l)
     ok "db-config.tar.gz íntegro (${N} entradas)"
-    if tar -tzf "$DBCONF" 2>/dev/null | grep -qiE 'pgsodium.*\.key|\.key$'; then
+    # grep -q sairia no 1o casamento e mataria o tar com SIGPIPE; sob pipefail
+    # isso vira falso negativo na verificacao mais critica do DR. grep -c consome
+    # o stream inteiro e elimina a corrida.
+    KEYS=$(tar -tzf "$DBCONF" 2>/dev/null | grep -ciE 'pgsodium.*\.key|\.key$' || true)
+    if [ "${KEYS:-0}" -gt 0 ]; then
       ok "root key do pgsodium presente no arquivo"
     else
       warn "nenhum arquivo .key no db-config — esperado ANTES do 1º boot; ALARMANTE depois dele"
@@ -143,7 +147,7 @@ fi
 
 echo "=== 6/8 subindo PostgreSQL isolado (${PG_IMAGE}) ==="
 command -v docker >/dev/null 2>&1 || hard "docker indisponível — use --offline"
-cleanup() { docker rm -f "$CONTAINER" >/dev/null 2>&1 || true; }
+cleanup() { docker rm -f -v "$CONTAINER" >/dev/null 2>&1 || true; }
 trap cleanup EXIT
 
 docker run -d --name "$CONTAINER" \
@@ -201,13 +205,13 @@ rm -f /tmp/restore_err_$$
 echo "=== 8/8 verificações de integridade ==="
 q() { docker exec "$CONTAINER" psql -U postgres -tAc "$1"; }
 
-TABLES=$(q "SELECT count(*) FROM information_schema.tables WHERE table_schema='public';")
-INDEXES=$(q "SELECT count(*) FROM pg_indexes WHERE schemaname='public';")
-CONSTRAINTS=$(q "SELECT count(*) FROM information_schema.table_constraints WHERE table_schema='public';")
-FUNCS=$(q "SELECT count(*) FROM information_schema.routines WHERE routine_schema='public';")
-TRIGGERS=$(q "SELECT count(*) FROM information_schema.triggers WHERE trigger_schema='public';")
-RLS=$(q "SELECT count(*) FROM pg_tables t JOIN pg_class c ON c.relname=t.tablename WHERE t.schemaname='public' AND c.relrowsecurity;")
-POLICIES=$(q "SELECT count(*) FROM pg_policies WHERE schemaname='public';")
+TABLES=$(q "SELECT count(*) FROM information_schema.tables WHERE table_schema NOT IN ('pg_catalog','information_schema');")
+INDEXES=$(q "SELECT count(*) FROM pg_indexes WHERE schemaname NOT IN ('pg_catalog','information_schema');")
+CONSTRAINTS=$(q "SELECT count(*) FROM information_schema.table_constraints WHERE table_schema NOT IN ('pg_catalog','information_schema');")
+FUNCS=$(q "SELECT count(*) FROM information_schema.routines WHERE routine_schema NOT IN ('pg_catalog','information_schema');")
+TRIGGERS=$(q "SELECT count(*) FROM information_schema.triggers WHERE trigger_schema NOT IN ('pg_catalog','information_schema');")
+RLS=$(q "SELECT count(*) FROM pg_tables t JOIN pg_class c ON c.relname=t.tablename WHERE t.schemaname NOT IN ('pg_catalog','information_schema') AND c.relrowsecurity;")
+POLICIES=$(q "SELECT count(*) FROM pg_policies WHERE schemaname NOT IN ('pg_catalog','information_schema');")
 
 printf '    tabelas=%s indices=%s constraints=%s funcoes=%s triggers=%s rls=%s policies=%s\n' \
   "$TABLES" "$INDEXES" "$CONSTRAINTS" "$FUNCS" "$TRIGGERS" "$RLS" "$POLICIES"
@@ -215,8 +219,8 @@ printf '    tabelas=%s indices=%s constraints=%s funcoes=%s triggers=%s rls=%s p
 [ "${TABLES:-0}" -gt 0 ] || fail "nenhuma tabela restaurada"
 [ "${INDEXES:-0}" -gt 0 ] || fail "nenhum índice restaurado"
 
-q "SELECT relname||'='||n_live_tup FROM pg_stat_user_tables WHERE schemaname='public' AND n_live_tup>0 ORDER BY n_live_tup DESC LIMIT 10;" | sed 's/^/    /'
-TOTAL_ROWS=$(q "SELECT COALESCE(sum(n_live_tup),0) FROM pg_stat_user_tables WHERE schemaname='public';")
+q "SELECT relname||'='||n_live_tup FROM pg_stat_user_tables WHERE schemaname NOT IN ('pg_catalog','information_schema') AND n_live_tup>0 ORDER BY n_live_tup DESC LIMIT 10;" | sed 's/^/    /'
+TOTAL_ROWS=$(q "SELECT COALESCE(sum(n_live_tup),0) FROM pg_stat_user_tables WHERE schemaname NOT IN ('pg_catalog','information_schema');")
 echo "    total de linhas restauradas: ${TOTAL_ROWS}"
 
 echo
