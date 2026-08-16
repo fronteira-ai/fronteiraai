@@ -62,9 +62,22 @@ AGE_RECIPIENT_SRC="${INFRA}/age/age-recipient"
 AGE_RECIPIENT_DST=/etc/paraguai/age-recipient
 
 # path:owner:group:mode
+# Diretórios de DADOS: existem, mas o dono pertence a quem escreve neles,
+# não a este script. /srv/paraguai/postgres é o PGDATA, bind-montado em
+# /var/lib/postgresql/data; seu dono é o uid do postgres de dentro do
+# container (uid=100, que no host aparece como systemd-network por mera
+# colisão de uid). Ele esteve listado em DIRS como root:root, o que fazia
+# `--install` executar `chown root:root` no diretório de dados e deixar o
+# PostgreSQL sem conseguir subir. Um provisionador de recuperação que
+# destrói os dados para deixá-los "conforme" é pior que nenhum.
+#
+# Aqui eles são apenas AUDITADOS. Nunca criados, nunca chown, nunca chmod.
+DATA_DIRS=(
+  "/srv/paraguai/postgres"
+)
+
 DIRS=(
   "/srv/paraguai:root:root:0755"
-  "/srv/paraguai/postgres:root:root:0700"
   "/srv/paraguai/storage:root:root:0755"
   "/backups/paraguai:${SERVICE_USER}:${SERVICE_USER}:0750"
   "/etc/paraguai:root:${SERVICE_USER}:0750"
@@ -148,6 +161,24 @@ for entry in "${DIRS[@]}"; do
   else
     bad "${p} está '${cur}', esperado '${want}'"
   fi
+done
+
+# ── 2b. Diretórios de dados (auditoria SEM escrita) ─────────────────────
+# Nenhuma correção automática aqui, por decisão: a ausência do diretório numa
+# VM nova não é defeito — o Docker cria a origem do bind mount e o entrypoint
+# do Postgres ajusta o dono no init. Inventar um dono aqui seria adivinhar.
+sec "diretórios de dados (somente auditoria)"
+for p in "${DATA_DIRS[@]}"; do
+  if [ ! -d "$p" ]; then
+    ok "${p} ausente — PGDATA ownership delegated to database/container bootstrap"
+    continue
+  fi
+  cur="$(stat -c '%U:%G %a' "$p")"
+  mode="$(stat -c '%a' "$p")"
+  case "$mode" in
+    700|750) ok "${p} (${cur}) — dono pertence ao container; não é alterado por este script" ;;
+    *)       warn "${p} está com modo ${mode}; o PostgreSQL exige 0700 ou 0750 — corrija MANUALMENTE, este script não escreve aqui" ;;
+  esac
 done
 
 # ── 3. Swap ─────────────────────────────────────────────────────────────
