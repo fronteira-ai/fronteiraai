@@ -55,6 +55,9 @@ SSH_PORT=22
 # cifrar os backups, e a etapa mais fácil de esquecer num desastre é a que
 # não está em lugar nenhum. A metade privada continua fora do VPS e fora do
 # Git — é ela que decifra, e é por isso que o servidor nunca a vê.
+TMPFILES_SRC="${INFRA}/monitoring/paraguai-status.tmpfiles"
+TMPFILES_DST=/etc/tmpfiles.d/paraguai-status.conf
+STATUS_DIR=/run/paraguai-status
 AGE_RECIPIENT_SRC="${INFRA}/age/age-recipient"
 AGE_RECIPIENT_DST=/etc/paraguai/age-recipient
 
@@ -72,6 +75,7 @@ UNITS=(
   "${INFRA}/backup/paraguai-backup.timer"
   "${INFRA}/monitoring/paraguai-healthcheck.service"
   "${INFRA}/monitoring/paraguai-healthcheck.timer"
+  "${INFRA}/monitoring/paraguai-container-status.service"
 )
 
 MODE=check
@@ -303,6 +307,56 @@ if [ -f /etc/paraguai/backup.env ]; then
   warn "backup.env existe — habilitar os timers é decisão do gate de segredos, não deste script"
 else
   ok "timers NÃO habilitados (backup.env ainda não existe — correto)"
+fi
+
+# ── 6b. tmpfiles.d ──────────────────────────────────────────────────────
+# /run/paraguai-status é onde paraguai-container-status.service deposita o
+# estado dos containers para o healthcheck ler. Ele precisa existir ANTES
+# da unit rodar: o systemd abre o `StandardOutput=file:` antes de criar
+# qualquer `RuntimeDirectory=`, então declarar o diretório aqui não é
+# preferência de estilo — é a única ordem que funciona. Medido na Sprint
+# 34B: com RuntimeDirectory=, a unit falhava com 209/STDOUT.
+#
+# O controle de acesso mora no DIRETÓRIO (0750 root:paraguai), não no
+# arquivo: o systemd abre o arquivo de saída antes de aplicar `Group=`, e
+# ele nasce root:root. Sem este diretório com o dono certo, o healthcheck
+# volta a ficar cego — em silêncio.
+sec "tmpfiles.d"
+if [ ! -f "$TMPFILES_SRC" ]; then
+  bad "fonte ausente: ${TMPFILES_SRC}"
+else
+  TMPF_NAME="$(basename "$TMPFILES_DST")"
+  CONF_OK=0
+  [ -f "$TMPFILES_DST" ] && cmp -s "$TMPFILES_SRC" "$TMPFILES_DST" && CONF_OK=1
+  DIR_OK=0
+  [ -d "$STATUS_DIR" ] \
+    && [ "$(stat -c '%U:%G %a' "$STATUS_DIR")" = "root:${SERVICE_USER} 750" ] && DIR_OK=1
+
+  if [ "$CONF_OK" -eq 1 ] && [ "$DIR_OK" -eq 1 ]; then
+    ok "${TMPF_NAME} instalado; ${STATUS_DIR} (root:${SERVICE_USER} 750)"
+  elif [ "$MODE" = install ]; then
+    # Mesma disciplina da seção 6: só escreve quando há divergência real.
+    if [ "$CONF_OK" -eq 0 ]; then
+      install -o root -g root -m 0644 "$TMPFILES_SRC" "$TMPFILES_DST"
+      fix "${TMPF_NAME} instalado"
+    fi
+    if systemd-tmpfiles --create "$TMPFILES_DST"; then
+      fix "${STATUS_DIR} aplicado ($(stat -c '%U:%G %a' "$STATUS_DIR" 2>/dev/null))"
+    else
+      bad "systemd-tmpfiles falhou ao criar ${STATUS_DIR}"
+    fi
+  else
+    [ "$CONF_OK" -eq 1 ] || bad "${TMPF_NAME} ausente ou divergente do repositório"
+    [ "$DIR_OK" -eq 1 ] || bad "${STATUS_DIR} ausente ou com dono/modo errado (esperado root:${SERVICE_USER} 750)"
+  fi
+
+  # Guarda de sanidade, no mesmo espírito da checagem do recipient AGE: este
+  # diretório é para estado PÚBLICO de containers. /run/paraguai é que é a
+  # tmpfs de custódia. Se um dia os dois se misturarem, isto reprova.
+  if [ -d "$STATUS_DIR" ] \
+     && grep -rqlE 'AGE-SECRET-KEY|BEGIN [A-Z ]*PRIVATE KEY|SERVICE_ROLE' "$STATUS_DIR" 2>/dev/null; then
+    bad "${STATUS_DIR} contém material sensível — este diretório é só para estado de containers"
+  fi
 fi
 
 # ── 7. Configuração externa (NUNCA provisionada aqui) ───────────────────

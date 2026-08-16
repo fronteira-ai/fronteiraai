@@ -1,0 +1,51 @@
+[Unit]
+Description=ParaguAI — coleta privilegiada do estado dos containers
+Documentation=file:///opt/paraguai/docs/engineering/SELFHOSTED_INFRASTRUCTURE.md
+After=docker.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+
+# Roda como root porque consultar o Docker exige o socket. Esta é a única
+# unit privilegiada do caminho de monitoramento, e executa exatamente um
+# binário fixo, sem argumentos, sem shell e sem variável no comando. O
+# usuário `paraguai` continua fora do grupo docker e nunca toca no socket:
+# ele apenas LÊ o resultado já sanitizado.
+#
+# Group=paraguai existe só para que o RuntimeDirectory e o arquivo de saída
+# nasçam legíveis pelo grupo do consumidor.
+# Explicito de proposito: o padrao do systemd ja seria root, mas uma
+# auditoria nao deve depender de conhecer o padrao. Esta e a UNICA
+# unit do caminho de monitoramento que roda privilegiada.
+User=root
+Group=paraguai
+
+# O diretório de saída é declarado em tmpfiles.d, não com
+# RuntimeDirectory=: o systemd abre o StandardOutput=file: ANTES de
+# criar o RuntimeDirectory, e a unit falhava com 209/STDOUT. Ver
+# infra/selfhosted/monitoring/paraguai-status.tmpfiles.
+
+# O wrapper escreve em stdout; o systemd redireciona para o arquivo e o
+# trunca a cada execução. Sem shell, sem redirecionamento, sem comando
+# arbitrário.
+ExecStart=/usr/local/sbin/paraguai-container-status
+StandardOutput=file:/run/paraguai-status/containers
+StandardError=journal
+
+WorkingDirectory=/
+TimeoutStartSec=60
+Nice=10
+
+# Endurecimento compatível com um processo root que precisa falar com o
+# daemon do Docker. ProtectSystem=strict NÃO é usado de propósito: deixaria
+# /run somente-leitura e impediria a conexão ao socket.
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+RestrictRealtime=true
+LockPersonality=true
+SystemCallArchitectures=native

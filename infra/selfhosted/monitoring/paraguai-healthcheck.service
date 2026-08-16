@@ -4,6 +4,13 @@ Documentation=file:///opt/paraguai/docs/engineering/SELFHOSTED_INFRASTRUCTURE.md
 After=network-online.target docker.service
 Wants=network-online.target
 
+# O estado dos containers e produzido por esta unit, que roda o wrapper
+# privilegiado como root. `Wants` (e nao `Requires`) de proposito: se o
+# produtor falhar, o healthcheck ainda roda e ALERTA sobre a ausencia do
+# estado, em vez de sumir do radar junto com ele.
+Wants=paraguai-container-status.service
+After=paraguai-container-status.service
+
 [Service]
 Type=oneshot
 User=paraguai
@@ -32,6 +39,12 @@ SuccessExitStatus=0 1
 
 # ── Endurecimento ────────────────────────────────────────────────────────
 # O healthcheck só lê: nenhum caminho de escrita é concedido.
+#
+# Sprint 34B: as diretivas abaixo implicam NoNewPrivileges=1 no kernel, o
+# que torna QUALQUER setuid impossível — inclusive o do sudo. Isso deixou
+# de ser um problema porque o estado privilegiado passou a chegar por
+# arquivo, produzido por paraguai-container-status.service. O endurecimento
+# fica integral e a fronteira de privilégio, intacta.
 NoNewPrivileges=true
 PrivateTmp=true
 ProtectSystem=strict

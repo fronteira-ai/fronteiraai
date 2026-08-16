@@ -1,0 +1,16 @@
+# ParaguAI — Sprint 34B. Diretório de transporte do estado dos containers.
+#
+# Por que tmpfiles.d e não RuntimeDirectory= na unit: o systemd abre o
+# StandardOutput=file: ANTES de criar o RuntimeDirectory, então a unit
+# falharia com 209/STDOUT na primeira execução. Foi reproduzido e medido.
+# tmpfiles.d é declarativo — nenhum comando é executado para criar isto.
+#
+# 0750 root:paraguai é o controle de acesso real: o arquivo lá dentro nasce
+# root:root 0644 (o systemd o abre antes de aplicar Group=), então quem
+# barra o resto do mundo é a permissão do diretório. O conteúdo não é
+# secreto — são nomes de containers e seus estados —, mas não há motivo
+# para publicá-lo além de quem precisa.
+#
+# Não confundir com /run/paraguai (0700 root:root), a tmpfs reservada a
+# material secreto. São diretórios distintos de propósito.
+d /run/paraguai-status 0750 root paraguai -

@@ -44,13 +44,28 @@ ok "load average:$(cut -d' ' -f1-3 /proc/loadavg | sed 's/^/ /')"
 # não limitação. O estado vem de um wrapper privilegiado sem argumentos, que
 # devolve apenas `<nome> <status> <health>` para uma lista FIXA de
 # containers. Ver infra/selfhosted/privilege/.
-CONTAINER_STATUS_WRAPPER=/usr/local/sbin/paraguai-container-status
+# Sprint 34B: o estado chega por ARQUIVO, não por `sudo`. O endurecimento
+# desta unit (RestrictSUIDSGID, ProtectKernel*, LockPersonality,
+# SystemCallArchitectures, RestrictRealtime) implica NoNewPrivileges=1 no
+# kernel, o que torna qualquer setuid impossível — inclusive o do sudo.
+# Afrouxar o sandbox para caber o sudo seria pagar com segurança por
+# visibilidade. Em vez disso, paraguai-container-status.service roda o
+# wrapper como root ANTES desta unit e deposita o resultado aqui.
+CONTAINER_STATUS_FILE=/run/paraguai-status/containers
+STATUS_MAX_AGE=120
 STATUS_OUT=""
-if [ ! -x "$CONTAINER_STATUS_WRAPPER" ]; then
-  alert "wrapper de status ausente — rode provision/install-healthcheck-privilege.sh"
-elif ! STATUS_OUT=$(sudo -n "$CONTAINER_STATUS_WRAPPER" 2>/dev/null); then
-  alert "não foi possível consultar o estado dos containers (sudo/wrapper falhou)"
-  STATUS_OUT=""
+if [ ! -r "$CONTAINER_STATUS_FILE" ]; then
+  alert "estado dos containers indisponível — paraguai-container-status.service não produziu ${CONTAINER_STATUS_FILE}"
+else
+  # Um arquivo antigo é pior que arquivo nenhum: reportaria como atual um
+  # estado de horas atrás. Fora da janela, recusa a leitura e alerta.
+  STATUS_AGE=$(( $(date +%s) - $(stat -c %Y "$CONTAINER_STATUS_FILE") ))
+  if [ "$STATUS_AGE" -gt "$STATUS_MAX_AGE" ]; then
+    alert "estado dos containers obsoleto (${STATUS_AGE}s > ${STATUS_MAX_AGE}s) — leitura recusada"
+  else
+    STATUS_OUT=$(cat "$CONTAINER_STATUS_FILE")
+    [ -n "$STATUS_OUT" ] || alert "estado dos containers vazio — wrapper nao produziu saida"
+  fi
 fi
 
 DB_STATE=""; DB_HEALTH=""
