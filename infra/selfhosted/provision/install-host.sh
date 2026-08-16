@@ -55,6 +55,10 @@ SSH_PORT=22
 # cifrar os backups, e a etapa mais fácil de esquecer num desastre é a que
 # não está em lugar nenhum. A metade privada continua fora do VPS e fora do
 # Git — é ela que decifra, e é por isso que o servidor nunca a vê.
+CADDYFILE_SRC="${INFRA}/caddy/Caddyfile"
+CADDYFILE_DST=/etc/caddy/Caddyfile
+CADDY_DROPIN_SRC="${INFRA}/caddy/caddy.service.d/paraguai-hardening.conf"
+CADDY_DROPIN_DST=/etc/systemd/system/caddy.service.d/paraguai-hardening.conf
 TMPFILES_SRC="${INFRA}/monitoring/paraguai-status.tmpfiles"
 TMPFILES_DST=/etc/tmpfiles.d/paraguai-status.conf
 STATUS_DIR=/run/paraguai-status
@@ -388,6 +392,67 @@ else
      && grep -rqlE 'AGE-SECRET-KEY|BEGIN [A-Z ]*PRIVATE KEY|SERVICE_ROLE' "$STATUS_DIR" 2>/dev/null; then
     bad "${STATUS_DIR} contém material sensível — este diretório é só para estado de containers"
   fi
+fi
+
+# ── 6c. Caddy (camada de exposição pública) ─────────────────────────────
+# Caddy é o único componente publicado na internet: recebe 80/443 e faz
+# reverse proxy para o Kong em 127.0.0.1:8000. A configuração vinha só de
+# /etc/caddy/Caddyfile, fora do Git — a última peça da infraestrutura que
+# não se reconstruía sozinha. Agora vem daqui.
+#
+# O binário NÃO é instalado por este script (é pacote apt, não versionável).
+# Se faltar, isto reprova com mensagem explícita em vez de instalar config
+# para um serviço inexistente e declarar sucesso.
+#
+# Este bloco NUNCA habilita nem inicia o Caddy: subir o serviço sem que o
+# DNS aponte para a máquina faz o ACME falhar em loop e queimar os limites
+# da Let's Encrypt. Iniciar é decisão de gate, como nos timers.
+sec "caddy (exposição pública)"
+CADDY_RELOAD=0
+if ! command -v caddy >/dev/null 2>&1; then
+  bad "caddy não instalado — instale o pacote antes (este script não gerencia pacotes)"
+else
+  ok "caddy presente ($(caddy version 2>/dev/null | awk '{print $1}'))"
+
+  for pair in "${CADDYFILE_SRC}:${CADDYFILE_DST}" "${CADDY_DROPIN_SRC}:${CADDY_DROPIN_DST}"; do
+    src="${pair%%:*}"; dst="${pair##*:}"; name="$(basename "$dst")"
+    if [ ! -f "$src" ]; then bad "fonte ausente: ${src}"; continue; fi
+    if [ -f "$dst" ] && cmp -s "$src" "$dst"; then
+      ok "${name} instalado e idêntico ao repositório"
+    elif [ "$MODE" = install ]; then
+      install -D -o root -g root -m 0644 "$src" "$dst"
+      CADDY_RELOAD=1
+      fix "${name} -> ${dst}"
+    else
+      [ -f "$dst" ] && bad "${name} DIVERGE do repositório" || bad "${name} não instalado (${dst})"
+    fi
+  done
+
+  # daemon-reload só quando o drop-in mudou: recarregar por reflexo faria o
+  # relatório dizer "alterado" a cada execução.
+  if [ "$MODE" = install ] && [ "$CADDY_RELOAD" -eq 1 ]; then
+    systemctl daemon-reload; fix "systemctl daemon-reload (drop-in do caddy)"
+  fi
+
+  # Validar a configuração REALMENTE instalada, não a do repositório: é a
+  # que o serviço vai carregar.
+  if [ -f "$CADDYFILE_DST" ]; then
+    if caddy validate --adapter caddyfile --config "$CADDYFILE_DST" >/dev/null 2>&1; then
+      ok "Caddyfile instalado é válido"
+    else
+      bad "Caddyfile instalado REPROVOU em caddy validate"
+    fi
+  fi
+
+  # A fronteira de privilégio do Caddy, auditada a cada execução.
+  if id -nG caddy 2>/dev/null | tr ' ' '\n' | grep -qx docker; then
+    bad "caddy está no grupo docker — um proxy não tem uso legítimo para o Docker"
+  else
+    ok "caddy fora do grupo docker"
+  fi
+
+  # Estado do serviço é informativo: quem decide subir é o operador.
+  ok "caddy: enabled=$(systemctl is-enabled caddy 2>/dev/null) active=$(systemctl is-active caddy 2>/dev/null) (este script não inicia)"
 fi
 
 # ── 7. Configuração externa (NUNCA provisionada aqui) ───────────────────

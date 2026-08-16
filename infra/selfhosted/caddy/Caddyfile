@@ -1,0 +1,19 @@
+# ParaguAI — Sprint 36R. Único ponto de entrada público do VPS.
+#
+#   Internet → api.fronteiraai.com → Caddy :80/:443 → 127.0.0.1:8000 (Kong) → Supabase
+#
+# O apex fronteiraai.com e www continuam na Vercel e NÃO aparecem aqui de
+# propósito: este arquivo governa exclusivamente o hostname da API. Declarar
+# o apex aqui faria o Caddy tentar emitir certificado para um domínio que
+# não aponta para esta máquina, e o ACME falharia em loop.
+#
+# Sem plugins, sem hooks, sem credencial. O certificado é obtido e renovado
+# automaticamente pelo próprio Caddy via ACME HTTP-01 — por isso o registro
+# DNS precisa continuar em "DNS only" na Cloudflare: com o proxy ligado, o
+# desafio é interceptado antes de chegar aqui.
+
+api.fronteiraai.com {
+	# Kong escuta apenas em loopback. É essa a fronteira: nada além do Caddy
+	# está publicado, e o Caddy só sabe falar com este endereço.
+	reverse_proxy 127.0.0.1:8000
+}
