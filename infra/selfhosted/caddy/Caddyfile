@@ -1,3 +1,25 @@
+# Bloco global — Sprint 37.
+{
+	# A Admin API (127.0.0.1:2019) permite reconfigurar o Caddy em runtime:
+	# trocar o upstream, servir arquivos, emitir certificados. Ela escuta em
+	# loopback, mas loopback não é uma fronteira de privilégio — QUALQUER
+	# processo local, de qualquer usuário, alcança 2019. Num host cuja
+	# arquitetura inteira foi construída para que nem o usuário de serviço
+	# toque no Docker, deixar um canal de reconfiguração aberto a qualquer
+	# processo local seria incoerente.
+	#
+	# Consequência assumida: `caddy reload` fala com o Caddy POR essa API, e
+	# portanto deixa de funcionar. Trocas de configuração passam a exigir
+	# `systemctl restart caddy` (interrupção de ~1s). O ExecReload da unit é
+	# neutralizado no drop-in para não deixar um comando que falha em silêncio.
+	admin off
+
+	# Endereço da conta ACME. Sem ele, a Let's Encrypt não tem para onde
+	# avisar se a renovação começar a falhar — e a renovação é justamente o
+	# que pode quebrar silenciosamente daqui a 60 dias. Não é segredo.
+	email danielscaramello21@gmail.com
+}
+
 # ParaguAI — Sprint 36R. Único ponto de entrada público do VPS.
 #
 #   Internet → api.fronteiraai.com → Caddy :80/:443 → 127.0.0.1:8000 (Kong) → Supabase
