@@ -1,4 +1,5 @@
 import { Search, SearchX } from "lucide-react";
+import { productsPath } from "@/constants/routes";
 import ProductCard from "@/components/product/ProductCard";
 import StoreCard from "@/components/store/StoreCard";
 import CategoryCard from "@/components/ui/CategoryCard";
@@ -103,7 +104,7 @@ export default function SearchResults({ results, belowAveragePriceBadges, trustB
                 key={category.id}
                 icon={category.icon ?? "🛍️"}
                 name={category.name}
-                href={`/categories/${category.slug}`}
+                href={productsPath({ category: category.slug })}
               />
             ))}
           </div>
