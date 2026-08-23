@@ -7,15 +7,16 @@ import Footer from "@/components/layout/Footer";
 import SectionSkeleton from "@/components/ui/SectionSkeleton";
 import Hero from "@/components/home/Hero";
 import SearchBar from "@/components/home/SearchBar";
-import HeroCTAs from "@/components/home/HeroCTAs";
 import DashboardStrip from "@/components/home/DashboardStrip";
 import Offers from "@/components/home/Offers";
 import AchadoDoDia from "@/components/home/AchadoDoDia";
 import AIShowcase from "@/components/home/AIShowcase";
+import HeroCTAs from "@/components/home/HeroCTAs";
 import Benefits from "@/components/home/Benefits";
 import HowItWorks from "@/components/home/HowItWorks";
 import ForLojistasSection from "@/components/home/ForLojistasSection";
 import CTASection from "@/components/home/CTASection";
+import { getPopularSearchSuggestions } from "@/services/search-suggestions.service";
 
 // Release 1.9 — Program F — Wave 2 (v0 realignment, ADR-050 v1.1). Loaded
 // here (not in the root layout) and applied only to this page's <main> below
@@ -61,6 +62,12 @@ export const metadata: Metadata = {
 };
 
 export default async function Home() {
+  // Sprint 39B (Search as the Hero): sugestões REAIS de busca (eventos de
+  // buyer_events), resolvidas no servidor dentro da janela ISR (revalidate=60)
+  // e entregues ao SearchBar por props — sem request client-side. Em erro o
+  // serviço devolve [] e o bloco de sugestões simplesmente não renderiza.
+  const suggestions = await getPopularSearchSuggestions(6);
+
   return (
     <main className={`min-h-screen bg-[oklch(0.14_0.03_265)] text-white ${sora.variable} ${inter.variable}`}>
       <Navbar />
@@ -73,24 +80,12 @@ export default async function Home() {
         <Hero />
       </Suspense>
 
+      {/* Sprint 39B: a busca é a ÚNICA ação principal do fold (Search as the
+          Hero). Os CTAs de lojista (HeroCTAs) foram rebaixados para depois do
+          AIShowcase, fora da primeira dobra — a hierarquia acima da dobra é
+          agora: mensagem (Hero) → ação (busca) → prova (stats reais no Hero). */}
       <div className="relative z-10 mx-auto max-w-[1600px] px-6 pt-10 lg:px-10">
-        <SearchBar />
-        <div className="mt-6">
-          <HeroCTAs />
-        </div>
-      </div>
-
-      {/* Program UX — Mission UX-1B (Objetivo 3/7). Moved up from below the
-          dashboard/offers blocks — the proof of "toda busca já vem com a
-          decisão pronta" belongs right after the promise the Hero makes, not
-          several data-dense sections later.
-          Program UX — Mission UX-1C (Objetivo 2). -mt-* below pulls each
-          section closer to the one above it, cutting roughly a quarter of
-          the empty space Section's own py-16/py-20 padding leaves on both
-          sides of the seam — Section itself (components/ui/, shared Design
-          System) is never touched. */}
-      <div className="-mt-4 sm:-mt-6">
-        <AIShowcase />
+        <SearchBar suggestions={suggestions} />
       </div>
 
       {/* Dense dashboard: 4-card info row (Economia do dia | Market Pulse |
@@ -115,6 +110,17 @@ export default async function Home() {
         <Suspense fallback={<SectionSkeleton minHeight={280} />}>
           <AchadoDoDia />
         </Suspense>
+      </div>
+
+      {/* Sprint 39B: AIShowcase rebaixado abaixo da dobra — não compete mais
+          com a busca no fold (decisão de hierarquia, não anti-IA). */}
+      <div className="-mt-8 sm:-mt-10">
+        <AIShowcase />
+      </div>
+
+      {/* Sprint 39B: CTA único de lojista, discreto, fora do fold. */}
+      <div className="flex justify-center py-4">
+        <HeroCTAs />
       </div>
 
       <Benefits />

@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Search, Store, X } from "lucide-react";
+import { Store, X } from "lucide-react";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
 type AuthState = "loading" | "unauthenticated" | "merchant" | "buyer";
@@ -41,14 +41,6 @@ export default function HeroCTAs() {
   return (
     <>
       <div className="flex w-full flex-wrap items-center justify-center gap-4">
-        <Link
-          href="/search"
-          className="flex items-center gap-2.5 rounded-full bg-gradient-to-r from-brand-blue to-brand-purple px-8 py-4 text-sm font-bold text-white shadow-[0_0_24px_-6px_var(--color-brand-blue)] transition-all duration-300 hover:scale-[1.03] active:scale-95"
-        >
-          <Search size={17} />
-          Encontrar a melhor compra
-        </Link>
-
         <button
           onClick={handleLojistaClick}
           disabled={authState === "loading"}

@@ -7,7 +7,9 @@ import { searchPath } from "@/constants/routes";
 interface UseSearchResult {
   query: string;
   setQuery: (value: string) => void;
-  submit: () => void;
+  /** Sprint 39B: aceita valor opcional — chips de sugestão passam o termo
+   * diretamente; sem argumento usa o valor atual do campo. */
+  submit: (value?: string) => void;
 }
 
 // Estado de input + navegação para a busca. A busca em si (consulta ao
@@ -19,11 +21,17 @@ export function useSearch(initialQuery = ""): UseSearchResult {
   const [query, setQuery] = useState(initialQuery);
   const router = useRouter();
 
-  const submit = useCallback(() => {
-    const trimmed = query.trim();
-    if (!trimmed) return;
-    router.push(searchPath(trimmed));
-  }, [query, router]);
+  // Sprint 39B (Search as the Hero): aceita um valor opcional para que chips
+  // de sugestões possam disparar a busca diretamente (1 toque) sem depender
+  // do estado assíncrono de setQuery.
+  const submit = useCallback(
+    (value?: string) => {
+      const trimmed = (value ?? query).trim();
+      if (!trimmed) return;
+      router.push(searchPath(trimmed));
+    },
+    [query, router]
+  );
 
   return { query, setQuery, submit };
 }

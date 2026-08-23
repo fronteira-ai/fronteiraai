@@ -1,27 +1,16 @@
 import Image from "next/image";
-import { Sparkles, Trophy, ShieldCheck, Zap, Flower2 } from "lucide-react";
 import HeroStats from "./HeroStats";
 import Reveal from "@/components/ui/Reveal";
 import { getSupabaseServiceClient } from "@/lib/supabase/service";
 import { getHomeStats } from "@/lib/home-premium-service";
 
-// Program UX — Mission UX-1B. Copy frozen per HOME_COPY_APPROVAL.md / the
-// CTO's official identity block — icons chosen to match each bullet's emoji
-// (🏆/🛡️/⚡) rather than duplicating the emoji as a second glyph next to the
-// existing colored Lucide icon treatment.
-const featureBullets = [
-  { icon: Trophy, title: "Melhor compra", color: "text-brand-blue" },
-  { icon: ShieldCheck, title: "Lojas confiáveis", color: "text-brand-purple" },
-  { icon: Zap, title: "Decisão inteligente", color: "text-positive" },
-] as const;
-
-// Release 1.9 — Program F — Wave 2 (v0 realignment, ADR-050 v1.1). Rebuilt
-// against the CTO-approved v0 export: a photographic bridge backdrop instead
-// of the previous CSS/SVG globe scene. Stats still come from
-// MarketplaceMetricsService (via getHomeStats) — only the visual treatment
-// changed. Search, store row and the "Comparar preços"/"Sou Lojista" CTAs
-// used to live inside this component; the v0 layout treats them as separate
-// sections below the hero (see app/page.tsx).
+// Sprint 39B — Home 2.0 (Search as the Hero, Direction A — Evolution).
+// Fold com 1 mensagem (H1 + subcopy), 1 ação (a busca, em SearchBar) e 1
+// prova discreta (HeroStats com contagens reais). Removidos do fold por
+// competirem ou por falta de evidência: badge de IA, feature bullets
+// ("Melhor compra"/"Lojas confiáveis" — CONDITIONAL), glass-card de IA
+// ("Nossa IA analisa milhares de preços") e o claim "Garanta sempre o
+// melhor preço" (UNSUPPORTED — ver auditoria de trust da 39A).
 export default async function Hero() {
   const client = getSupabaseServiceClient();
   const stats = await getHomeStats(client);
@@ -42,58 +31,26 @@ export default async function Hero() {
 
       <div className="relative z-10 mx-auto grid max-w-[1600px] grid-cols-1 gap-8 px-6 lg:grid-cols-12 lg:px-10">
         <div className="lg:col-span-5">
-          <Reveal direction="up">
-            <span className="inline-flex items-center gap-2 rounded-full border border-brand-blue/20 bg-brand-blue/5 px-4 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-brand-cyan backdrop-blur-sm">
-              <Sparkles size={14} />
-              Inteligência artificial para compras no Paraguai
-            </span>
-          </Reveal>
-
           <Reveal direction="up" delay={100}>
             <h1 className="mt-6 max-w-xl font-home-display text-[40px] font-extrabold leading-[1.05] tracking-tight text-white sm:text-[46px]">
-              <span className="block">O jeito mais</span>
-              <span className="block">inteligente de</span>
+              <span className="block">Compare e economize</span>
+              <span className="block">nas lojas do</span>
               <span className="block bg-gradient-to-r from-brand-blue to-brand-purple bg-clip-text text-transparent">
-                comprar no Paraguai.
+                Paraguai.
               </span>
             </h1>
           </Reveal>
 
           <Reveal direction="up" delay={180}>
             <p className="mt-6 max-w-md text-[15px] leading-relaxed text-slate-400">
-              Mais do que comparar preços. O ParaguAI analisa, explica e
-              recomenda a melhor compra para você.
+              Preços reais, lojas verificadas e histórico — antes de atravessar a ponte.
             </p>
-          </Reveal>
-
-          <Reveal direction="up" delay={220} className="mt-7 flex flex-wrap items-center gap-x-7 gap-y-4">
-            {featureBullets.map((f) => (
-              <div key={f.title} className="flex items-center gap-2.5">
-                <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/5 ${f.color}`}>
-                  <f.icon size={16} />
-                </span>
-                <span className="text-[13px] font-semibold leading-tight text-white">{f.title}</span>
-              </div>
-            ))}
           </Reveal>
         </div>
 
         <div className="hidden lg:col-span-4 lg:block" />
 
         <Reveal direction="left" delay={200} className="flex flex-col gap-3 lg:col-span-3">
-          <div className="glass-card flex items-start gap-3 rounded-2xl p-4">
-            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-brand-purple/15 text-brand-purple">
-              <Flower2 size={18} />
-            </span>
-            <div>
-              <p className="text-balance font-home-display text-[15px] font-bold leading-tight text-white">
-                Economize tempo e dinheiro
-              </p>
-              <p className="mt-1 text-[12.5px] leading-snug text-slate-400">
-                Nossa IA analisa milhares de preços para você
-              </p>
-            </div>
-          </div>
           <HeroStats stats={stats} />
         </Reveal>
       </div>
