@@ -100,6 +100,25 @@ export class PriceIntelligenceService {
       limit: OFFER_FETCH_LIMIT,
       offset: 0,
     });
-    return items.filter((o) => o.inStock).map((o) => ({ storeId: o.storeId, storeSlug: o.storeSlug, priceUSD: o.priceUSD }));
+    // Sprint 11: `available=false` é oferta ARQUIVADA e não participa de
+    // preço ativo — regra de domínio já estabelecida (ADR-008,
+    // services/offer.service.ts) e aplicada em todas as outras superfícies
+    // pelas Sprints 5, 9B e 10. Este serviço era a última leitura que ainda
+    // a ignorava, e a inconsistência era observável: o grid de /products e
+    // /search calcula seu preço SEM as arquivadas, enquanto estas
+    // estatísticas as incluíam — os dois lados da comparação do selo
+    // "Melhor compra" (`priceUSD <= statistics.lowestPriceUSD`) usavam
+    // conjuntos de ofertas diferentes.
+    //
+    // Medido no banco local: 3 produtos exibiam o selo apenas porque uma
+    // oferta arquivada inflava `storeCount` de 1 para 2 (macbook-air-m3,
+    // jbl-tune-770nc, galaxy-z-flip6) — "melhor compra entre lojas" com uma
+    // única loja ativa vendendo.
+    //
+    // `available=false` ≠ `inStock=false`: a esgotada segue fora do preço
+    // aqui, exatamente como antes — este filtro não mexe nessa regra.
+    return items
+      .filter((o) => o.available && o.inStock)
+      .map((o) => ({ storeId: o.storeId, storeSlug: o.storeSlug, priceUSD: o.priceUSD }));
   }
 }

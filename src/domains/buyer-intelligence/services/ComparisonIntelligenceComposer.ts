@@ -38,7 +38,18 @@ export class ComparisonIntelligenceComposer {
     const canonicalProduct = await this.catalogRepo.findBySlug(canonicalSlug);
     if (!canonicalProduct) return null;
 
-    const { items: offers } = await this.catalogRepo.findOffersByCanonicalProductId(canonicalProduct.id, PAGINATION);
+    const { items: allOffers } = await this.catalogRepo.findOffersByCanonicalProductId(canonicalProduct.id, PAGINATION);
+
+    // Sprint 12: estas ofertas servem só para montar os mapas auxiliares de
+    // verificação de loja e de frescor, consultados adiante pelas ofertas
+    // RANKEADAS que `CompareFoundationService` devolve — e aquele serviço já
+    // descarta as arquivadas desde a Sprint 9B. Manter as arquivadas aqui
+    // produzia entradas que nunca eram lidas, e `resolveFreshness` custa uma
+    // consulta a `market_changes` POR OFERTA: medido no banco local, o Dell
+    // XPS 14 e o JBL Charge 6 gastavam 2 consultas de frescor para um bundle
+    // de 1 oferta. Alinhar este conjunto ao conjunto rankeado é só remover
+    // trabalho desperdiçado — nenhuma entrada que era consultada desaparece.
+    const offers = allOffers.filter((offer) => offer.available);
 
     const isVerifiedByStoreId = await this.resolveVerification(offers);
     const resolveIsVerified = (storeId: string) => isVerifiedByStoreId.get(storeId) ?? false;
@@ -99,21 +110,21 @@ export class ComparisonIntelligenceComposer {
     offers: CanonicalOfferView[],
     errors: ComparisonIntelligenceBundle["errors"]
   ): Promise<Map<string, Awaited<ReturnType<FreshnessService["computeForOffer"]>>>> {
-    const entries = await Promise.allSettled(
-      offers.map(async (offer) => {
-        const score = await this.freshnessService.computeForOffer(offer.offerId, new Date(offer.updatedAt));
-        return [offer.offerId, score] as const;
-      })
-    );
-
-    const map = new Map<string, Awaited<ReturnType<FreshnessService["computeForOffer"]>>>();
-    for (const entry of entries) {
-      if (entry.status === "fulfilled") {
-        map.set(entry.value[0], entry.value[1]);
-      } else if (!errors.freshness) {
-        errors.freshness = entry.reason instanceof Error ? entry.reason.message : String(entry.reason);
-      }
+    // Sprint 13: era uma consulta a `market_changes` por oferta (o N+1 desta
+    // página). `computeForOffers` aplica exatamente a mesma regra por oferta —
+    // mudança mais recente, senão `updatedAt` da oferta — numa leitura só.
+    // O `try/catch` substitui o `Promise.allSettled` anterior com o mesmo
+    // efeito observável: uma falha de frescor vira `errors.freshness` e o
+    // bundle segue com `freshness: null` nas ofertas, nunca uma exceção
+    // propagada. A diferença é que agora, havendo falha, ela é total e não
+    // parcial — coerente com haver uma única consulta a falhar.
+    try {
+      return await this.freshnessService.computeForOffers(
+        offers.map((offer) => ({ offerId: offer.offerId, fallbackUpdatedAt: new Date(offer.updatedAt) }))
+      );
+    } catch (err) {
+      errors.freshness = err instanceof Error ? err.message : String(err);
+      return new Map();
     }
-    return map;
   }
 }

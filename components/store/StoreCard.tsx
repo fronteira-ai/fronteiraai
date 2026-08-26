@@ -74,10 +74,25 @@ function StoreCard({ store, productCount, qualityScore, lastSyncAt }: Props) {
         </div>
 
         <div className="mt-5 flex items-center justify-between">
-          <span className="flex items-center gap-1 rounded-full bg-blue-500/20 px-4 py-2 text-sm text-blue-300">
-            <Star size={14} fill="currentColor" />
-            {store.rating.toFixed(1)}
-          </span>
+          {/* Sprint 4 (P1): `store.rating` pode ser null no banco — a loja
+              criada por database/migrations/0010_shoppingchina_connector.sql
+              é inserida sem rating. types/store.ts declara `rating: number`,
+              uma suposição que nunca foi verificada contra o schema real, e
+              esta era a ÚNICA leitura desguardada: CompareOfferCard,
+              StoreCarousel, app/lojas/page.tsx e app/lojas/[slug]/page.tsx
+              já testavam antes de chamar .toFixed(). Sem a guarda,
+              /lojas/[slug] quebrava inteira com
+              "Cannot read properties of null (reading 'toFixed')".
+              Segue o idioma já usado nas outras três: sem nota, sem selo —
+              nunca "0.0", que afirmaria uma avaliação que não existe. */}
+          {store.rating > 0 ? (
+            <span className="flex items-center gap-1 rounded-full bg-blue-500/20 px-4 py-2 text-sm text-blue-300">
+              <Star size={14} fill="currentColor" />
+              {store.rating.toFixed(1)}
+            </span>
+          ) : (
+            <span />
+          )}
 
           {productCount !== undefined ? (
             <span className="text-sm text-slate-400">

@@ -91,6 +91,7 @@ describe("PriceIntelligenceService", () => {
           storeSlug: o.storeSlug,
           priceUSD: o.priceUSD,
           inStock: true,
+          available: true,
           stockQuantity: null,
           updatedAt: new Date().toISOString(),
           condition: null,
@@ -122,8 +123,8 @@ describe("PriceIntelligenceService", () => {
       findOffersByCanonicalProductIds: jest.fn().mockResolvedValue(new Map()),
       findOffersByCanonicalProductId: jest.fn().mockResolvedValue({
         items: [
-          { offerId: "1", productId: "p1", storeId: "s1", storeSlug: "s1", priceUSD: 100, inStock: true, stockQuantity: null, updatedAt: "", condition: null, warranty: null, productUrl: null },
-          { offerId: "2", productId: "p2", storeId: "s2", storeSlug: "s2", priceUSD: 10, inStock: false, stockQuantity: null, updatedAt: "", condition: null, warranty: null, productUrl: null },
+          { offerId: "1", productId: "p1", storeId: "s1", storeSlug: "s1", priceUSD: 100, inStock: true, available: true, stockQuantity: null, updatedAt: "", condition: null, warranty: null, productUrl: null },
+          { offerId: "2", productId: "p2", storeId: "s2", storeSlug: "s2", priceUSD: 10, inStock: false, available: true, stockQuantity: null, updatedAt: "", condition: null, warranty: null, productUrl: null },
         ],
         total: 2,
       }),
@@ -146,5 +147,72 @@ describe("PriceIntelligenceService", () => {
     const stats = await service.getStatistics("canonical-1");
     expect(stats?.lowestPriceUSD).toBe(80);
     expect(stats?.highestPriceUSD).toBe(100);
+  });
+  // ── Sprint 11 — oferta arquivada fora das estatísticas ──────────────────
+  // Regra de domínio já estabelecida (ADR-008; Sprints 5, 9B, 10): available=false
+  // é oferta ARQUIVADA e não forma preço ativo. Este serviço era a última
+  // leitura que a ignorava — e a inconsistência era observável, porque o grid
+  // de /products e /search já calcula seu preço sem as arquivadas.
+
+  function repoWith(items: unknown[]) {
+    return {
+      findBySlug: jest.fn(), findById: jest.fn(), findOrCreateBySlug: jest.fn(),
+      updateSyncedFields: jest.fn(), findByBrandId: jest.fn(), findByCategoryId: jest.fn(),
+      findCanonicalProductIdByProductId: jest.fn(), findCategorySlugsByIds: jest.fn().mockResolvedValue(new Map()),
+      findAll: jest.fn(), linkOffer: jest.fn(),
+      findOffersByCanonicalProductIds: jest.fn().mockResolvedValue(new Map()),
+      findOffersByCanonicalProductId: jest.fn().mockResolvedValue({ items, total: items.length }),
+      findOfferIdsByCanonicalProductId: jest.fn(), reassignOffers: jest.fn(),
+      reassignOffersByIds: jest.fn(), deactivateAndMerge: jest.fn(), reactivate: jest.fn(),
+    } as unknown as ICanonicalCatalogRepository;
+  }
+  const offer = (o: Record<string, unknown>) => ({
+    offerId: "o", productId: "p", storeId: "s", storeSlug: "s", priceUSD: 100,
+    inStock: true, available: true, stockQuantity: null, updatedAt: "",
+    condition: null, warranty: null, productUrl: null, ...o,
+  });
+
+  it("exclui oferta arquivada das estatísticas, mesmo com estoque", async () => {
+    const service = new PriceIntelligenceService(repoWith([
+      offer({ offerId: "arquivada", storeId: "s1", storeSlug: "s1", priceUSD: 50, available: false, inStock: true }),
+      offer({ offerId: "ativa-a", storeId: "s2", storeSlug: "s2", priceUSD: 100 }),
+      offer({ offerId: "ativa-b", storeId: "s3", storeSlug: "s3", priceUSD: 200 }),
+    ]));
+    const stats = await service.getStatistics("canonical-1");
+    // $50 é arquivada: não pode ser o menor preço nem contar como loja.
+    expect(stats?.lowestPriceUSD).toBe(100);
+    expect(stats?.storeCount).toBe(2);
+  });
+
+  it("exclui oferta arquivada do cálculo de economia", async () => {
+    const service = new PriceIntelligenceService(repoWith([
+      offer({ offerId: "arquivada", storeId: "s1", storeSlug: "s1", priceUSD: 50, available: false }),
+      offer({ offerId: "ativa-a", storeId: "s2", storeSlug: "s2", priceUSD: 100 }),
+      offer({ offerId: "ativa-b", storeId: "s3", storeSlug: "s3", priceUSD: 200 }),
+    ]));
+    const savings = await service.getSavingsOpportunity("canonical-1");
+    // Economia sai de 200 -> 100, nunca de 200 -> 50 (arquivada).
+    expect(savings?.cheapestPriceUSD).toBe(100);
+    expect(savings?.maxSavingsUSD).toBe(100);
+  });
+
+  it("mantém a regra pré-existente: esgotada porém ATIVA continua fora do preço", async () => {
+    const service = new PriceIntelligenceService(repoWith([
+      offer({ offerId: "esgotada", storeId: "s1", storeSlug: "s1", priceUSD: 50, available: true, inStock: false }),
+      offer({ offerId: "ativa", storeId: "s2", storeSlug: "s2", priceUSD: 100 }),
+    ]));
+    const stats = await service.getStatistics("canonical-1");
+    // Este filtro é anterior à Sprint 11 e não foi alterado.
+    expect(stats?.storeCount).toBe(1);
+    expect(stats?.lowestPriceUSD).toBe(100);
+  });
+
+  it("devolve null quando todas as ofertas estão arquivadas — sem fallback arquivado", async () => {
+    const service = new PriceIntelligenceService(repoWith([
+      offer({ offerId: "a1", storeId: "s1", storeSlug: "s1", available: false }),
+      offer({ offerId: "a2", storeId: "s2", storeSlug: "s2", priceUSD: 200, available: false }),
+    ]));
+    expect(await service.getStatistics("canonical-1")).toBeNull();
+    expect(await service.getSavingsOpportunity("canonical-1")).toBeNull();
   });
 });

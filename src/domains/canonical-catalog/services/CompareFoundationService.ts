@@ -34,10 +34,28 @@ export class CompareFoundationService {
     const canonicalProduct = await this.canonicalProductService.getBySlug(canonicalSlug);
     if (!canonicalProduct) return null;
 
-    const { items: offers, total } = await this.catalogRepo.findOffersByCanonicalProductId(
+    const { items: allOffers } = await this.catalogRepo.findOffersByCanonicalProductId(
       canonicalProduct.id,
       pagination
     );
+
+    // Sprint 9B (P3-1): uma oferta ARQUIVADA (`available=false`) sai do
+    // conjunto comparável AQUI, antes de qualquer cálculo. Não basta escondê-la
+    // no card: antes desta linha ela entrava no ranking, podia ser a `lowest`,
+    // podia vencer como "Melhor compra" e ainda alimentava a evidência
+    // "vs. lowest $X among compared offers" que o BestDeal exibe em
+    // /product — medido em /compare/jbl-charge-6, onde o ParaguAI
+    // recomendava "comprar agora" uma oferta arquivada, marcada "Em estoque".
+    //
+    // `available=false` ≠ `inStock=false`: a segunda é ativa e apenas
+    // esgotada, e continua comparável (ADR-008). Esta é a mesma regra que
+    // services/offer.service.ts já aplica em getOffersByProduct/ByStore —
+    // aqui ela passa a valer também para o caminho do Canonical Catalog.
+    //
+    // O filtro fica no serviço, não no repositório: aquele é compartilhado
+    // com market-insights e buyer-intelligence, e filtrar lá mudaria a
+    // semântica de preço/economia desses domínios (P2-2/P2-4).
+    const offers = allOffers.filter((offer) => offer.available);
 
     const rankInputs: OfferRankInput[] = await Promise.all(
       offers.map(async (offer) => ({ offer, isVerifiedStore: await resolveIsVerified(offer.storeId) }))
@@ -49,6 +67,10 @@ export class CompareFoundationService {
       offers.map((o) => o.priceUSD)
     );
 
-    return { canonicalProduct, rankedOffers, priceAggregation, totalOffers: total };
+    // `totalOffers` alimenta o texto "1º lugar entre N ofertas comparadas"
+    // (BestDealComposer). Precisa ser a contagem do conjunto COMPARÁVEL — o
+    // `count` do repositório inclui as arquivadas e faria a UI anunciar uma
+    // comparação que não aconteceu.
+    return { canonicalProduct, rankedOffers, priceAggregation, totalOffers: offers.length };
   }
 }

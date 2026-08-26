@@ -15,6 +15,7 @@ import type { LearnedFact } from "../domain/LearnedFact";
 function makeFactRepo(overrides: Partial<ILearnedFactRepository> = {}): ILearnedFactRepository {
   return {
     findByCanonicalProductId: jest.fn().mockResolvedValue([]),
+    findByCanonicalProductIds: jest.fn().mockResolvedValue(new Map()),
     findByTypeAndValue: jest.fn().mockResolvedValue([]),
     upsert: jest.fn(),
     findAll: jest.fn().mockResolvedValue({ items: [], total: 0 }),

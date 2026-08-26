@@ -21,4 +21,28 @@ export class FreshnessService {
     const lastChangeAt = latest ? new Date(latest.detectedAt) : (fallbackUpdatedAt ?? null);
     return this.engine.score(offerId, lastChangeAt);
   }
+
+  /**
+   * Sprint 13 — mesma conta de `computeForOffer`, para várias ofertas de uma
+   * vez. Uma leitura em lote de `market_changes` no lugar de uma por oferta.
+   *
+   * Regra idêntica, oferta por oferta: usa o `detectedAt` da mudança mais
+   * recente e, quando a oferta não tem nenhuma, cai no `fallbackUpdatedAt`
+   * informado pelo chamador — inclusive quando esse fallback é ausente, caso
+   * em que o Engine devolve Stale como sempre devolveu. O Engine não é tocado.
+   */
+  async computeForOffers(offers: { offerId: string; fallbackUpdatedAt?: Date | null }[]): Promise<Map<string, FreshnessScore>> {
+    const latestByOfferId = await this.repo.latestForEntities(
+      MarketChangeEntityType.Offer,
+      offers.map((o) => o.offerId)
+    );
+
+    const scores = new Map<string, FreshnessScore>();
+    for (const { offerId, fallbackUpdatedAt } of offers) {
+      const latest = latestByOfferId.get(offerId);
+      const lastChangeAt = latest ? new Date(latest.detectedAt) : (fallbackUpdatedAt ?? null);
+      scores.set(offerId, this.engine.score(offerId, lastChangeAt));
+    }
+    return scores;
+  }
 }

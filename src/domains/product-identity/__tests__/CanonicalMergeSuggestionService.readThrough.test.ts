@@ -68,6 +68,7 @@ function makeMergeCandidateRepo(overrides: Partial<IMergeCandidateRepository> = 
     findByStatus: jest.fn(),
     findByPair: jest.fn().mockResolvedValue(null),
     updateStatus: jest.fn(),
+    updateScoring: jest.fn(),
     ...overrides,
   };
 }

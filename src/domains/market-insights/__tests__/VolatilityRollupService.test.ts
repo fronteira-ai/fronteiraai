@@ -32,6 +32,7 @@ function makeChangeRepo(overrides: Partial<IMarketChangeRepository> = {}): IMark
     countInRange: jest.fn(),
     listInRange: jest.fn(),
     latestForEntity: jest.fn(),
+    latestForEntities: jest.fn(),
     listForProduct: jest.fn(),
     listForStore: jest.fn(),
     ...overrides,

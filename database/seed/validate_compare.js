@@ -2,29 +2,15 @@
 // Usa a chave de serviço quando disponível (ignora RLS), depois repete
 // a leitura com a chave anônima para confirmar o status do ADR-019.
 
-const path = require("path");
-const fs = require("fs");
 const { createClient } = require("@supabase/supabase-js");
 
-function loadEnvLocal() {
-  const envPath = path.join(__dirname, "..", "..", ".env.local");
-  if (!fs.existsSync(envPath)) return;
-  const content = fs.readFileSync(envPath, "utf8");
-  for (const line of content.split("\n")) {
-    const trimmed = line.trim();
-    if (!trimmed || trimmed.startsWith("#")) continue;
-    const idx = trimmed.indexOf("=");
-    if (idx === -1) continue;
-    const key = trimmed.slice(0, idx).trim();
-    const value = trimmed.slice(idx + 1).trim()
-      .replace(/^"(.*)"$/, "$1").replace(/^'(.*)'$/, "$1");
-    if (!(key in process.env)) process.env[key] = value;
-  }
-}
 
-loadEnvLocal();
+// Sprint 3D: lia .env.local por conta própria e consultava PRODUÇÃO. Agora
+// passa pelo resolvedor de alvo comum (LOCAL por padrão).
+const { resolveSupabaseTarget } = require("./lib/target");
+const resolved = resolveSupabaseTarget();
 
-const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const url = resolved.url;
 const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 

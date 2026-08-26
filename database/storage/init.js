@@ -20,39 +20,23 @@
  *   {SUPABASE_URL}/storage/v1/object/public/catalog/{path}
  */
 
-const path = require("path");
-const fs = require("fs");
 const { createClient } = require("@supabase/supabase-js");
 
-function loadEnv() {
-  const envPath = path.join(__dirname, "../../.env.local");
-  if (!fs.existsSync(envPath)) {
-    console.error("❌  .env.local não encontrado");
-    process.exit(1);
-  }
-  for (const line of fs.readFileSync(envPath, "utf8").split("\n")) {
-    const trimmed = line.trim();
-    if (!trimmed || trimmed.startsWith("#")) continue;
-    const idx = trimmed.indexOf("=");
-    if (idx === -1) continue;
-    const key = trimmed.slice(0, idx).trim();
-    const val = trimmed.slice(idx + 1).trim().replace(/^"(.*)"$/, "$1");
-    if (!(key in process.env)) process.env[key] = val;
-  }
-}
 
 async function run() {
-  loadEnv();
+  // Sprint 3D: antes lia .env.local por conta própria e criava buckets em
+  // PRODUÇÃO sem trava alguma. Agora passa pelo resolvedor de alvo comum
+  // (LOCAL por padrão; produção exige SUPABASE_TARGET=production +
+  // SUPABASE_ALLOW_PRODUCTION=yes).
+  const { resolveSupabaseTarget } = require("../seed/lib/target");
+  const resolved = resolveSupabaseTarget();
 
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-  if (!url || !serviceKey) {
-    console.error("❌  NEXT_PUBLIC_SUPABASE_URL ou SUPABASE_SERVICE_ROLE_KEY ausentes");
+  if (!resolved.usingServiceRole) {
+    console.error("❌  SUPABASE_SERVICE_ROLE_KEY necessária para criar buckets");
     process.exit(1);
   }
 
-  const svc = createClient(url, serviceKey);
+  const svc = createClient(resolved.url, resolved.key);
   const BUCKET = "catalog";
 
   // Verifica se o bucket já existe

@@ -29,6 +29,7 @@ function makeOffer(overrides: Partial<CanonicalOfferView> = {}): CanonicalOfferV
     storeSlug: "store-1",
     priceUSD: 100,
     inStock: true,
+    available: true,
     stockQuantity: 5,
     updatedAt: new Date().toISOString(),
     condition: "new",

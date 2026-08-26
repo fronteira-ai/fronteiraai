@@ -88,19 +88,43 @@ const organizationJsonLd = {
   },
 };
 
+/** Origem do Supabase em uso (local em dev, Cloud em produção), para os
+ *  resource hints do <head>. Retorna null se a variável estiver ausente ou
+ *  malformada — os hints são otimização, nunca requisito de renderização. */
+function getSupabaseOrigin(): string | null {
+  const raw = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  if (!raw) return null;
+  try {
+    return new URL(raw).origin;
+  } catch {
+    return null;
+  }
+}
+
 export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const supabaseOrigin = getSupabaseOrigin();
   return (
     <html
       lang="pt-BR"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <head>
-        <link rel="preconnect" href="https://acairzpzsklctaqjsukw.supabase.co" />
-        <link rel="dns-prefetch" href="https://acairzpzsklctaqjsukw.supabase.co" />
+        {/* Sprint 3C: o host era o project-ref de PRODUÇÃO escrito à mão. Em
+            desenvolvimento local isso fazia o navegador abrir conexão com o
+            Supabase Cloud a cada page load — consumindo egress de produção
+            justamente do projeto bloqueado por exceed_egress_quota, e
+            quebrando o isolamento local↔produção. Agora o hint segue o mesmo
+            endpoint que a aplicação realmente usa. Nada muda visualmente. */}
+        {supabaseOrigin && (
+          <>
+            <link rel="preconnect" href={supabaseOrigin} />
+            <link rel="dns-prefetch" href={supabaseOrigin} />
+          </>
+        )}
       </head>
       <body className="min-h-full flex flex-col">
         <script

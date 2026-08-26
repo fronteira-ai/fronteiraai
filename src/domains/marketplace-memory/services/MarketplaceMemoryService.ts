@@ -23,6 +23,14 @@ export class MarketplaceMemoryService {
     return this.factRepo.findByCanonicalProductId(canonicalProductId);
   }
 
+  /** Sprint 15B — versão em lote de `getFactsForProduct`, para quem precisa
+   * dos fatos de muitos produtos de uma vez (o read-through do
+   * CanonicalMergeSuggestionService, que antes fazia uma consulta por
+   * candidato). Aditiva: não substitui nem altera o método individual. */
+  async getFactsForProducts(canonicalProductIds: string[]): Promise<Map<string, LearnedFact[]>> {
+    return this.factRepo.findByCanonicalProductIds(canonicalProductIds);
+  }
+
   /** The read path that justifies this Mission — every product sharing the
    * same (factType, factValue), e.g. every product with
    * manufacturerCode="A3257". */

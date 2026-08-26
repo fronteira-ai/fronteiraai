@@ -89,6 +89,7 @@ function makeCandidateRepo(overrides: Partial<IMergeCandidateRepository> = {}): 
     findByStatus: jest.fn().mockResolvedValue({ items: [], total: 0 }),
     findByPair: jest.fn(),
     updateStatus: jest.fn(),
+    updateScoring: jest.fn(),
     ...overrides,
   };
 }

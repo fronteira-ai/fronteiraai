@@ -13,7 +13,14 @@ export const ATACADO_CONNECT_CONFIG = {
   // Raised moderately (Program Ξ, Wave Ξ-5) — same reasoning as Roma
   // Shopping: measured 0% overlap with any other connected merchant
   // (MERCHANT_OVERLAP_MATRIX.md), grown for breadth, not prioritized for CPC.
-  maxProducts: 600,
+  //
+  // Raised again (Mission 04 — Offer Density): only ~1,552 products (~8.6%
+  // of the ~18,000-URL real catalog) had ever been captured — same
+  // under-capture pattern already fixed once for Mega Eletrônicos/Mobile
+  // Zone (Sprint 2.6). Set above the last known real sitemap size, same
+  // precedent — Delta Import means this is safe to raise without redoing
+  // any already-fetched work.
+  maxProducts: 20_000,
 
   requestDelayMs: 500,
   timeoutMs: 15_000,

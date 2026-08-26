@@ -12,6 +12,16 @@ export interface CanonicalOfferView {
   storeSlug: string;
   priceUSD: number;
   inStock: boolean;
+  /** Sprint 9B (P3-1). `offers.available` — oferta ARQUIVADA quando `false`,
+   * conceito distinto de `inStock` (ativa, porém esgotada). Ver ADR-008 e a
+   * regra já escrita em services/offer.service.ts: "uma oferta arquivada
+   * também não deve aparecer numa lista de ofertas ativas".
+   *
+   * O repositório apenas TRANSPORTA este campo — deliberadamente não filtra
+   * por ele, porque é compartilhado com market-insights e buyer-intelligence,
+   * que hoje dependem do conjunto completo. Quem decide o que é comparável é
+   * o CompareFoundationService. */
+  available: boolean;
   stockQuantity: number | null;
   updatedAt: string;
   condition: string | null;

@@ -55,19 +55,28 @@ describe("CanonicalSuggestionSweepService — adaptive batch sizing (Mission Ω-
     expect(outboxRepo.countCompletedSince).not.toHaveBeenCalled(); // adaptive computation never runs
   });
 
-  it("computes an adaptive batch size from backlog + recent throughput when batchLimit is omitted", async () => {
+  // Sprint 15C: o sinal de throughput passou a vir de `recentCompletionSamples`
+  // (duração média medida por item) em vez de `countCompletedSince` (conclusões
+  // divididas pela janela inteira de 5 min, que subestimava trabalho em rajada
+  // e ficava estruturalmente em zero com o cron de 15 min).
+  it("computes an adaptive batch size from backlog + measured per-item duration when batchLimit is omitted", async () => {
     const outboxRepo = makeOutboxRepo({
       countByStatus: jest.fn().mockResolvedValue({ pending: 500, processing: 0, done: 0, failed: 0, dead_letter: 0, expired: 0 }),
-      countCompletedSince: jest.fn().mockResolvedValue({ done: 60, deadLetter: 0, expired: 0 }), // 60 in 5min = 12/min
+      // 5s por item -> 12 itens/minuto
+      recentCompletionSamples: jest.fn().mockResolvedValue([
+        { claimedAt: "2026-07-24T00:00:00.000Z", completedAt: "2026-07-24T00:00:05.000Z" },
+        { claimedAt: "2026-07-24T00:00:05.000Z", completedAt: "2026-07-24T00:00:10.000Z" },
+      ]),
     });
     const mergeSuggestionService = { suggestMergesFor: jest.fn() } as unknown as CanonicalMergeSuggestionService;
     const service = new CanonicalSuggestionSweepService(outboxRepo, mergeSuggestionService);
 
     await service.sweep();
 
-    expect(outboxRepo.countCompletedSince).toHaveBeenCalled();
+    expect(outboxRepo.recentCompletionSamples).toHaveBeenCalled();
     const [limitArg] = (outboxRepo.claimBatch as jest.Mock).mock.calls[0];
-    expect(limitArg).toBeGreaterThan(0);
+    // Sem orçamento informado, o alvo continua sendo ~1 minuto de trabalho: 12.
+    expect(limitArg).toBe(12);
     expect(Number.isInteger(limitArg)).toBe(true);
   });
 });

@@ -10,24 +10,9 @@
  *      npm run db:validate:43
  */
 
-const path = require("path");
-const fs = require("fs");
 const https = require("https");
 const { createClient } = require("@supabase/supabase-js");
 
-function loadEnv() {
-  const envPath = path.join(__dirname, "../../.env.local");
-  if (!fs.existsSync(envPath)) { console.error("❌  .env.local não encontrado"); process.exit(1); }
-  for (const line of fs.readFileSync(envPath, "utf8").split("\n")) {
-    const trimmed = line.trim();
-    if (!trimmed || trimmed.startsWith("#")) continue;
-    const idx = trimmed.indexOf("=");
-    if (idx === -1) continue;
-    const key = trimmed.slice(0, idx).trim();
-    const val = trimmed.slice(idx + 1).trim().replace(/^"(.*)"$/, "$1");
-    if (!(key in process.env)) process.env[key] = val;
-  }
-}
 
 function ok(msg) { console.log(`  ✅  ${msg}`); }
 function fail(msg) { console.log(`  ❌  ${msg}`); }
@@ -41,8 +26,12 @@ async function fetchUrl(url) {
 }
 
 async function run() {
-  loadEnv();
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  // Sprint 3D: somente leitura, mas lia .env.local por conta própria e
+  // consultava PRODUÇÃO — consumindo egress do projeto justamente bloqueado
+  // por exceed_egress_quota. Agora usa o resolvedor de alvo (LOCAL padrão).
+  const { resolveSupabaseTarget } = require("./lib/target");
+  const resolved = resolveSupabaseTarget();
+  const url = resolved.url;
   const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 

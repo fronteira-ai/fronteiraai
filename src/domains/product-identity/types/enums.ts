@@ -32,4 +32,14 @@ export function tierForConfidence(confidence: number): ConfidenceTier {
 // Match log rows are append-only and carry the version they were produced
 // under — a past evaluation is never recalculated in place, so this string
 // is what makes an old row interpretable after the algorithm evolves.
-export const PRODUCT_IDENTITY_ALGORITHM_VERSION = "1.0.0";
+// Mission 04 (Offer Density) bumped this to 1.1.0 — ProductIdentityEngine's
+// tokenizer now strips e-commerce boilerplate words (see
+// domain/ProductIdentityEngine.ts BOILERPLATE_TOKENS) before computing
+// name-similarity. The bump exists so already-stored `merge_candidates`
+// rows can tell they were scored by the older tokenizer and are eligible
+// for a one-time recompute (CanonicalMergeSuggestionService.suggestMergesFor)
+// — the same self-healing-on-version-mismatch precedent already used by
+// Marketplace Memory's `factsToSpecifications`. Never touches a candidate
+// a human has already reviewed (approved/rejected/merged/rolled_back) —
+// those are permanent regardless of algorithm version.
+export const PRODUCT_IDENTITY_ALGORITHM_VERSION = "1.1.0";

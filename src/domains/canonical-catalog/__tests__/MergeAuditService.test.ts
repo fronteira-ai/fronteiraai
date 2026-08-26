@@ -29,6 +29,7 @@ function makeRepo(overrides: Partial<IMergeCandidateRepository> = {}): IMergeCan
     findByStatus: jest.fn().mockResolvedValue({ items: [], total: 0 }),
     findByPair: jest.fn(),
     updateStatus: jest.fn(),
+    updateScoring: jest.fn(),
     ...overrides,
   };
 }

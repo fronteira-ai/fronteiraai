@@ -14,6 +14,7 @@ function makeCandidateRepo(totals: Partial<Record<MergeCandidateStatus, number>>
     findById: jest.fn(),
     findByPair: jest.fn(),
     updateStatus: jest.fn(),
+    updateScoring: jest.fn(),
     findByStatus: jest.fn().mockImplementation(async (status: MergeCandidateStatus) => totalPage(totals[status] ?? 0)),
   };
 }

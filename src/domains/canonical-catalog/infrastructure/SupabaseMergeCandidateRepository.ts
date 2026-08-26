@@ -97,4 +97,22 @@ export class SupabaseMergeCandidateRepository implements IMergeCandidateReposito
       .eq("id", id);
     if (error) throw new Error(`merge candidate status update: ${error.message}`);
   }
+
+  async updateScoring(
+    id: string,
+    input: Omit<CreateMergeCandidateInput, "sourceCanonicalProductId" | "targetCanonicalProductId">
+  ): Promise<void> {
+    const { error } = await this.client
+      .from("merge_candidates")
+      .update({
+        confidence: input.confidence,
+        algorithm_version: input.algorithmVersion,
+        matched_attributes: input.matchedAttributes,
+        mismatched_attributes: input.mismatchedAttributes,
+        penalties: input.penalties,
+        reason: input.reason,
+      })
+      .eq("id", id);
+    if (error) throw new Error(`merge candidate scoring update: ${error.message}`);
+  }
 }

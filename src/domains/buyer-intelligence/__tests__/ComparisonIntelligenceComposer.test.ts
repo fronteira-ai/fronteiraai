@@ -4,6 +4,7 @@ import type { ICanonicalCatalogRepository, ICanonicalPriceHistoryRepository, Can
 import { PriceIntelligenceService } from "@/src/domains/market-insights";
 import { FreshnessService } from "@/src/domains/realtime-commerce";
 import type { IMarketChangeRepository } from "@/src/domains/realtime-commerce";
+import type { MarketChange } from "@/src/domains/realtime-commerce/types";
 import { BadgeService } from "@/src/domains/trust/services/BadgeService";
 import type { IBadgeRepository, ITrustEventRepository } from "@/src/domains/trust/repositories";
 import { TrustBadge } from "@/src/domains/trust/types/enums";
@@ -36,6 +37,7 @@ function makeOffer(overrides: Partial<CanonicalOfferView> = {}): CanonicalOfferV
     storeSlug: "test-store",
     priceUSD: 100,
     inStock: true,
+    available: true,
     stockQuantity: 5,
     updatedAt: new Date().toISOString(),
     condition: "new",
@@ -107,12 +109,29 @@ function makeStoreLinkRepo(merchantIdByStoreId: Map<string, string> = new Map())
   };
 }
 
-function makeChangeRepo(): IMarketChangeRepository {
+/** Sprint 13: os dois caminhos de leitura (individual e em lote) saem da MESMA
+ * lista de mudanças, para que o mock não possa concordar por acidente. */
+function makeChangeRepo(changes: MarketChange[] = []): IMarketChangeRepository {
+  const latestFor = (entityType: string, entityId: string) =>
+    changes
+      .filter((c) => c.entityType === entityType && c.entityId === entityId)
+      // Sprint 13B: mesmo desempate do repositório real — maior detectedAt e,
+      // em empate, maior id.
+      .sort((a, b) => (a.detectedAt === b.detectedAt ? (a.id < b.id ? 1 : -1) : a.detectedAt < b.detectedAt ? 1 : -1))[0] ?? null;
+
   return {
     insertMany: jest.fn(),
     countInRange: jest.fn(),
     listInRange: jest.fn(),
-    latestForEntity: jest.fn().mockResolvedValue(null),
+    latestForEntity: jest.fn(async (entityType: string, entityId: string) => latestFor(entityType, entityId)),
+    latestForEntities: jest.fn(async (entityType: string, entityIds: string[]) => {
+      const map = new Map<string, MarketChange>();
+      for (const id of entityIds) {
+        const latest = latestFor(entityType, id);
+        if (latest) map.set(id, latest);
+      }
+      return map;
+    }),
     listForProduct: jest.fn(),
     listForStore: jest.fn(),
   };

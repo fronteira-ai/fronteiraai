@@ -92,13 +92,69 @@ export class SupabaseCanonicalCatalogRepository implements ICanonicalCatalogRepo
     return toCanonicalProduct(data);
   }
 
+  // Sprint 15. Mesmo tamanho de página já usado por
+  // SupabaseMarketChangeRepository (Sprint 13C) — convenção do projeto para
+  // leitura paginada por `range`, e folgadamente abaixo do `max_rows` do
+  // PostgREST, de modo que uma página nunca é truncada pelo servidor.
+  private static readonly BRAND_PAGE_SIZE = 500;
+
+  // Todas as colunas que `toCanonicalProduct` lê, menos `image_url`.
+  private static readonly BRAND_COLUMNS =
+    "id, canonical_slug, name, brand_id, category_id, specifications, created_at, updated_at, is_active, merged_into_id";
+
+  // Sprint 15 (egress). `findByBrandId` é chamada UMA VEZ POR ITEM do
+  // canonical_suggestion_outbox (CanonicalMergeSuggestionService.
+  // suggestMergesFor, seu único consumidor de produção), e era a maior
+  // resposta isolada do fluxo: `select("*")` sem `range`/`limit`, incluindo
+  // `specifications` (jsonb).
+  //
+  // Duas mudanças, ambas de QUANTO se lê — nunca de QUAIS produtos entram:
+  //
+  // 1. PROJEÇÃO — apenas `image_url` saiu, por ser a única coluna que
+  //    nenhum consumidor lê (o mapper a converte para `null`, valor válido
+  //    para `imageUrl: string | null`). `created_at`/`updated_at` FICAM:
+  //    `toCanonicalProduct` os tipa como `string` não-nulo e omiti-los
+  //    produziria `undefined` — violação de tipo em troca de poucos bytes.
+  //    `is_active`/`merged_into_id` FICAM: são pequenos e seus defaults no
+  //    mapper (`true`/`null`) mentiriam sobre um produto já mesclado se
+  //    algum consumidor futuro passasse a lê-los.
+  //
+  // 2. PAGINAÇÃO — antes, uma marca com mais produtos que o `max_rows` do
+  //    PostgREST (1000 por padrão) era TRUNCADA EM SILÊNCIO e os candidatos
+  //    excedentes simplesmente não eram avaliados. O laço abaixo lê até o
+  //    fim. Isto CORRIGE uma perda de candidatos; não reduz bytes — para
+  //    marcas grandes lê mais do que antes, porque antes se perdia dado.
+  //
+  // `.order("id")` é obrigatório: sem ordenação determinística, paginar por
+  // `range` pode duplicar ou perder linhas entre páginas. A ordem anterior
+  // era a de armazenamento do Postgres — arbitrária e não garantida. O
+  // motor desempata por ordem de array (`confidence > best.confidence`, o
+  // PRIMEIRO máximo vence), então empates agora resolvem de forma
+  // reproduzível por `id` crescente, em vez de arbitrariamente. Nenhuma
+  // pontuação muda; o casamento por slug exato é imune (canonical_slug é
+  // UNIQUE). Mesma política de erro de antes: loga e devolve [].
   async findByBrandId(brandId: string): Promise<CanonicalProduct[]> {
-    const { data, error } = await this.client.from("canonical_products").select("*").eq("brand_id", brandId);
-    if (error) {
-      console.error("[SupabaseCanonicalCatalogRepository.findByBrandId]", error.message);
-      return [];
+    const rows: Record<string, unknown>[] = [];
+
+    for (let offset = 0; ; offset += SupabaseCanonicalCatalogRepository.BRAND_PAGE_SIZE) {
+      const { data, error } = await this.client
+        .from("canonical_products")
+        .select(SupabaseCanonicalCatalogRepository.BRAND_COLUMNS)
+        .eq("brand_id", brandId)
+        .order("id", { ascending: true })
+        .range(offset, offset + SupabaseCanonicalCatalogRepository.BRAND_PAGE_SIZE - 1);
+
+      if (error) {
+        console.error("[SupabaseCanonicalCatalogRepository.findByBrandId]", error.message);
+        return [];
+      }
+
+      const page = (data ?? []) as unknown as Record<string, unknown>[];
+      rows.push(...page);
+      if (page.length < SupabaseCanonicalCatalogRepository.BRAND_PAGE_SIZE) break;
     }
-    return (data ?? []).map(toCanonicalProduct);
+
+    return rows.map(toCanonicalProduct);
   }
 
   async findByCategoryId(categoryId: string): Promise<CanonicalProduct[]> {
@@ -125,9 +181,12 @@ export class SupabaseCanonicalCatalogRepository implements ICanonicalCatalogRepo
     const { limit, offset } = pagination;
     const { data, error, count } = await this.client
       .from("offers")
-      .select("id, product_id, store_id, price_usd, in_stock, stock_quantity, updated_at, condition, warranty, product_url, stores(slug)", {
-        count: "exact",
-      })
+      // Sprint 9B (P3-1): passa a usar a lista de colunas e o mapper que a
+      // Sprint 8B já havia extraído para a leitura em lote. Antes eram duas
+      // cópias que precisavam ser mantidas em sincronia — a inclusão de
+      // `available` teria de ser feita duas vezes, e divergir aqui
+      // silenciosamente é exatamente como P3-1 nasceu.
+      .select(SupabaseCanonicalCatalogRepository.OFFER_COLUMNS, { count: "exact" })
       .eq("canonical_product_id", canonicalProductId)
       .range(offset, offset + limit - 1);
 
@@ -136,23 +195,9 @@ export class SupabaseCanonicalCatalogRepository implements ICanonicalCatalogRepo
       return { items: [], total: 0 };
     }
 
-    const items: CanonicalOfferView[] = (data ?? []).map((row) => {
-      const storeRelation = row.stores as { slug: string } | { slug: string }[] | null;
-      const store = Array.isArray(storeRelation) ? storeRelation[0] : storeRelation;
-      return {
-        offerId: row.id as string,
-        productId: row.product_id as string,
-        storeId: row.store_id as string,
-        storeSlug: store?.slug ?? "",
-        priceUSD: row.price_usd as number,
-        inStock: row.in_stock as boolean,
-        stockQuantity: (row.stock_quantity as number | null) ?? null,
-        updatedAt: row.updated_at as string,
-        condition: (row.condition as string | null) ?? null,
-        warranty: (row.warranty as string | null) ?? null,
-        productUrl: (row.product_url as string | null) ?? null,
-      };
-    });
+    const items: CanonicalOfferView[] = (data ?? []).map((row) =>
+      SupabaseCanonicalCatalogRepository.mapOfferRow(row as unknown as Record<string, unknown>)
+    );
 
     return { items, total: count ?? items.length };
   }
@@ -160,8 +205,14 @@ export class SupabaseCanonicalCatalogRepository implements ICanonicalCatalogRepo
   // Sprint 8B (P2-4). Colunas e mapeamento compartilhados entre a leitura
   // individual e a em lote — se divergissem, o lote deixaria de ser uma
   // substituição fiel da consulta que ele elimina.
+  // Sprint 9B (P3-1): `available` acrescentado ao TRANSPORTE. Nenhum filtro
+  // é aplicado aqui de propósito: este repositório é compartilhado com
+  // market-insights (PriceIntelligenceService) e buyer-intelligence
+  // (OpportunityEngine), que hoje dependem do conjunto completo de ofertas.
+  // Filtrar aqui mudaria a semântica de preço/economia desses domínios e
+  // reabriria P2-2/P2-4. Quem decide o que é comparável é o consumidor.
   private static readonly OFFER_COLUMNS =
-    "id, product_id, store_id, price_usd, in_stock, stock_quantity, updated_at, condition, warranty, product_url, stores(slug)";
+    "id, product_id, store_id, price_usd, in_stock, available, stock_quantity, updated_at, condition, warranty, product_url, stores(slug)";
 
   private static mapOfferRow(row: Record<string, unknown>): CanonicalOfferView {
     const storeRelation = row.stores as { slug: string } | { slug: string }[] | null;
@@ -173,6 +224,10 @@ export class SupabaseCanonicalCatalogRepository implements ICanonicalCatalogRepo
       storeSlug: store?.slug ?? "",
       priceUSD: row.price_usd as number,
       inStock: row.in_stock as boolean,
+      // Sprint 9B (P3-1). Default `true` só protege contra uma linha sem a
+      // coluna (mock antigo, select parcial); no schema real `available` é
+      // NOT NULL DEFAULT true, então nunca vem ausente do banco.
+      available: (row.available as boolean | null) ?? true,
       stockQuantity: (row.stock_quantity as number | null) ?? null,
       updatedAt: row.updated_at as string,
       condition: (row.condition as string | null) ?? null,

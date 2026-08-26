@@ -48,8 +48,8 @@ describe("SearchIntelligenceComposer", () => {
       findOffersByCanonicalProductIds: jest.fn().mockResolvedValue(new Map()),
       findOffersByCanonicalProductId: jest.fn().mockResolvedValue({
         items: [
-          { offerId: "a", productId: "p1", storeId: "s1", storeSlug: "s1", priceUSD: 100, inStock: true, stockQuantity: 1, updatedAt: new Date().toISOString(), condition: null, warranty: null, productUrl: null },
-          { offerId: "b", productId: "p2", storeId: "s2", storeSlug: "s2", priceUSD: 100, inStock: true, stockQuantity: 1, updatedAt: new Date().toISOString(), condition: null, warranty: null, productUrl: null },
+          { offerId: "a", productId: "p1", storeId: "s1", storeSlug: "s1", priceUSD: 100, inStock: true, available: true, stockQuantity: 1, updatedAt: new Date().toISOString(), condition: null, warranty: null, productUrl: null },
+          { offerId: "b", productId: "p2", storeId: "s2", storeSlug: "s2", priceUSD: 100, inStock: true, available: true, stockQuantity: 1, updatedAt: new Date().toISOString(), condition: null, warranty: null, productUrl: null },
         ],
         total: 2,
       }),
@@ -69,8 +69,8 @@ describe("SearchIntelligenceComposer", () => {
       findOffersByCanonicalProductIds: jest.fn().mockResolvedValue(new Map()),
       findOffersByCanonicalProductId: jest.fn().mockResolvedValue({
         items: [
-          { offerId: "a", productId: "p1", storeId: "s1", storeSlug: "s1", priceUSD: 80, inStock: true, stockQuantity: 1, updatedAt: new Date().toISOString(), condition: null, warranty: null, productUrl: null },
-          { offerId: "b", productId: "p2", storeId: "s2", storeSlug: "s2", priceUSD: 100, inStock: true, stockQuantity: 1, updatedAt: new Date().toISOString(), condition: null, warranty: null, productUrl: null },
+          { offerId: "a", productId: "p1", storeId: "s1", storeSlug: "s1", priceUSD: 80, inStock: true, available: true, stockQuantity: 1, updatedAt: new Date().toISOString(), condition: null, warranty: null, productUrl: null },
+          { offerId: "b", productId: "p2", storeId: "s2", storeSlug: "s2", priceUSD: 100, inStock: true, available: true, stockQuantity: 1, updatedAt: new Date().toISOString(), condition: null, warranty: null, productUrl: null },
         ],
         total: 2,
       }),

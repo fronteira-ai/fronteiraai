@@ -29,6 +29,7 @@ function makeRanked(): RankedOfferIntelligence {
       storeSlug: "store-1",
       priceUSD: 90,
       inStock: true,
+      available: true,
       stockQuantity: 5,
       updatedAt: new Date().toISOString(),
       condition: "new",

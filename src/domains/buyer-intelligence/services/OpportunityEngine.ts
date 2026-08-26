@@ -148,14 +148,30 @@ export class OpportunityEngine {
     // pura que o serviço usa internamente, importada de market-insights.
     // Continua sendo a única fonte da fórmula.
     //
-    // O preparo dos dados replica `PriceIntelligenceService.fetchOfferPrices`
-    // linha a linha: filtra `inStock` (oferta esgotada não forma preço) e
-    // projeta {storeId, storeSlug, priceUSD}. `available` continua sem
-    // participar aqui — nem antes nem agora (resíduo já registrado na
-    // Sprint 8C, deliberadamente fora do escopo desta).
+    // O preparo dos dados replica `PriceIntelligenceService.fetchOfferPrices`:
+    // filtra `inStock` (oferta esgotada não forma preço) e projeta
+    // {storeId, storeSlug, priceUSD}.
+    //
+    // MUDANÇA DELIBERADA DE COMPORTAMENTO (P3-1, continuação): oferta
+    // ARQUIVADA (`available=false`) sai do conjunto. Isto NÃO é otimização —
+    // muda quais dados são considerados, de propósito.
+    //
+    // Motivo, medido no banco local antes da alteração: para o Dell XPS 14
+    // 1TB o motor elegia como `winningOffer` a oferta arquivada de $1.723,28
+    // (`available=false`, `inStock=true`) e usava esse preço como ponta
+    // barata da economia. "Achado do Dia"/"Flash Offers" na Home podiam
+    // portanto anunciar preço, loja e link de uma oferta que o catálogo, a
+    // busca, a página do produto e o /compare já se recusam a mostrar
+    // (ADR-008; services/offer.service.ts; Sprints 5 e 9B).
+    //
+    // `available=false` ≠ `inStock=false`: a esgotada continua ativa e segue
+    // participando normalmente — é o gate de estoque logo abaixo que decide
+    // o que fazer com ela.
+    const activeOffers = offers.filter((o) => o.available);
+
     const savings = computeSavingsOpportunity(
       product.id,
-      offers
+      activeOffers
         .filter((o) => o.inStock)
         .map((o) => ({ storeId: o.storeId, storeSlug: o.storeSlug, priceUSD: o.priceUSD }))
     );
@@ -172,7 +188,12 @@ export class OpportunityEngine {
     // caminho antigo (`findOffersByCanonicalProductId(id, { limit: 50 })`).
     // Sem ele, a busca pela oferta vencedora passaria a enxergar até 500
     // ofertas onde antes via 50 — mudança de resultado, não de transporte.
-    const winningOffer = offers
+    //
+    // P3-1 (continuação): a busca agora corre sobre `activeOffers`, então a
+    // vencedora nunca pode ser uma oferta arquivada. O teto de 50 passa a
+    // contar ofertas ATIVAS — só observável num canonical com mais de 50
+    // ofertas, o que não existe no dataset local (máximo medido: 6).
+    const winningOffer = activeOffers
       .slice(0, OFFER_LOOKUP_LIMIT)
       .find((o) => o.storeId === savings.cheapestStoreId);
     if (!winningOffer) return null;

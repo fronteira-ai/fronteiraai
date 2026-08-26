@@ -7,6 +7,18 @@ export interface ILearnedFactRepository {
    * a future "read-before-calculate" Learning Service. */
   findByCanonicalProductId(canonicalProductId: string): Promise<LearnedFact[]>;
 
+  /** Sprint 15B (egress) — a leitura em lote de `findByCanonicalProductId`.
+   * ADITIVA: o método individual continua existindo e continua sendo usado
+   * por `ProductIntelligenceComposer`, que lê um produto só.
+   *
+   * Contrato deliberadamente idêntico ao individual, produto a produto:
+   * `get(id)` devolve exatamente o que `findByCanonicalProductId(id)`
+   * devolveria. Um produto sem fatos simplesmente não aparece no Map — o
+   * chamador trata ausência como `[]`, a mesma lista vazia que o individual
+   * retornaria. Erro degrada para Map vazio, espelhando o `[]` do
+   * individual, nunca lança. */
+  findByCanonicalProductIds(canonicalProductIds: string[]): Promise<Map<string, LearnedFact[]>>;
+
   /** Every product sharing the same fact type+value — e.g. `(manufacturer_code,
    * "A3257")`. This is the exact grouping key Mission Π-1's simulation used
    * to measure the 28x Comparable Coverage ceiling; the index this query

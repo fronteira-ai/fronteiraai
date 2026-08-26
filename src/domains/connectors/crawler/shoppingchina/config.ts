@@ -13,7 +13,13 @@ export const SHOPPING_CHINA_CONFIG = {
   // into its catalog is the highest-evidence lever for Comparable Product
   // Coverage. Delta Import (Program Σ) makes this safe — repeated runs
   // advance progressively, never re-fetch what's unchanged.
-  maxProducts: 1500,
+  //
+  // Raised again (Mission 04 — Offer Density): only ~2,445 products (~12%
+  // of the 20,000+-URL real catalog) had ever been captured — same
+  // under-capture pattern already fixed once for Mega Eletrônicos/Mobile
+  // Zone (Sprint 2.6). Set above the last known real sitemap size, same
+  // precedent.
+  maxProducts: 22_000,
 
   // Milliseconds to wait between HTTP requests (be respectful)
   requestDelayMs: 500,

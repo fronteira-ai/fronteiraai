@@ -1,4 +1,6 @@
 import { CanonicalMergeSuggestionService } from "../services/CanonicalMergeSuggestionService";
+import { PRODUCT_IDENTITY_ALGORITHM_VERSION } from "../types/enums";
+import { MergeCandidateStatus } from "@/src/domains/canonical-catalog";
 import type { ICanonicalCatalogRepository, CanonicalProduct } from "@/src/domains/canonical-catalog";
 import type { IMergeCandidateRepository } from "@/src/domains/canonical-catalog";
 
@@ -49,6 +51,7 @@ function makeMergeCandidateRepo(overrides: Partial<IMergeCandidateRepository> = 
     findByStatus: jest.fn(),
     findByPair: jest.fn().mockResolvedValue(null),
     updateStatus: jest.fn(),
+    updateScoring: jest.fn(),
     ...overrides,
   };
 }
@@ -131,7 +134,7 @@ describe("CanonicalMergeSuggestionService", () => {
     expect(mergeCandidateRepo.create).not.toHaveBeenCalled();
   });
 
-  it("does not create a duplicate MergeCandidate for a pair that was already suggested", async () => {
+  it("does not create a duplicate MergeCandidate for a pair already suggested by the current algorithm version", async () => {
     const source = makeCanonicalProduct();
     const target = makeCanonicalProduct({ id: "canonical-2", canonicalSlug: "notebook-acer-aspire-3-a315-23-r7ve-loja-2" });
     const catalogRepo = makeCatalogRepo({
@@ -139,7 +142,11 @@ describe("CanonicalMergeSuggestionService", () => {
       findByBrandId: jest.fn().mockResolvedValue([source, target]),
     });
     const mergeCandidateRepo = makeMergeCandidateRepo({
-      findByPair: jest.fn().mockResolvedValue({ id: "existing-candidate" }),
+      findByPair: jest.fn().mockResolvedValue({
+        id: "existing-candidate",
+        status: MergeCandidateStatus.Pending,
+        algorithmVersion: PRODUCT_IDENTITY_ALGORITHM_VERSION,
+      }),
     });
     const service = new CanonicalMergeSuggestionService(catalogRepo, mergeCandidateRepo);
 
@@ -147,5 +154,54 @@ describe("CanonicalMergeSuggestionService", () => {
 
     expect(mergeCandidateRepo.findByPair).toHaveBeenCalledWith("canonical-1", "canonical-2");
     expect(mergeCandidateRepo.create).not.toHaveBeenCalled();
+    expect(mergeCandidateRepo.updateScoring).not.toHaveBeenCalled();
+  });
+
+  it("Mission 04 (Offer Density): rescopes a still-pending candidate scored by an older algorithm version", async () => {
+    const source = makeCanonicalProduct();
+    const target = makeCanonicalProduct({ id: "canonical-2", canonicalSlug: "notebook-acer-aspire-3-a315-23-r7ve-loja-2" });
+    const catalogRepo = makeCatalogRepo({
+      findById: jest.fn().mockResolvedValue(source),
+      findByBrandId: jest.fn().mockResolvedValue([source, target]),
+    });
+    const mergeCandidateRepo = makeMergeCandidateRepo({
+      findByPair: jest.fn().mockResolvedValue({
+        id: "existing-candidate",
+        status: MergeCandidateStatus.Pending,
+        algorithmVersion: "0.9.0-older",
+      }),
+    });
+    const service = new CanonicalMergeSuggestionService(catalogRepo, mergeCandidateRepo);
+
+    await service.suggestMergesFor("canonical-1");
+
+    expect(mergeCandidateRepo.create).not.toHaveBeenCalled();
+    expect(mergeCandidateRepo.updateScoring).toHaveBeenCalledTimes(1);
+    const [id, input] = (mergeCandidateRepo.updateScoring as jest.Mock).mock.calls[0];
+    expect(id).toBe("existing-candidate");
+    expect(input.algorithmVersion).toBe(PRODUCT_IDENTITY_ALGORITHM_VERSION);
+    expect(input.confidence).toBeGreaterThanOrEqual(70);
+  });
+
+  it("Mission 04 (Offer Density): never rescopes a candidate a human already reviewed, even on an older algorithm version", async () => {
+    const source = makeCanonicalProduct();
+    const target = makeCanonicalProduct({ id: "canonical-2", canonicalSlug: "notebook-acer-aspire-3-a315-23-r7ve-loja-2" });
+    const catalogRepo = makeCatalogRepo({
+      findById: jest.fn().mockResolvedValue(source),
+      findByBrandId: jest.fn().mockResolvedValue([source, target]),
+    });
+    const mergeCandidateRepo = makeMergeCandidateRepo({
+      findByPair: jest.fn().mockResolvedValue({
+        id: "existing-candidate",
+        status: MergeCandidateStatus.Approved,
+        algorithmVersion: "0.9.0-older",
+      }),
+    });
+    const service = new CanonicalMergeSuggestionService(catalogRepo, mergeCandidateRepo);
+
+    await service.suggestMergesFor("canonical-1");
+
+    expect(mergeCandidateRepo.create).not.toHaveBeenCalled();
+    expect(mergeCandidateRepo.updateScoring).not.toHaveBeenCalled();
   });
 });

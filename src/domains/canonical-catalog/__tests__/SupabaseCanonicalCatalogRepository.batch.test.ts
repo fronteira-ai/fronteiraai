@@ -25,6 +25,7 @@ interface OfferRow {
   warranty: string | null;
   product_url: string | null;
   stores: { slug: string } | null;
+  available: boolean;
 }
 
 function makeRow(canonicalId: string, offerId: string, overrides: Partial<OfferRow> = {}): OfferRow {
@@ -41,6 +42,7 @@ function makeRow(canonicalId: string, offerId: string, overrides: Partial<OfferR
     warranty: "12 meses",
     product_url: "https://example.test/p",
     stores: { slug: `slug-${offerId}` },
+    available: true,
     ...overrides,
   };
 }
@@ -147,5 +149,30 @@ describe("SupabaseCanonicalCatalogRepository.findOffersByCanonicalProductIds", (
 
     expect(result.size).toBe(0);
     spy.mockRestore();
+  });
+  // ── Sprint 9B (P3-1) ────────────────────────────────────────────────────
+  it("mapeia available, e NÃO adiciona filtro global — o repositório é compartilhado", async () => {
+    const { client, inFn, select } = makeClient({
+      data: [
+        makeRow("canon-a", "ativa", { available: true }),
+        makeRow("canon-a", "arquivada", { available: false }),
+      ],
+    });
+    const repo = new SupabaseCanonicalCatalogRepository(client);
+
+    const offers = (await repo.findOffersByCanonicalProductIds(["canon-a"], 50)).get("canon-a")!;
+
+    // Transporta as duas: market-insights e buyer-intelligence dependem do
+    // conjunto completo. Quem decide o que é comparável é o
+    // CompareFoundationService, não este repositório.
+    expect(offers.map((o) => [o.offerId, o.available])).toEqual([
+      ["ativa", true],
+      ["arquivada", false],
+    ]);
+    // A coluna é selecionada...
+    expect(select).toHaveBeenCalledWith(expect.stringContaining("available"));
+    // ...mas o único filtro continua sendo o de canonical_product_id.
+    expect(inFn).toHaveBeenCalledTimes(1);
+    expect(inFn).toHaveBeenCalledWith("canonical_product_id", ["canon-a"]);
   });
 });

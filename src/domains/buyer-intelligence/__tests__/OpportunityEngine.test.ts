@@ -36,6 +36,7 @@ function makeOffer(overrides: Partial<CanonicalOfferView> = {}): CanonicalOfferV
     storeSlug: "store-1",
     priceUSD: 100,
     inStock: true,
+    available: true,
     stockQuantity: 5,
     updatedAt: new Date().toISOString(),
     condition: "new",
@@ -472,5 +473,70 @@ describe("OpportunityEngine", () => {
     // $10 está esgotada: não pode virar o "menor preço" (mesma regra de
     // PriceIntelligenceService.fetchOfferPrices, preservada).
     expect(top).toMatchObject({ newPriceUSD: 80, oldPriceUSD: 100, cheapestStoreSlug: "s2" });
+  });
+  // ── P3-1 (continuação) — oferta arquivada nunca vira oportunidade ───────
+  // Medido no banco local antes da correção: para o Dell XPS 14 1TB o motor
+  // elegia como winningOffer a oferta arquivada de $1.723,28
+  // (available=false, inStock=true). Ela era eliminada por gates posteriores
+  // naquele dataset, mas o defeito era latente — bastava passar nos gates
+  // para a Home anunciar preço, loja e link de uma oferta que o catálogo, a
+  // busca, /product e /compare já se recusam a mostrar.
+
+  it("nunca elege uma oferta arquivada como vencedora, mesmo sendo a mais barata", async () => {
+    const product = makeCanonicalProduct();
+    const engine = buildEngine({
+      products: [product],
+      offersByProductId: {
+        "canonical-1": [
+          makeOffer({ offerId: "arquivada-barata", storeId: "s-arq", storeSlug: "s-arq", priceUSD: 100, inStock: true, available: false }),
+          makeOffer({ offerId: "ativa-cara", storeId: "s-ativa", storeSlug: "s-ativa", priceUSD: 500, inStock: true, available: true }),
+          makeOffer({ offerId: "ativa-media", storeId: "s-media", storeSlug: "s-media", priceUSD: 300, inStock: true, available: true }),
+        ],
+      },
+      savingsByProductId: {},
+    });
+
+    const [top] = await engine.getTopOpportunities(5);
+    // A economia sai de 500 -> 300 (ativas), nunca de 500 -> 100 (arquivada).
+    expect(top).toMatchObject({ newPriceUSD: 300, oldPriceUSD: 500, cheapestStoreSlug: "s-media" });
+  });
+
+  it("descarta o candidato quando sobra menos de uma comparação real após remover a arquivada", async () => {
+    const product = makeCanonicalProduct();
+    const engine = buildEngine({
+      products: [product],
+      offersByProductId: {
+        "canonical-1": [
+          makeOffer({ offerId: "arquivada", storeId: "s-arq", storeSlug: "s-arq", priceUSD: 100, inStock: true, available: false }),
+          makeOffer({ offerId: "ativa", storeId: "s-ativa", storeSlug: "s-ativa", priceUSD: 500, inStock: true, available: true }),
+        ],
+      },
+      savingsByProductId: {},
+    });
+
+    // Antes, a arquivada servia de "loja mais cara/barata" e produzia uma
+    // economia fantasma. Com uma única oferta ativa não há economia entre
+    // lojas para anunciar.
+    expect(await engine.getTopOpportunities(5)).toEqual([]);
+  });
+
+  it("oferta esgotada porém ATIVA continua participando — available != in_stock", async () => {
+    const product = makeCanonicalProduct();
+    const engine = buildEngine({
+      products: [product],
+      offersByProductId: {
+        "canonical-1": [
+          makeOffer({ offerId: "ativa-esgotada", storeId: "s-esg", storeSlug: "s-esg", priceUSD: 900, inStock: false, available: true }),
+          makeOffer({ offerId: "ativa-barata", storeId: "s-bar", storeSlug: "s-bar", priceUSD: 500, inStock: true, available: true }),
+          makeOffer({ offerId: "ativa-cara", storeId: "s-car", storeSlug: "s-car", priceUSD: 700, inStock: true, available: true }),
+        ],
+      },
+      savingsByProductId: {},
+    });
+
+    const [top] = await engine.getTopOpportunities(5);
+    // A esgotada não forma preço (regra de fetchOfferPrices, preservada),
+    // mas o candidato segue vivo pelas duas ativas com estoque.
+    expect(top).toMatchObject({ newPriceUSD: 500, oldPriceUSD: 700 });
   });
 });

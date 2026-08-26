@@ -1,7 +1,8 @@
-import type {
-  CanonicalProduct,
-  ICanonicalCatalogRepository,
-  IMergeCandidateRepository,
+import {
+  MergeCandidateStatus,
+  type CanonicalProduct,
+  type ICanonicalCatalogRepository,
+  type IMergeCandidateRepository,
 } from "@/src/domains/canonical-catalog";
 import { findNodeByRealCategorySlug } from "@/src/domains/taxonomy";
 import { buildProductSignature, type ProductSignature } from "@/src/domains/product-intelligence";
@@ -209,7 +210,17 @@ function computeSignatureAndSpecifications(canonical: CanonicalProduct): { signa
  * construction, not by convention. */
 async function getSpecificationsReadThrough(
   canonical: CanonicalProduct,
-  memoryService: MarketplaceMemoryService | null
+  memoryService: MarketplaceMemoryService | null,
+  // Sprint 15B (egress). Quando presente, os fatos deste produto já vieram
+  // de UMA leitura em lote feita por suggestMergesFor — a consulta por
+  // candidato desaparece e nada mais muda. Ausente (ou prefetch falhou),
+  // o caminho individual abaixo roda exatamente como antes.
+  //
+  // Um produto sem fatos não aparece no Map; `?? []` é a MESMA lista vazia
+  // que `findByCanonicalProductId` devolveria, então cai no mesmo ramo de
+  // miss, com a mesma escrita de write-back. A equivalência é por
+  // construção, não por convenção.
+  prefetchedFacts?: Map<string, LearnedFact[]> | null
 ): Promise<Record<string, string>> {
   if (!memoryService || bucketFor(canonical.id) >= rolloutPercent()) {
     return computeSignatureAndSpecifications(canonical).spec;
@@ -218,14 +229,18 @@ async function getSpecificationsReadThrough(
   readThroughMetrics.reads++;
 
   let facts: LearnedFact[];
-  try {
-    facts = await memoryService.getFactsForProduct(canonical.id);
-  } catch (err) {
-    // Objetivo 2: any read failure -> old pipeline, silently, never
-    // interrupts Product Identity.
-    readThroughMetrics.fallbacks++;
-    console.error(`[CanonicalMergeSuggestionService] Marketplace Memory read failed for ${canonical.id}, falling back:`, String(err));
-    return computeSignatureAndSpecifications(canonical).spec;
+  if (prefetchedFacts) {
+    facts = prefetchedFacts.get(canonical.id) ?? [];
+  } else {
+    try {
+      facts = await memoryService.getFactsForProduct(canonical.id);
+    } catch (err) {
+      // Objetivo 2: any read failure -> old pipeline, silently, never
+      // interrupts Product Identity.
+      readThroughMetrics.fallbacks++;
+      console.error(`[CanonicalMergeSuggestionService] Marketplace Memory read failed for ${canonical.id}, falling back:`, String(err));
+      return computeSignatureAndSpecifications(canonical).spec;
+    }
   }
 
   const reused = factsToSpecifications(facts);
@@ -266,21 +281,23 @@ async function getSpecificationsReadThrough(
 async function toEvaluableProduct(
   canonical: CanonicalProduct,
   categorySlug: string,
-  memoryService: MarketplaceMemoryService | null
+  memoryService: MarketplaceMemoryService | null,
+  prefetchedFacts?: Map<string, LearnedFact[]> | null
 ): Promise<EvaluableProduct> {
   return {
     slug: canonical.canonicalSlug,
     name: canonical.name,
     brandSlug: canonical.brandId ?? "",
     categorySlug,
-    specifications: await getSpecificationsReadThrough(canonical, memoryService),
+    specifications: await getSpecificationsReadThrough(canonical, memoryService, prefetchedFacts),
   };
 }
 
 async function toMatchCandidate(
   canonical: CanonicalProduct,
   categorySlug: string,
-  memoryService: MarketplaceMemoryService | null
+  memoryService: MarketplaceMemoryService | null,
+  prefetchedFacts?: Map<string, LearnedFact[]> | null
 ): Promise<MatchCandidate> {
   return {
     productId: canonical.id,
@@ -288,7 +305,7 @@ async function toMatchCandidate(
     name: canonical.name,
     brandSlug: canonical.brandId ?? "",
     categorySlug,
-    specifications: await getSpecificationsReadThrough(canonical, memoryService),
+    specifications: await getSpecificationsReadThrough(canonical, memoryService, prefetchedFacts),
   };
 }
 
@@ -311,6 +328,28 @@ export class CanonicalMergeSuggestionService {
   // tier, writes a single pending MergeCandidate — always a suggestion,
   // never an automatic union (CTO mission). No-ops (does not throw) when
   // there's nothing to compare or a suggestion for this pair already exists.
+  /** Sprint 15B — uma leitura em lote no lugar de N individuais.
+   *
+   * Devolver `null` significa "sem prefetch": cada candidato volta ao
+   * caminho individual de antes. É o que acontece quando não há memória
+   * configurada, quando ninguém está no rollout, e quando o próprio lote
+   * falha — nesse último caso a otimização se desliga sozinha e o
+   * comportamento anterior, incluindo o ramo de fallback por exceção,
+   * continua valendo integralmente. */
+  private async prefetchFacts(canonicals: CanonicalProduct[]): Promise<Map<string, LearnedFact[]> | null> {
+    if (!this.memoryService) return null;
+
+    const idsInRollout = canonicals.map((c) => c.id).filter((id) => bucketFor(id) < rolloutPercent());
+    if (idsInRollout.length === 0) return null;
+
+    try {
+      return await this.memoryService.getFactsForProducts(idsInRollout);
+    } catch (err) {
+      console.error("[CanonicalMergeSuggestionService] Marketplace Memory batch read failed, falling back to per-product reads:", String(err));
+      return null;
+    }
+  }
+
   async suggestMergesFor(canonicalProductId: string): Promise<void> {
     const source = await this.catalogRepo.findById(canonicalProductId);
     if (!source || !source.brandId) return;
@@ -327,10 +366,25 @@ export class CanonicalMergeSuggestionService {
       source.categoryId,
       source.categoryId ? realSlugsById.get(source.categoryId) : undefined
     );
-    const evaluableSource = await toEvaluableProduct(source, sourceCategorySlug, this.memoryService);
+    // Sprint 15B (egress). Era aqui o N+1: cada `toMatchCandidate` abaixo
+    // disparava seu próprio `getFactsForProduct`, todos em paralelo pelo
+    // Promise.all — uma consulta por candidato, para CADA item do outbox.
+    //
+    // Só entram no lote os IDs que o read-through realmente consultaria:
+    // os que estão DENTRO do rollout (`bucketFor < rolloutPercent`). Os de
+    // fora nunca leram memória e continuam sem ler — o rollout de 50% fica
+    // literalmente intacto, e o lote não busca o que ninguém usaria.
+    const prefetchedFacts = await this.prefetchFacts([source, ...candidates]);
+
+    const evaluableSource = await toEvaluableProduct(source, sourceCategorySlug, this.memoryService, prefetchedFacts);
     const matchCandidates = await Promise.all(
       candidates.map((c) =>
-        toMatchCandidate(c, resolveCategoryGateSlug(c.categoryId, c.categoryId ? realSlugsById.get(c.categoryId) : undefined), this.memoryService)
+        toMatchCandidate(
+          c,
+          resolveCategoryGateSlug(c.categoryId, c.categoryId ? realSlugsById.get(c.categoryId) : undefined),
+          this.memoryService,
+          prefetchedFacts
+        )
       )
     );
 
@@ -340,7 +394,27 @@ export class CanonicalMergeSuggestionService {
     if (!result.candidateProductId || result.candidateProductId === source.id) return;
 
     const existing = await this.mergeCandidateRepo.findByPair(source.id, result.candidateProductId);
-    if (existing) return;
+
+    if (existing) {
+      // Mission 04 (Offer Density): a candidate a human already reviewed
+      // (approved/rejected/merged/rolled_back) is a permanent decision —
+      // never touched here regardless of algorithm version. Only a
+      // still-pending suggestion scored by an older ProductIdentityEngine
+      // version is eligible for a one-time rescore, the same self-healing
+      // precedent already used by Marketplace Memory's
+      // `factsToSpecifications` (stale algorithm_version -> recompute).
+      if (existing.status === MergeCandidateStatus.Pending && existing.algorithmVersion !== result.algorithmVersion) {
+        await this.mergeCandidateRepo.updateScoring(existing.id, {
+          confidence: result.confidence,
+          algorithmVersion: result.algorithmVersion,
+          matchedAttributes: result.matchedAttributes,
+          mismatchedAttributes: result.mismatchedAttributes,
+          penalties: result.penalties,
+          reason: result.explainabilityReason,
+        });
+      }
+      return;
+    }
 
     await this.mergeCandidateRepo.create({
       sourceCanonicalProductId: source.id,

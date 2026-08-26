@@ -23,7 +23,11 @@ export interface SweepResult {
 }
 
 const DEFAULT_STALE_CLAIM_MS = 5 * 60_000; // 5 minutes
-const ADAPTIVE_THROUGHPUT_WINDOW_MS = 5 * 60_000; // 5 minutes — recent-throughput sample window
+// Sprint 15C: quantas conclusões recentes amostrar para estimar a duração
+// média por item. Mesmo tamanho de amostra que OutboxObservabilityService
+// já usa para seus percentis — grande o bastante para não oscilar com um
+// item atípico, pequeno o bastante para a consulta continuar barata.
+const ADAPTIVE_THROUGHPUT_SAMPLE_SIZE = 50;
 
 // Mission Ω-Canonical Integration. The sole consumer of
 // canonical_suggestion_outbox — claims a bounded batch, calls
@@ -66,7 +70,12 @@ export class CanonicalSuggestionSweepService {
    * a worker that dies mid-batch, not a new contract. */
   async sweep(batchLimit?: number, staleClaimMs: number = DEFAULT_STALE_CLAIM_MS, deadlineAt?: number): Promise<SweepResult> {
     const startedAt = Date.now();
-    const effectiveBatchLimit = batchLimit ?? (await this.computeAdaptiveLimit());
+    // Sprint 15C: o orçamento restante é justamente o que faltava ao
+    // dimensionamento. `deadlineAt` já era conhecido aqui — só não era
+    // usado para decidir QUANTOS itens reivindicar, apenas para parar de
+    // processá-los. Um chamador sem deadline (todo teste e todo uso
+    // anterior a esta Sprint) passa `undefined` e mantém o cálculo antigo.
+    const effectiveBatchLimit = batchLimit ?? (await this.computeAdaptiveLimit(deadlineAt === undefined ? undefined : deadlineAt - startedAt));
     const entries = await this.outboxRepo.claimBatch(effectiveBatchLimit, staleClaimMs);
 
     let succeeded = 0;
@@ -125,15 +134,38 @@ export class CanonicalSuggestionSweepService {
     };
   }
 
-  private async computeAdaptiveLimit(): Promise<number> {
-    const [statusCounts, recentCompletions] = await Promise.all([
+  // Sprint 15C. A fonte do sinal de throughput mudou de `countCompletedSince`
+  // para `recentCompletionSamples` — MESMA quantidade de consultas (duas, em
+  // paralelo), método de repositório que já existia (OutboxObservabilityService
+  // o usa desde a Mission Ω-Hardening), nenhum contrato novo.
+  //
+  // Por quê: `countCompletedSince` divide as conclusões pela janela INTEIRA
+  // de 5 minutos. Como o trabalho é em rajada — o cron roda, trabalha 45s e
+  // dorme 15 minutos — 30 itens concluídos em 45s eram reportados como
+  // 6/min em vez dos ~40/min reais, subestimando a capacidade em ~7x. Pior:
+  // no primeiro sweep de cada invocação a janela está sempre vazia (última
+  // execução foi há 15 minutos), então o sinal era estruturalmente ZERO.
+  //
+  // A duração média por item (`completedAt - claimedAt`) é a grandeza
+  // fisicamente correta para responder "quantos cabem no orçamento": não
+  // depende de quando o trabalho aconteceu, só de quanto cada item custa.
+  private async computeAdaptiveLimit(budgetMs?: number): Promise<number> {
+    const [statusCounts, samples] = await Promise.all([
       this.outboxRepo.countByStatus(),
-      this.outboxRepo.countCompletedSince(new Date(Date.now() - ADAPTIVE_THROUGHPUT_WINDOW_MS).toISOString()),
+      this.outboxRepo.recentCompletionSamples(ADAPTIVE_THROUGHPUT_SAMPLE_SIZE),
     ]);
     const backlogRemaining = (statusCounts.pending ?? 0) + (statusCounts.processing ?? 0);
-    const recentTotal = recentCompletions.done + recentCompletions.deadLetter + recentCompletions.expired;
-    const throughputPerMinute = recentTotal / (ADAPTIVE_THROUGHPUT_WINDOW_MS / 60_000);
-    return computeAdaptiveBatchSize(backlogRemaining, throughputPerMinute, outboxMinBatchSize(), outboxMaxBatchSize());
+
+    const durations = samples
+      .map((s) => new Date(s.completedAt).getTime() - new Date(s.claimedAt).getTime())
+      .filter((ms) => Number.isFinite(ms) && ms > 0);
+    const averageItemMs = durations.length > 0 ? durations.reduce((sum, ms) => sum + ms, 0) / durations.length : 0;
+
+    // Sem amostra utilizável, throughput 0 — exatamente o "cold start" que
+    // computeAdaptiveBatchSize já tratava, e continua tratando.
+    const throughputPerMinute = averageItemMs > 0 ? 60_000 / averageItemMs : 0;
+
+    return computeAdaptiveBatchSize(backlogRemaining, throughputPerMinute, outboxMinBatchSize(), outboxMaxBatchSize(), budgetMs);
   }
 }
 

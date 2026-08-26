@@ -28,13 +28,50 @@ const FACTOR_MAX_WEIGHT: Record<string, number> = {
   "model-number": MODEL_WEIGHT,
 };
 
+// Mission 04 (Offer Density) reopened this file per
+// docs/engineering/ENGINEERING_CONSTITUTION.md's explicit criterion \u2014
+// "evid\u00eancia objetiva de decis\u00e3o incorreta em produ\u00e7\u00e3o": aggregating the
+// real `penalties` already stored on every pending cross-store merge
+// candidate in production showed name-similarity was the factor losing
+// points on 85/85 of them (1,853 points lost total, ~21.8/50 average),
+// while specifications and model-number combined lost only 135 points \u2014
+// zeroing specifications' penalty hypothetically would not have pushed a
+// single one of those 85 past the "probable" tier. The actual titles
+// (e.g. "OUKITEL WP100 Titan 5G Dual SIM 6GB+512GB 6.8\u2033 NFC \u2013 Preto" vs
+// "Smartphone Oukitel WP100 Titan 5G 512GB 16GB RAM Dual SIM NFC Tela 6.8"
+// - Preto (1 Ano de Garantia)") are the same real product, but each
+// merchant's own marketing boilerplate \u2014 a category prefix, a unit
+// suffix, a warranty clause, connector prepositions \u2014 inflates the Jaccard
+// token union without ever landing in the intersection that actually
+// distinguishes one product from another. Excluding these closed-class,
+// non-distinguishing tokens (never a brand, model number, capacity,
+// color, or generation \u2014 this list was checked against exactly those
+// categories before being written) can only raise or preserve a genuine
+// match's score, never lower it, and can never manufacture a match
+// between two products that differ on a real identity token, because none
+// of those real identity tokens are in this list. NAME_WEIGHT, SPEC_WEIGHT,
+// MODEL_WEIGHT, MISMATCH_CAP, and every gate below are unchanged \u2014 this is
+// a tokenizer fix, not a new scoring model.
+const BOILERPLATE_TOKENS = new Set([
+  // Category/marketing filler (PT/ES/EN \u2014 the marketplace's three listing languages)
+  "smartphone", "celular", "aparelho", "produto",
+  "novo", "nova", "nuevo", "nueva", "new",
+  "original",
+  "tela",
+  "garantia", "warranty",
+  "ano", "anos", "year", "years",
+  // Connector prepositions/conjunctions \u2014 carry no product identity in any of the three languages
+  "com", "sem", "con", "sin", "with",
+  "de", "da", "do", "das", "dos", "del", "la", "el", "para", "for", "the",
+]);
+
 function tokenize(value: string): string[] {
   return value
     .toLowerCase()
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
     .split(/[^a-z0-9]+/)
-    .filter((token) => token.length > 0);
+    .filter((token) => token.length > 0 && !BOILERPLATE_TOKENS.has(token));
 }
 
 function jaccardSimilarity(a: string[], b: string[]): number {

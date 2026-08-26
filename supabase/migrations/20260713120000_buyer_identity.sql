@@ -188,11 +188,38 @@ CREATE TRIGGER trg_buyer_sessions_rate_limit
 -- Hardening complementar: teto de tamanho de payload (RLS/CHECK não
 -- substituem o rate limit acima, mas fecham o caso de poucos eventos
 -- gigantes em vez de muitos pequenos).
-ALTER TABLE buyer_events
-  ADD CONSTRAINT IF NOT EXISTS buyer_events_page_url_length CHECK (char_length(page_url) <= 2048),
-  ADD CONSTRAINT IF NOT EXISTS buyer_events_referrer_length CHECK (referrer IS NULL OR char_length(referrer) <= 2048),
-  ADD CONSTRAINT IF NOT EXISTS buyer_events_search_query_length CHECK (search_query IS NULL OR char_length(search_query) <= 512),
-  ADD CONSTRAINT IF NOT EXISTS buyer_events_metadata_size CHECK (pg_column_size(metadata) <= 8192);
+-- CORREÇÃO (Sprint 3C): estas quatro linhas usavam
+-- `ALTER TABLE ... ADD CONSTRAINT IF NOT EXISTS`, que NÃO é sintaxe válida
+-- em nenhuma versão do PostgreSQL — `IF NOT EXISTS` existe para ADD COLUMN,
+-- nunca para ADD CONSTRAINT. O statement abortava com SQLSTATE 42601
+-- ("syntax error at or near NOT"), derrubando a migration inteira e, com
+-- ela, todo o `supabase db reset`. Ou seja: esta migration nunca pôde ter
+-- sido aplicada com sucesso em lugar nenhum.
+--
+-- A correção usa o bloco DO guardado por pg_constraint — exatamente o idioma
+-- que este projeto já adotava em database/migrations/0008_data_integrity.sql
+-- para o mesmo problema. Semântica preservada: mesmos nomes, mesmos CHECKs,
+-- mesma idempotência pretendida.
+DO $$
+DECLARE
+  c record;
+BEGIN
+  FOR c IN
+    SELECT * FROM (VALUES
+      ('buyer_events_page_url_length',     'char_length(page_url) <= 2048'),
+      ('buyer_events_referrer_length',     'referrer IS NULL OR char_length(referrer) <= 2048'),
+      ('buyer_events_search_query_length', 'search_query IS NULL OR char_length(search_query) <= 512'),
+      ('buyer_events_metadata_size',       'pg_column_size(metadata) <= 8192')
+    ) AS t(name, expr)
+  LOOP
+    IF NOT EXISTS (
+      SELECT 1 FROM pg_constraint
+      WHERE conname = c.name AND conrelid = 'buyer_events'::regclass
+    ) THEN
+      EXECUTE format('ALTER TABLE buyer_events ADD CONSTRAINT %I CHECK (%s)', c.name, c.expr);
+    END IF;
+  END LOOP;
+END $$;
 
 -- Corrige o comentário que a Wave 6 do Release 1.8 já havia identificado
 -- como falso (a API nunca validou rate limit de fato).

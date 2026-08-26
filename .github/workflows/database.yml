@@ -11,6 +11,27 @@
 # pushes straight to that one project once secrets exist. Add a staging
 # project and a second set of secrets before treating this as a real
 # staging→production gate.
+#
+# POLÍTICA DE APLICAÇÃO (Sprint 3E — opção B da auditoria da Sprint 3D)
+#
+#   pull_request  → valida (lint/typecheck/test/db:lint). Nunca escreve.
+#   push em main  → valida. `push-migrations` é PULADO.
+#   workflow_dispatch (manual, ref=main) → único caminho que aplica DDL.
+#
+# Por quê: `supabase db push` roda com service credentials contra o único
+# projeto Supabase existente. Antes, um merge em `main` que tocasse
+# supabase/migrations/** disparava isso automaticamente — sem revisão humana
+# entre o merge e o DDL em produção.
+#
+# O gatilho concreto que expôs o problema: as baselines 00000000000000 e
+# 00000000000001 ordenam ANTES de toda migration já aplicada no remoto. O
+# CLI recusa migrations fora de ordem (exit 1), então o job ficaria vermelho
+# a cada merge — e o "conserto" intuitivo, `--include-all`, aplicaria em
+# produção ALTER TABLE ... ADD CONSTRAINT não idempotentes mais DML real
+# (DELETE FROM offers, UPDATE profiles). NUNCA adicione `--include-all` aqui.
+# A resolução correta para as baselines é marcá-las como já aplicadas no
+# histórico remoto (`supabase migration repair --status applied`), como uma
+# operação manual e autorizada — não um flag no CI.
 name: Database Migration Pipeline
 
 on:
@@ -23,6 +44,10 @@ on:
     branches: [main]
     paths:
       - "supabase/migrations/**"
+  # Sprint 3E: único gatilho que habilita `push-migrations`. Aplicar DDL em
+  # produção passa a ser um ato deliberado (Actions → Run workflow), nunca o
+  # efeito colateral de um merge.
+  workflow_dispatch:
 
 jobs:
   lint-typecheck-test:
@@ -56,7 +81,11 @@ jobs:
     name: supabase db push
     runs-on: ubuntu-latest
     needs: migration-lint
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    # Sprint 3E: era `github.event_name == 'push'`, ou seja, qualquer merge em
+    # `main` que tocasse supabase/migrations/** aplicava DDL em produção
+    # sozinho. Agora só `workflow_dispatch` chega aqui. A guarda de branch é
+    # mantida: mesmo na execução manual, o ref precisa ser `main`.
+    if: github.ref == 'refs/heads/main' && github.event_name == 'workflow_dispatch'
     environment: production
     steps:
       - uses: actions/checkout@v4

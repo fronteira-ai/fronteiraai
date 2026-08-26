@@ -117,6 +117,44 @@ describe("ProductIdentityEngine", () => {
     expect(result.explainabilityReason).toContain("capped at");
   });
 
+  it("Mission 04 (Offer Density): boilerplate wording differences across merchants no longer tank name-similarity", () => {
+    const offer = makeOffer({
+      name: 'OUKITEL WP100 Titan 5G Dual SIM 6GB+512GB 6.8" NFC - Preto',
+      specifications: {},
+    });
+    const candidate = makeCandidate({
+      name: 'Smartphone Oukitel WP100 Titan 5G 512GB 16GB RAM Dual SIM NFC Tela 6.8" - Preto (1 Ano de Garantia)',
+      specifications: {},
+    });
+
+    const result = engine.evaluate(offer, [candidate]);
+
+    const nameFactor = result.factors.find((f) => f.factor === "name-similarity");
+    expect(nameFactor?.matched).toBe(true);
+    expect(nameFactor!.weight).toBeGreaterThanOrEqual(35);
+  });
+
+  it("Mission 04 (Offer Density): a real capacity difference still fails name-similarity/model-number the same as before the boilerplate fix", () => {
+    const offer = makeOffer({
+      name: "iPhone 15 Pro 128GB Titanio",
+      brandSlug: "apple",
+      categorySlug: "celulares",
+      specifications: {},
+    });
+    const candidate = makeCandidate({
+      name: "iPhone 15 Pro 256GB Titanio",
+      brandSlug: "apple",
+      categorySlug: "celulares",
+      specifications: {},
+    });
+
+    const result = engine.evaluate(offer, [candidate]);
+
+    const modelFactor = result.factors.find((f) => f.factor === "model-number");
+    expect(modelFactor?.matched).toBe(false);
+    expect(result.confidence).toBeLessThan(90);
+  });
+
   it("suggests a new product when there are no candidates at all", () => {
     const result = engine.evaluate(makeOffer(), []);
 

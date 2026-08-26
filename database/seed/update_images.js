@@ -12,25 +12,10 @@
  *      node database/seed/update_images.js --dry-run
  */
 
-const path = require("path");
-const fs = require("fs");
 const { createClient } = require("@supabase/supabase-js");
 
 const DRY_RUN = process.argv.includes("--dry-run");
 
-function loadEnv() {
-  const envPath = path.join(__dirname, "../../.env.local");
-  if (!fs.existsSync(envPath)) { console.error("❌  .env.local não encontrado"); process.exit(1); }
-  for (const line of fs.readFileSync(envPath, "utf8").split("\n")) {
-    const trimmed = line.trim();
-    if (!trimmed || trimmed.startsWith("#")) continue;
-    const idx = trimmed.indexOf("=");
-    if (idx === -1) continue;
-    const key = trimmed.slice(0, idx).trim();
-    const val = trimmed.slice(idx + 1).trim().replace(/^"(.*)"$/, "$1");
-    if (!(key in process.env)) process.env[key] = val;
-  }
-}
 
 function placeholder(w, h, bg, text, fg = "94a3b8") {
   const encoded = encodeURIComponent(text);
@@ -66,11 +51,13 @@ const BRAND_LOGOS = {
 };
 
 async function run() {
-  loadEnv();
-  const svc = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL,
-    process.env.SUPABASE_SERVICE_ROLE_KEY
-  );
+  // Sprint 3D: este script tinha seu próprio loadEnv() lendo .env.local, o
+  // que o fazia escrever em PRODUÇÃO sem passar por nenhuma trava — a
+  // proteção da Sprint 3C cobria apenas lib/client.js e scripts/lib/client.ts.
+  // Agora usa o mesmo resolvedor de alvo: LOCAL por padrão.
+  const { resolveSupabaseTarget } = require("./lib/target");
+  const resolved = resolveSupabaseTarget();
+  const svc = createClient(resolved.url, resolved.key);
 
   console.log(DRY_RUN ? "🔍  Dry-run — nenhuma escrita será feita\n" : "✏️   Executando atualizações de imagem...\n");
 
