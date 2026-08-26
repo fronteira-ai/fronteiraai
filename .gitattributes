@@ -1,0 +1,26 @@
+# ParaguAI — normalização de line endings (Sprint 38I reconciliation)
+# Texto → LF (consistente com TODO o histórico Git do projeto).
+# Binários → nunca converter.
+* text=auto eol=lf
+
+# Binários (nunca normalizar/parsear como texto)
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.webp binary
+*.ico binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.eot binary
+*.pdf binary
+*.zip binary
+*.gz binary
+*.tar binary
+*.jar binary
+*.node binary
+
+# Artefatos de build/gerados (garantia mesmo sem gitignore)
+node_modules/ text=auto
+.next/ -text
