@@ -8,6 +8,8 @@ import { Store } from "@/types/store";
 import { animations } from "@/styles/animations";
 import { lojaPath } from "@/constants/routes";
 import { analytics } from "@/utils/analytics";
+import StoreLogo from "@/components/store/StoreLogo";
+import StoreDirectionsButton from "@/components/store/StoreDirectionsButton";
 
 type Props = {
   store: Store;
@@ -48,11 +50,16 @@ function StoreCard({ store, productCount, qualityScore, lastSyncAt }: Props) {
             sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
             className="object-cover transition duration-300 group-hover:scale-105"
           />
-        ) : (
-          <span className="text-4xl font-black text-slate-700">
-            {store.name.charAt(0)}
-          </span>
-        )}
+        ) : null}
+        <div className="absolute inset-0 bg-slate-950/40" />
+        {/* PR-004: logo oficial (com fallback monograma) sobre o cover/fundo */}
+        <StoreLogo
+          logoUrl={store.logo_url}
+          name={store.name}
+          size={72}
+          radius={20}
+          className="relative z-10 border-2 border-white/15 ring-2 ring-slate-900/60"
+        />
       </div>
 
       <div className="p-7">
@@ -108,7 +115,12 @@ function StoreCard({ store, productCount, qualityScore, lastSyncAt }: Props) {
           </div>
         ) : null}
 
-        <span className="mt-8 block w-full rounded-2xl bg-blue-600 py-3 text-center font-semibold text-white transition group-hover:bg-blue-500">
+        {/* PR-005: rota Ponte da Amizade → loja (secundário; não compete com preço/compra) */}
+        <div className="mt-4">
+          <StoreDirectionsButton store={store} className="w-full" />
+        </div>
+
+        <span className="mt-3 block w-full rounded-2xl bg-blue-600 py-3 text-center font-semibold text-white transition group-hover:bg-blue-500">
           Ver Loja
         </span>
       </div>

@@ -59,6 +59,8 @@
     "offer-density:report": "tsx scripts/offer-density-report.ts",
     "catalog-recovery:run": "tsx scripts/catalog-recovery-run.ts",
     "catalog-recovery:run:execute": "tsx scripts/catalog-recovery-run.ts --execute",
+    "store-logos:seed": "tsx scripts/store-logos-seed.ts",
+    "store-logos:seed:execute": "tsx scripts/store-logos-seed.ts --execute",
     "top100-absence:audit": "tsx scripts/top100-absence-audit.ts",
     "bootstrap-impact:report": "tsx scripts/bootstrap-impact-report.ts"
   },

@@ -3,6 +3,7 @@ import { OfferWithStore } from "@/types/offer";
 import { formatUSD, formatBRL } from "@/src/domains/exchange";
 import { formatOfferCondition } from "@/utils/offerPresentation";
 import OfferLink from "@/components/product/OfferLink";
+import StoreDirectionsButton from "@/components/store/StoreDirectionsButton";
 
 type Props = {
   offers: OfferWithStore[];
@@ -94,6 +95,13 @@ function ProductOffers({ offers }: Props) {
                   >
                     Ver oferta
                   </OfferLink>
+                ) : null}
+
+                {/* PR-005: rota Ponte da Amizade → loja desta oferta (secundário) */}
+                {offer.store ? (
+                  <div className="mt-2">
+                    <StoreDirectionsButton store={offer.store} compact />
+                  </div>
                 ) : null}
 
               </div>

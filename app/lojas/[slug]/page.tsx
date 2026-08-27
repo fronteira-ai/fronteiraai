@@ -11,6 +11,8 @@ import StoreGrid from "@/components/store/StoreGrid";
 import ClaimStoreButton from "@/components/store/ClaimStoreButton";
 import StoreViewTracker from "@/components/store/StoreViewTracker";
 import StoreContactLinks from "@/components/store/StoreContactLinks";
+import StoreDirectionsButton from "@/components/store/StoreDirectionsButton";
+import StoreLogo from "@/components/store/StoreLogo";
 import { getCachedStorePublic } from "./_cache";
 import { getOffersByStore } from "@/services/offer.service";
 import { getRelatedStores } from "@/services/store.service";
@@ -115,11 +117,7 @@ export default async function LojaPublicaPage({ params }: { params: Params }) {
         {/* Store header */}
         <div className="mt-6 flex flex-col sm:flex-row items-start gap-5">
           {/* Logo */}
-          {store.logo_url && (
-            <div className="relative h-16 w-16 rounded-2xl border border-slate-700 bg-slate-900 overflow-hidden shrink-0">
-              <Image src={store.logo_url} alt={store.name} fill sizes="64px" className="object-contain p-1" />
-            </div>
-          )}
+          <StoreLogo logoUrl={store.logo_url} name={store.name} size={64} radius={16} className="mt-1" />
 
           <div className="flex-1">
             <div className="flex flex-wrap items-center gap-2 mb-1">
@@ -236,6 +234,9 @@ export default async function LojaPublicaPage({ params }: { params: Params }) {
                     <span className="whitespace-pre-line">{store.opening_hours}</span>
                   </div>
                 )}
+                <div className="pt-1">
+                  <StoreDirectionsButton store={store} className="w-full" />
+                </div>
               </div>
             </div>
 
