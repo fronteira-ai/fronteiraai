@@ -2,6 +2,40 @@
 
 Auditoria gerada por leitura completa do código-fonte. Substitui o conteúdo anterior deste arquivo.
 
+## Atualização factual — Product Rebaseline V2 (2026-08-26)
+
+### Sprint "Search Ordering + Out-of-Stock + SEO Recovery" — IMPLEMENTADO (código), PENDENTE deploy
+
+> Estado de implementação da Sprint que corrige PR-001/PR-002/SEO. **Redigido e testado (GREEN)**; **aplicação de produção (RED) aguarda aprovação do owner** — ver `docs/operations/CHANGELOG.md` (entrada 2026-08-26).
+
+- **Ordenação global em SQL**: RPC `search_products_global` (nova, `20260827000000`) para `/search`; `search_products_catalog` (`20260809120000`) estendida com `has_stock DESC` para `/products`. Regra canônica: disponíveis → esgotados, preço ASC (null por último), determinístico por id.
+- **`services/search.service.ts`**: chama a RPC com fallback determinístico (não quebra `/search` se a RPC ainda não estiver aplicada).
+- **SEO**: `lib/env.ts` exige `NEXT_PUBLIC_SITE_URL` em produção (fail-fast); sem fallback localhost em prod.
+- **Quality gates**: lint 0, typecheck 0, **1025 testes** (147 suítes), build PASS, `db:lint` OK. `MIGRATION_REVIEW = PASS`.
+- **RED aguardando aprovação**: aplicar as duas RPCs no self-hosted; configurar `NEXT_PUBLIC_SITE_URL` no deploy; merge para `main` + deploy; validação pós-deploy.
+
+### Auditoria factual (rebaseline) — quadro de origem
+
+> Entrada de auditoria que confrontou o estado documentado com o estado REAL. Detalhes: `docs/product/PRODUCT_REBASELINE_REQUIREMENTS.md` (registro PR-001 a PR-006).
+**Baseline oficial**: branch `sprint-0/baseline-recovery`, HEAD `29092dd`. `main` está em `227caf3` (29/07) e **não contém** a Home 2.0 (`31f215e`/`64cd6e2`) nem as correções de ordenação (`4a8b36d`/`6d2a4d4`). O código do baseline (Home 2.0, Busca, Compare, IA rule-based) está **pronto mas não deployado**.
+
+**Quality Gates no HEAD (2026-08-26)**: ESLint 0 erros (1 warning em `scripts/comparison-forensics-audit.ts:19`), TypeScript 0 erros, **1016/1016 testes PASS**, Build PASS.
+
+**Estado do banco de produção (self-hosted `api.fronteiraai.com`, leitura anônima )**:
+- produtos 52.589 · offers 52.630 (available=true 43.356; active+esgotadas 100) · stores 7 · brands 964 · categories 1.172 · `price_history` 72.413.
+- `canonical_products` **= 0 linhas** (tabela existe? retorno 0); `offers` com `canonical_product_id` preenchido = 32.153 (61%) — Compare opera via este link.
+- **Escore de lojas**: logo 0/7 (**0%**), address 4/7, `latitude`/`longitude` **0/7**.
+- **Ecossistema vazio**: favorites 0, reviews 0, alerts 0, profiles 0, buyers 0, buyer_events 0, merchants 0, merchant_stores 0, exchange_rates 0, market_changes 0.
+
+**Achados críticos de produção (dado real, não hipotético)**:
+1. **Busca em produção NÃO ordena** — o fix de ordenação (`4a8b36d`, esgotados-last + price asc) só existe no baseline, não em `main`. Bug "esgotados primeiro" **vivo em produção**. A ordenação no código do baseline roda sobre ≤8 linhas (sem ORDER BY SQL) — não é global.
+2. **RPC `search_products_catalog` não existe no self-hosted** (migration `20260809120000` não aplicada) — a ordenação global do catálogo `/products?sort=price_asc|desc` degrada para grid vazio se esse código deployar.
+3. **SEO quebrado no deploy**: `robots.txt` publicado aponta `Host: http://localhost:3000` e sitemaps em `localhost:3000` — `NEXT_PUBLIC_SITE_URL` não configurado no ambiente de deploy (canonical/robots/sitemap derivam de `SITE_URL` em `constants/routes.ts`).
+
+**Home 2.0 / rotas**: `HOME_2_0_STATUS = FOUNDATION_ONLY` (código completo no baseline, Home 2.0 não publicada). `/categorias`, `/search`, `/product/[slug]`, `/products`, `/compare/[slug]`, `/lojas`, `/lojas/[slug]` COMPLETES; `/lojistas/[merchantId]` órfã de links; `LiveCameras` placeholder honesto ("Em breve"), sem integração real.
+
+**PR-001 a PR-006 registrados**: ver `docs/product/PRODUCT_REBASELINE_REQUIREMENTS.md`. **Nenhum implementado.** `NEXT_SPRINT_RECOMMENDED = Sprint "Search Ordering + Out-of-Stock + SEO fix"`.
+
 Última atualização: 2026-07-04 (Release 1.9 — **Program F Premium Home Experience Wave 1 entregue** — Home redesenhada + nova página `/categorias`, consumindo exclusivamente Market Intelligence/Canonical Catalog/Marketplace Operations/Exchange/Connector Platform, zero regra de negócio em componente React, ISR real (revalidate=60) em vez de force-dynamic; Release 1.8 — **Program D Marketplace Coverage Expansion Wave 1 entregue** — Mega Eletrônicos, Roma Shopping e Atacado Connect certificados com dado real (597 ofertas persistidas, zero fluxo paralelo); **Program C Market Intelligence Engine Wave 1 entregue** — novo domínio `src/domains/market-insights/`: Price Intelligence, Savings Engine, Volatility Rollup, Price History API, Market Pulse canônico — auditoria encontrou sobreposição real com quase todos os objetivos, Merchant Intelligence deliberadamente não duplicado; **Program B Wave 2 (Connector Platform Finalization) entregue** — Delta Import Engine agora operacional em produção (`connector_url_snapshots`, validado com sync real), Connector Registry V2 (`ConnectorDirectoryService`), Observability V2, Source Discovery Policy formalizada; **Program A Wave 5 (Connector Platform V2) entregue** — industrialização da Connector Platform: SDK unificado, Capability Matrix, Certification Framework + Quality Score, Observability, Delta Import (lógica pura), Registry estendido — ver `docs/engineering/CONNECTOR_PLATFORM_V2.md`; Program A Wave 4 (Connector Tier 1 Implementation) permanece **EM ANDAMENTO, pausada pelo CTO** para revisão de arquitetura após recertificar Shopping China (sitemap real, 27.402 URLs de produto confirmadas) e adicionar retry/backoff a `HttpFetchStrategy` — ver `docs/engineering/CONNECTOR_PLATFORM_ARCHITECTURE_REVIEW.md`; migrations das Waves 1-3 aplicadas em produção nesta sessão; **Program C Wave 0 (Merchant Partnership Program) entregue** — nova categoria `docs/business/` (ADR-049), processo oficial de parceria comercial para os 4 merchants que bloqueiam crawlers de IA, zero código, apenas documentação/processo; **Program A Wave 3 (Programa de Certificação de Connectors Tier 1) entregue** — auditoria técnica de 10 merchants candidatos, nova categoria `docs/marketplace/` (ADR-048), zero código de Engine novo por decisão deliberada; **Program A Wave 2 (Real-Time Commerce Engine) entregue** — novo domínio `src/domains/realtime-commerce/`: Change Detection Engine integrado ao `SyncOrchestrator`, Volatility/Freshness/Store Update Intelligence compute-on-read, Market Pulse + Live Activity Feed, Buyer Alert Engine (fundação, sem envio), dashboard interno `/admin/realtime-commerce`)
 Branch auditada: `main` — Release 1.7 completo e certificado (ver `docs/operations/RELEASE_CERTIFICATION_1.7.md`); **Release 1.8 (`RELEASE_1_8_BLUEPRINT.md`) com Blueprint aprovado, Sprint Zero, Sprint 0.1, Program 0 Wave 0, Program 0 Wave 1, Program A Wave 1 e Program A Wave 2 entregues** — ADR-043 (fornecedor de câmbio) e ADR-045/046 (Buyer Identity Model completo) resolvidos, ADR-047 (reaproveitamento de `offers.currency`); fornecedor de billing (Wave 8) e fornecedor de notificação (sub-item da Wave 6) seguem pendentes; ponte Brain↔buyer_events (achado do Sprint 0.1) resolvida no Program 0 Wave 0 — mecanismo real, mas volume ainda zero (zero lojas reivindicadas em produção); **Program A Wave 3 (Live Pricing surface na Home) é a próxima entrega planejada do Program A**, já com o Real-Time Commerce Engine pronto para alimentá-la (Market Pulse, Live Activity, Freshness/Volatility badges — ver Epic 11 desta Wave)
 

@@ -2,6 +2,33 @@
 
 Itens identificados por leitura completa do código. Nenhum é bloqueante hoje (build/lint/TS passam), mas todos custam mais quanto mais tarde forem corrigidos.
 
+## Product Rebaseline V2 (2026-08-26) — dívida nova registrada
+
+> Auditoria somente. Classificação P0-P3 por categoria. Ver `docs/product/PRODUCT_REBASELINE_REQUIREMENTS.md`.
+
+### P0 — BUG (produção)
+1. ~~**Busca não ordena em produção**~~ — **código corrigido na Sprint 2026-08-26** (ordenação global via RPC `search_products_global`, fallback determinístico em `services/search.service.ts`). Falta RED: aplicar RPC no self-hosted, merge para `main`, deploy. Bug "esgotados primeiro" permanece vivo APENAS até o deploy (produção atual = `main` sem o fix). Local: `services/search.service.ts`, `supabase/migrations/20260827000000_search_products_global.sql`.
+2. ~~**SEO quebrado no deploy**~~ — **código corrigido**: `lib/env.ts` exige `NEXT_PUBLIC_SITE_URL` em produção (fail-fast, sem localhost). Falta RED: setar a var no ambiente de deploy. `app/robots.ts`/`app/sitemap.ts`/canonical continuam derivando de `SITE_URL`.
+
+### P1 — DATA / ARCHITECTURE
+3. **RPC `search_products_catalog` não aplicada no self-hosted** (migration `20260809120000`) — **redigida/estendida e revisada (MIGRATION_REVIEW=PASS)**; aplicação é RED. A ordenação global de `/products?sort=price_asc|desc` degrada para grid vazio até a aplicação da RPC (nova e a estendida). Fecha ADR-011/P2-1.
+4. **Catálogo não separava esgotados por último** — **corrigido no código da RPC** (`search_products_catalog` agora ordena `has_stock DESC` primeiro, nas duas direções de preço). Efetivo em produção após a RPC ser aplicada (RED).
+
+5. **`STORE_LOGO_COVERAGE = 0%`** (0/7 lojas com `logo_url`) e **latlng 0/7** — bloqueia PR-004 e PR-005. Dependência de dados/seed com origem autorizada.
+6. **`canonical_products` tabela vazia (0 linhas)** enquanto 61% das `offers` têm `canonical_product_id` preenchido — snap mismatch; Compare opera via oferece-direto mas o domínio canônico segue sem estado.
+
+### P2 — UX / PERFORMANCE / DATA
+7. **Price History sem UI pública** — backend tem 72.413 linhas (`getOfferPriceMetrics`, `updateOfferPrice`), nenhum gráfico/histórico em `/product/[slug]`.
+8. **Ecossistema vazio em produção** (favorites 0, profiles 0, buyer_events 0, merchants 0, reviews 0) — nenhuma feature de conta/comprador ativa; Favoritos são localStorage sem sincronização; IA rule-based sem loop de aprendizado real.
+9. **Câmeras ao Vivo sem fonte legal** (PR-003) — `LiveCameras.tsx` é placeholder honesto; precisa de análise de fonte oficial/CORS/direitos antes de integrar.
+
+### P3 — TECH_DEBT / SEO
+10. **`LiveCameras` lê placeholder "Em breve"** — sem feed real (design correto, dado pendente).
+11. **Tokens de design duplicados** — `@theme` OKLCH (autoridade) + `styles/*.ts` + `constants/colors.ts` (consolidar, `HOME_2_0_FOUNDATION.md §3`).
+12. **`constants/navigation.ts` código morto** (3 rotas inexistentes) e `SearchResults.tsx:106` link `/categories/{slug}` → 404 (corrigir para `/categorias`).
+13. **Warning de lint** — `scripts/comparison-forensics-audit.ts:19` `MergeCandidateStatus` não usado.
+
+
 ## PROGRAM Z — RC-3 — Infrastructure Decoupling (2026-07-06) — pendência de configuração manual
 
 Ver `docs/engineering/CRON_INFRASTRUCTURE.md` para o relatório completo.

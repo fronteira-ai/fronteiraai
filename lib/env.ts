@@ -18,6 +18,22 @@ function required(name: string, value: string | undefined): string {
   return value;
 }
 
+// URL pública canônica do ParaguAI (robots.txt, sitemap, canonical, OG).
+//
+// Regra (Product Rebaseline — SEO Recovery):
+// - Em DESENVOLVIMENTO o fallback `http://localhost:3000` é aceitável.
+// - Em PRODUÇÃO (NODE_ENV=production, ex.: build de deploy Vercel) NÃO há
+//   fallback para localhost: uma URL ausente/incorreta quebrou robots.txt,
+//   sitemap e canonical apontando para localhost. Forçamos a presença para o
+//   build falhar cedo em vez de publicar SEO inindexável silenciosamente.
+function siteUrl(): string {
+  if (process.env.NEXT_PUBLIC_SITE_URL) return process.env.NEXT_PUBLIC_SITE_URL;
+  if (process.env.NODE_ENV === "production") {
+    throw new Error(missingVarMessage("NEXT_PUBLIC_SITE_URL"));
+  }
+  return "http://localhost:3000";
+}
+
 export const env = {
   NEXT_PUBLIC_SUPABASE_URL: required(
     "NEXT_PUBLIC_SUPABASE_URL",
@@ -27,5 +43,5 @@ export const env = {
     "NEXT_PUBLIC_SUPABASE_ANON_KEY",
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
   ),
-  NEXT_PUBLIC_SITE_URL: process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000",
+  NEXT_PUBLIC_SITE_URL: siteUrl(),
 };

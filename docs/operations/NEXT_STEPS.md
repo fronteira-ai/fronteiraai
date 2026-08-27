@@ -1,24 +1,55 @@
 # NEXT_STEPS.md
 
-Estado atual e próximos passos do ParaguAI. Atualizado em 2026-06-27 (Release 1.4 entregue).
-
-Para o histórico detalhado de cada Sprint/Release, consultar `docs/operations/CHANGELOG.md`. Para o roadmap estratégico, consultar `docs/product/MASTER_ROADMAP.md`.
+Estado atual e próximos passos do ParaguAI. Atualizado em 2026-08-26 (Product Rebaseline V2 — auditoria).
 
 ---
 
-## Estado atual: Release 1.4 completo
+## Estado real (Product Rebaseline V2, 2026-08-26)
 
-**Plataforma funcionando em produção** com 67 rotas, dados reais, autenticação admin e merchant, Acquisition Engine, e surface pública para lojistas.
+Auditoria somente (zero código/migration/deploy). Detalhes e requisitos formais: `docs/product/PRODUCT_REBASELINE_REQUIREMENTS.md` e atualização factual em `docs/operations/PROJECT_STATUS.md`.
 
-Release 1.4 entregou:
-- `/lojas` — ranking público de lojas por Merchant Score
-- `/lojas/[slug]` — página premium por loja com dados reais, JSON-LD, SEO
-- `/para-lojistas` — landing page institucional
-- `MerchantProgressCard` — progresso do perfil no dashboard
-- Navbar/Footer atualizados
-- Sitemap expandido
+**Baseline pronto mas não deployado**: branch `sprint-0/baseline-recovery` (HEAD `29092dd`) contém Home 2.0, Busca, Compare, engines rule-based, e os fixes de ordenação — mas `main` (produção, `227caf3`) **não os contém**. Quality gates: lint 0/1w, tsc 0, **1016/1016 testes**, build OK.
 
-**Stack certificada**: Next.js 16.2.9 + React 19.2.4 + Supabase + Vercel. Foundation Empresarial v1.0 LOCKED (8 documentos permanentes).
+**Bloqueadores de produção mais urgentes (P0)**:
+1. Busca em produção **não ordena** (esgotados/last + price asc só no baseline; bug "esgotados primeiro" vivo).
+2. RPC `search_products_catalog` **não aplicada** no self-hosted → ordenação global de `/products?sort=price_asc|desc` degrada.
+3. SEO quebrado: `NEXT_PUBLIC_SITE_URL` ausente no deploy → `robots.txt` publicado aponta `Host: localhost:3000` e sitemaps em localhost (inindexável).
+
+**Dado de produção (2026-08-26)**: 52.589 produtos, 7 lojas (logo 0% — `LOGO_COVERAGE=0%`, latlng 0/7), 72.413 linhas de `price_history`, `canonical_products` 0, ecossistema vazio (favorites/reviews/buyers/merchants = 0).
+
+## Próximos Sprints (recomendados)
+
+### Sprint 1 (NOW) — Search Ordering + Out-of-Stock + SEO fix — **CÓDIGO PRONTO, deploy RED pendente**
+
+> **Implementado nesta Sprint (GREEN) e disponível no baseline**: ordenação global via RPC, fallback determinístico, SEO fail-fast, 9 testes novos (1025 no total). Ações de produção restantes são **RED e aguardam aprovação** (aplicar RPC no self-hosted, configurar `NEXT_PUBLIC_SITE_URL` no deploy, merge para `main`, rodar validação pós-deploy). Ver `docs/operations/CHANGELOG.md` (2026-08-26).
+
+- [x] Código de ordenação global (RPC search_products_global + search_products_catalog estendida) redigido e testado.
+- [x] Fallback determinístico em `services/search.service.ts` (não quebra `/search` sem a RPC).
+- [x] SEO: `lib/env.ts` exige `NEXT_PUBLIC_SITE_URL` em produção (fail-fast), sem localhost.
+- [x] 9 testes de ordenação; quality gates verdes (lint 0, typecheck, 1025 testes, build, db:lint).
+- [ ] **RED**: aplicar `20260827000000_search_products_global.sql` + `20260809120000_search_products_catalog.sql` no self-hosted (após aprovação).
+- [ ] **RED**: configurar `NEXT_PUBLIC_SITE_URL=https://www.fronteiraai.com` no ambiente de deploy.
+- [ ] **RED**: merge/PR para `main` e deploy; validação pós-deploy.
+
+### Sprint 2 (NOW/NEXT) — Home 2.0 publish + dados
+- Publicar a Home 2.0 do baseline (está congelada ADR-050; publish = deploy, não redesenho).
+- Datas/atos: preencher `stores.logo_url` (PR-004) e `address`/`latitude`/`longitude` (PR-005) com origem autorizada.
+
+### Sprint 3 (NEXT) — Maps Directions (PR-005)
+- Utility `buildGoogleMapsDirectionsUrl()` + CTA "Como chegar" (Ponte da Amizade → loja) em ProductOffers/OfferCard/StoreDetails mobile.
+
+### Releases seguintes (NEXT/LATER)
+- Price History público em UI (`/product/[slug]` gráfico; backend já tem 72k linhas) · Câmeras ao Vivo (PR-003, após fonte legal) · IA real (LLM) · Favoritos/Alertas sincronizados (requer Auth) · Reviews.
+
+Pontos de partida históricos (Release 1.5+ e itens datados) permanecem abaixo, preservados como histórico.
+
+---
+
+## Estado histórico — Release 1.4 completo
+
+Para o histórico detalhado de cada Sprint/Release, consultar `docs/operations/CHANGELOG.md`. Para o roadmap estratégico, consultar `docs/product/MASTER_ROADMAP.md`.
+
+**Plataforma** (após Release 1.4): 67 rotas, dados reais, autenticação admin e merchant, Acquisition Engine, surface pública para lojistas. Stack certificada: Next.js 16.2.9 + React 19.2.4 + Supabase + Vercel. Foundation Empresarial v1.0 LOCKED.
 
 ---
 

@@ -67,6 +67,7 @@ CREATE OR REPLACE FUNCTION public.search_products_catalog(
 RETURNS TABLE (
   product_id       uuid,
   lowest_price_usd numeric,
+  has_stock        boolean,
   total_count      bigint
 )
 LANGUAGE sql
@@ -75,12 +76,20 @@ STABLE
 -- privilégios de quem chama, então as policies de `products`/`offers`
 -- (0007_proposed_public_read_policies) continuam valendo. Nada aqui usa
 -- service_role nem contorna RLS.
+--
+-- NOTA (2026-08-26, validação ao vivo no self-hosted): NÃO usar `SET
+-- search_path` aqui. `SET search_path = public` em uma SQL function impede a
+-- inlining do PostgreSQL, e sem inlining a ordenação global de `/products
+-- ?sort=price_asc|desc` (sem filtro) executa em ~25s+ (timeout) — o equivalente
+-- inline roda em ~437ms. O schema do corpo é `public` (nome totalmente
+-- qualificado na assinatura) e o path padrão do Supabase já resolve as tabelas
+-- usadas; manter SECURITY INVOKER preserva a RLS. O `search_products_global`
+-- segue o mesmo princípio.
 SECURITY INVOKER
-SET search_path = public
 AS $$
   WITH filtered_offers AS (
     -- Todos os filtros de nível de oferta, aplicados ANTES da agregação.
-    SELECT o.product_id, o.price_usd
+    SELECT o.product_id, o.price_usd, o.in_stock
     FROM offers o
     WHERE o.available = true
       AND (p_store_id  IS NULL     OR o.store_id  = p_store_id)
@@ -89,12 +98,12 @@ AS $$
       AND (p_max_price IS NULL     OR o.price_usd <= p_max_price)
   ),
   product_price AS (
-    SELECT fo.product_id, min(fo.price_usd) AS lowest
+    SELECT fo.product_id, min(fo.price_usd) AS lowest, bool_or(fo.in_stock) AS has_stock
     FROM filtered_offers fo
     GROUP BY fo.product_id
   ),
   candidates AS (
-    SELECT p.id, pp.lowest
+    SELECT p.id, pp.lowest, COALESCE(pp.has_stock, false) AS has_stock
     FROM products p
     LEFT JOIN product_price pp ON pp.product_id = p.id
     WHERE (p_category_id IS NULL OR p.category_id = p_category_id)
@@ -117,11 +126,16 @@ AS $$
   SELECT
     c.id,
     c.lowest,
+    c.has_stock,
     -- Janela avaliada antes de LIMIT/OFFSET: total do conjunto filtrado
     -- inteiro, equivalente ao `count: "exact"` do PostgREST.
     count(*) OVER () AS total_count
   FROM candidates c
   ORDER BY
+    -- PR-002: produtos disponíveis SEMPRE antes de esgotados, em ambas as
+    -- direções de preço (available → out-of-stock; cada grupo ordenado por
+    -- preço). has_stock é agregado sobre as ofertas available=true filtradas.
+    c.has_stock DESC,
     -- NULLS LAST nas duas direções, igual ao comparador que o serviço já
     -- usava: produto sem preço nunca sobe ao topo, nem em asc nem em desc.
     CASE WHEN p_sort = 'price_desc' THEN c.lowest END DESC NULLS LAST,

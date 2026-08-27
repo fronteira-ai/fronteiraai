@@ -1,8 +1,26 @@
 # FEATURES.md
 
-Inventário de funcionalidades por estado real. Gerado por leitura do código e do histórico de Releases. Atualizado em 2026-06-27 (Release 1.4).
+Inventário de funcionalidades por estado real. Atualizado em 2026-08-26 (Product Rebaseline V2 — auditoria). Consulte `docs/product/PRODUCT_REBASELINE_REQUIREMENTS.md` para os requisitos PR-001 a PR-006 (registrados, não implementados).
+
+## Atualização factual — features que existem e não estavam inventariadas (2026-08-26)
+
+> Auditoria somente. Complementa o inventário abaixo (gerado em 2026-06-27, Release 1.4). Nada abaixo é novo na missão — são functores reais lidos do código e confirmados no banco/site.
+
+**Já implementadas no baseline** (`sprint-0/baseline-recovery`) mas **não em produção** (`main`):
+- **Home 2.0** (`app/page.tsx` + `components/home/**` + `lib/home-premium-service.ts`): Hero com stats reais, busca como ação principal, DashboardStrip (Economia do dia, Market Pulse, Câmbio ao vivo, Live Marketplace), Achado do Dia, Lojas em destaque, Categorias. ISR `revalidate=60`, `Suspense` por bloco. **Frozen** (ADR-050). **Não deployado.**
+- **Busca com dados**: preço na busca (`offers` join), sugestões reais (`getPopularSearchSuggestions` de `buyer_events`), ordenação **GLOBAL** esgotados-last + price asc via RPC `search_products_global` (Sprint 2026-08-26; **no baseline apenas**, `main` não ordena) — com fallback determinístico no serviço.
+- **Ordens/engines (rule-based, sem LLM)**: `buyer-intelligence` (Advisor, BestDeal, PurchaseTiming, Trust, SearchIntelligence), `realtime-commerce` (ChangeDetector, Volatility, Freshness, MarketPulse, BuyerAlert), `canonical-catalog` (ProductIdentity, OfferRanking, MergeExecutor, CompareFoundation), `trust` (Merchant Passport, Reviews, Verification, KnowledgeGraph), `exchange` (preços/`PricePresentationService`), `market-insights` (PriceIntelligence, VolatilityRollup), `marketplace-operations`, `growth-engine`, `metrics/analytics`.
+- **Compare funcional** (`/compare/[slug]`): ranking `OfferRankingService` (price/availability/recency/trust/quality), BestDeal + ShouldIBuyNow + Trust, operando via `offers.canonical_product_id` (61% das ofertas preenchidas em prod).
+- **Price Intelligence backend**: `price_history` com **72.413 linhas** em produção (via `updateOfferPrice` único caminho de escrita). Sem UI pública de histórico.
+
+**Funcionalidades de produção confirmadas**: Busca `/search`, Produto `/product/[slug]` (Advisor/BestDeal/Trust/Related), Catálogo `/products` (filtros+paginação; ordenação global por preço **depende de RPC não aplicada**), Loja `/lojas` + `/lojas/[slug]`, Compare, Admin (24+ rotas), Merchant portal (11+ rotas), sitemap/robots (sitemaps em `localhost` em prod — BUG de `NEXT_PUBLIC_SITE_URL`).
+
+**Backlog / gate de produto (não implementado)**: Câmeras ao vivo (PR-003, `LiveCameras` é placeholder "Em breve"), Logos oficiais (PR-004, `STORE_LOGO_COVERAGE=0%`), Maps Directions (PR-005, sem coordenadas/address nas lojas), IA real com LLM (nenhum provedor integrado), Price History UI, Reviews públicos, Favoritos/Alertas sincronizados (requer Auth — hoje localStorage), Autonomia de agentes (PR-006, matriz proposta em `docs/product/PRODUCT_REBASELINE_REQUIREMENTS.md`).
 
 ---
+
+## Inventário herdado (2026-06-27, Release 1.4) — integridade preservada
+
 
 ## Concluído — Core Platform (Releases 0.1–0.8)
 

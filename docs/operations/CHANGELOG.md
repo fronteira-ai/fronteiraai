@@ -2,6 +2,24 @@
 
 Reconstruído a partir do histórico real de commits (`git log`) e do estado atual do código. Formato: data, commit, o que mudou de fato (verificado no diff/estado resultante, não só na mensagem).
 
+## 2026-08-26 — PRODUCT REBASELINE, SPRINT "Search Ordering + Out-of-Stock + SEO Recovery" (PR-001/PR-002)
+
+Fecha a correção de produto priorizada no Rebaseline V2. Comportamento-alvo: produtos DISPONÍVEIS sempre antes de ESGOTADOS; dentro de cada grupo, preço crescente (`price ASC`), preço null por último; ordenação GLOBAL (SQL/RPC), não sort de subconjunto no browser; SEO de produção destravado (sem fallback localhost).
+
+**Ordem global no SQL (GREEN — código + migrations redigidas)**:
+- **Nova** RPC `search_products_global` (migration `20260827000000_search_products_global.sql`): busca `/search` (seção produtos) — filtra `name ILIKE`, agrega `MIN(price)+bool_or(in_stock)` das ofertas `available=true`, `ORDER BY has_stock DESC → price ASC NULLS LAST → id`. Idempotente, `SECURITY INVOKER`, `GRANT` anon/authenticated/service_role (respeita RLS pública).
+- **Estendida** RPC `search_products_catalog` (migration `20260809120000`): adiciona `has_stock` à agregação e `ORDER BY c.has_stock DESC` primeiro — `/products?sort=price_asc|desc` agora preserva disponíveis→esgotados nas duas direções (PR-002 no catálogo). Retrocompatível (coluna extra ignorada pelo serviço).
+- `services/search.service.ts`: `searchEverything` chama a RPC; se a RPC ainda não estiver aplicada no self-hosted, **degrada** para o caminho legado com o mesmo sort determinístico — `/search` nunca quebra nem fica vazio.
+
+**SEO (GREEN código)**:
+- `lib/env.ts`: `NEXT_PUBLIC_SITE_URL` **obrigatória em produção** (NODE_ENV=production) — fail-fast no build em vez de publicar robots.txt/sitemap/canonical apontando para `localhost`. Fallback `localhost` continua apenas em desenvolvimento. URL real do ParaguAI: `https://www.fronteiraai.com` (configurada em `.env.local` local + deve ser setada no deploy — ação RED).
+
+**Testes**: 9 novos em `services/__tests__/search.service.test.ts` (matriz obrigatória AVAILABLE 100/200/300 → OUT_OF_STOCK 50/150/500 + edge cases: preço null por último, múltiplas ofertas MIN+bool_or, nada disponível, busca vazia, determinismo por slug, sobrevivência da ordem pós-`.in()`).
+
+**Qualidade**: lint 0, `tsc --noEmit` 0, **1025 testes (147 suítes)**, build PASS (146 páginas), `db:lint` OK (27 migrations).
+
+**NÃO aplicado (RED — aguarda aprovação do owner)**: aplicar `search_products_global`/`search_products_catalog` no self-hosted; configurar `NEXT_PUBLIC_SITE_URL` no ambiente de deploy; merge para `main` e deploy. `MIGRATION_REVIEW = PASS`. PR-001/PR-002 declarados implementados em produção SOMENTE após a validação pós-deploy (ver `docs/product/PRODUCT_REBASELINE_REQUIREMENTS.md`).
+
 ## 2026-07-23 — PROGRAM Ω, MISSION Ω-5 — Continuous Knowledge Engine
 
 Implementa o Learning Engine que `docs/architecture/MARKETPLACE_LEARNING_ENGINE.md`/`LEARNING_LIFECYCLE.md`/`CONFIDENCE_ENGINE.md`/`PATTERN_LEARNING.md`/`KNOWLEDGE_PROPAGATION.md` (Mission Ξ-2) já haviam especificado como "proposta arquitetural pura" e que `MarketplaceMemoryService` (Mission Ω-1) nomeava explicitamente como "Learning Engine, uma Missão futura". Zero IA, zero ML, zero embeddings — só contagem de recorrência determinística e confirmação, exatamente como as docs de origem especificaram.
