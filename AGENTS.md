@@ -41,8 +41,20 @@ This project runs **Next.js 16.2.9** with **React 19.2.4** — versions newer th
 - `npm run build` — production build
 - `npm run start` — run a production build
 - `npm run lint` — ESLint (flat config via `eslint.config.mjs`, `eslint-config-next` core-web-vitals + typescript)
+- `npm run typecheck` — `tsc --noEmit`
+- `npm test` — Jest (currently 147 suites / ~1026 tests)
 
-There is no test suite/runner configured in this repo yet.
+## Agent Autonomy (GREEN / YELLOW / RED)
+
+The canonical **Agent Autonomy Policy (AGENT_AUTONOMY_MATRIX)** lives in
+`docs/engineering/ENGINEERING_CONSTITUTION.md`. Read it and follow it.
+
+- **FAZER > PERGUNTAR.** An approved mission authorizes every safe, reversible operation needed to finish it. Do not turn normal subtasks into approval requests. Interruption target: 0.
+- **GREEN** — execute autonomously: read/edit within scope, reversible refactors, bug fixes, components, tests, lint/typecheck/testes/build, Playwright/visual validation, SQL read-only, git read-only + `checkout/switch/add/commit/merge --ff-only/cherry-pick`, branches, factual docs.
+- **YELLOW** — prepare autonomously: non-destructive migrations, new indexes/RPCs/seeds, additive schema, justified deps; if the mission explicitly authorized apply/publish, it's already approved.
+- **RED** (stop): DROP/TRUNCATE/destructive DELETE, destructive prod migration, hard reset/clean without preserved work, force push, destructive history rewrite, deleting important remote branches/Cloud/VPS/storage, revoking/rotating secrets, exposing credentials, billing/payment, irreversible unauthorized ops, material product scope change.
+- On failure: **DIAGNOSE → FIX → RE-TEST** — don't hand back a problem you can safely solve.
+
 
 ## Project overview
 

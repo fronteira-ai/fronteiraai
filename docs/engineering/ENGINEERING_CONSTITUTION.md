@@ -65,6 +65,33 @@ Um componente da lista de Componentes Congelados **somente** poderá ser alterad
 
 ---
 
+## Agent Autonomy Policy — AGENT_AUTONOMY_MATRIX (Sprint Autonomy Upgrade V1)
+
+**Subordinado à Foundation e a este documento.** Não é uma segunda constituição; formaliza o modelo de autonomia operacional dos agentes (Reasonix/Claude/Codex) como regra canônica. O PEF legado está arquivado em `docs/archive/PEF_LEGACY/` e **nunca deve ser ressuscitado**; o `reasonix.toml` (`[permissions].allow`) e `.claude/settings.local.json` são as allowlists **operacionais** (GREEN); este documento é a **norma de decisão** sobre o que é GREEN/YELLOW/RED.
+
+Princípio fundamental: **FAZER > PERGUNTAR.** Uma missão aprovada pelo owner autoriza todas as operações seguras, reversíveis e necessárias para concluí-la. Não transformar subtarefas normais em novas solicitações de aprovação; não interromper por escolhas que um Staff Engineer consegue resolver. Alvo de interrupção: **OWNER_INTERRUPTION_TARGET = 0** por Sprint.
+
+### GREEN — executar sem perguntar
+Leitura/busca; edição/criação de arquivos dentro do escopo aprovado; refactors reversíveis; correções de bugs; componentes; testes; scripts locais; lint/typecheck/testes/build; Playwright/screenshots/validação visual; SQL read-only; inspeção de banco/Docker/logs; git read-only (`status/diff/log/show/branch/fetch/rev-parse`); `checkout/switch/add/commit/merge --ff-only/cherry-pick não destrutivo`; criação de branch; documentação factual; correções para gates passarem.
+
+Falhou → **DIAGNOSTICAR → CORRIGIR → RETESTAR** (não devolver ao owner problema que se resolve com segurança).
+
+### YELLOW — autonomia dentro da missão
+Preparar autonomamente: migrations não destrutivas; novos índices/RPCs/seeds; schema aditivo; novas dependências justificadas; grandes refactors reversíveis; alteração de contratos internos; release candidate. Se a **missão autorizar explicitamente a aplicação/publicação**, essa operação já está autorizada — não pedir segunda autorização.
+
+### RED — únicos gates humanos (PARE antes de)
+`DROP`/`TRUNCATE`/`DELETE` massivo/destrutivo/perda de dados; migration destrutiva em produção; `git reset --hard` sem trabalho preservado; `git clean` destrutivo; force push; reescrita destrutiva de histórico; exclusão de branch remota importante; apagar Cloud/VPS/storage/projeto; revogar/rotacionar secrets; expor credenciais; billing/pagamento; operação irreversível não autorizada; mudança **material** de produto fora do escopo da Sprint.
+
+Não classificar como RED algo só porque envolve bash/git — risco real > nome da ferramenta.
+
+### Ambiguidade
+Escolher, nesta ordem: (1) mais segura; (2) mais simples; (3) mais reversível; (4) consistente com a arquitetura; (5) melhor coberta por testes; (6) melhor UX/performance. Só interromper se alternativas alterarem materialmente produto/dados/segurança/arquitetura/custos/operação irreversível.
+
+### Qualidade de ponta a ponta
+IMPLEMENT → LINT → TYPECHECK → TEST → BUILD → CORRIGIR → REPETIR → VALIDAR → PUBLICAR (quando autorizado) → VALIDAR PRODUÇÃO. Não parar porque um gate falhou; corrigir e repetir.
+
+---
+
 ## Princípios de Engenharia
 
 - **Evidence First** — nenhuma decisão arquitetural desde o Programa Λ foi tomada sem dado real extraído do sistema em produção
