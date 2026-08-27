@@ -91,8 +91,16 @@ export default async function Home() {
       {/* Dense dashboard: 4-card info row (Economia do dia | Market Pulse |
           Câmbio ao Vivo | Live Marketplace) and a row (Lojas em destaque |
           Categorias) plus the trust-strip/lojista banner — each card streams
-          independently (see DashboardStrip.tsx). */}
-      <div className="-mt-8 sm:-mt-10">
+          independently (see DashboardStrip.tsx).
+          HOTFIX (regressão Home 2.0): esta costura era `-mt-8 sm:-mt-10`, um
+          recuo negativo desenhado para o fluxo anterior (sem o bloco variável
+          "Mais buscados"). Com as sugestões reais o SearchBar cresce de altura
+          e o recuo fixo colapsava o bloco de cards para cima dos chips (gap
+          ~5px, sobrepondo em variações de wrap). Trocado por separação
+          positiva determinística: Market Intelligence (Bloco C) sempre começa
+          ABAIXO do fim de "Mais buscados" (Bloco B), em fluxo normal, em
+          todos os breakpoints. */}
+      <div className="mt-4 sm:mt-6">
         <DashboardStrip />
       </div>
 
