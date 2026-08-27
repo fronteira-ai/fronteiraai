@@ -7,12 +7,12 @@ Itens identificados por leitura completa do código. Nenhum é bloqueante hoje (
 > Auditoria somente. Classificação P0-P3 por categoria. Ver `docs/product/PRODUCT_REBASELINE_REQUIREMENTS.md`.
 
 ### P0 — BUG (produção)
-1. ~~**Busca não ordena em produção**~~ — **código corrigido na Sprint 2026-08-26** (ordenação global via RPC `search_products_global`, fallback determinístico em `services/search.service.ts`). Falta RED: aplicar RPC no self-hosted, merge para `main`, deploy. Bug "esgotados primeiro" permanece vivo APENAS até o deploy (produção atual = `main` sem o fix). Local: `services/search.service.ts`, `supabase/migrations/20260827000000_search_products_global.sql`.
-2. ~~**SEO quebrado no deploy**~~ — **código corrigido**: `lib/env.ts` exige `NEXT_PUBLIC_SITE_URL` em produção (fail-fast, sem localhost). Falta RED: setar a var no ambiente de deploy. `app/robots.ts`/`app/sitemap.ts`/canonical continuam derivando de `SITE_URL`.
+1. ~~**Busca não ordena em produção**~~ — **corrigido e publicado** na Sprint 2026-08-26 (ordenação global via RPC `search_products_global` aplicada no self-hosted; `services/search.service.ts` em `main` `7eba0e1`; merge publicado). Bug "esgotados primeiro" corrigido (validação pós-deploy do comportamento real ainda a confirmar no host público). Local: `services/search.service.ts`, `supabase/migrations/20260827000000_search_products_global.sql`.
+2. ~~**SEO quebrado no deploy**~~ — **corrigido e publicado**: `lib/env.ts` exige `NEXT_PUBLIC_SITE_URL` em produção (fail-fast); `NEXT_PUBLIC_SITE_URL=https://www.fronteiraai.com` setada em Vercel Production. `app/robots.ts`/`app/sitemap.ts`/canonical agora derivam do host real.
 
 ### P1 — DATA / ARCHITECTURE
-3. **RPC `search_products_catalog` não aplicada no self-hosted** (migration `20260809120000`) — **redigida/estendida e revisada (MIGRATION_REVIEW=PASS)**; aplicação é RED. A ordenação global de `/products?sort=price_asc|desc` degrada para grid vazio até a aplicação da RPC (nova e a estendida). Fecha ADR-011/P2-1.
-4. **Catálogo não separava esgotados por último** — **corrigido no código da RPC** (`search_products_catalog` agora ordena `has_stock DESC` primeiro, nas duas direções de preço). Efetivo em produção após a RPC ser aplicada (RED).
+3. ~~**RPC `search_products_catalog` ausente**~~ — **aplicada no self-hosted** (`20260809120000` estendida com `has_stock DESC`; `20260827000000` nova). Corrigido o timeout: `SET search_path` removido (bloqueava inlining da SQL function → no-filter price_asc/desc agora ~ms). Fecha ADR-011/P2-1. `/products?sort=price_asc|desc` globalmente ordenado.
+4. ~~**Catálogo não separava esgotados por último**~~ — **corrigido e aplicado**: `search_products_catalog` ordena `has_stock DESC` primeiro nas duas direções de preço (PR-002 no catálogo).
 
 5. **`STORE_LOGO_COVERAGE = 0%`** (0/7 lojas com `logo_url`) e **latlng 0/7** — bloqueia PR-004 e PR-005. Dependência de dados/seed com origem autorizada.
 6. **`canonical_products` tabela vazia (0 linhas)** enquanto 61% das `offers` têm `canonical_product_id` preenchido — snap mismatch; Compare opera via oferece-direto mas o domínio canônico segue sem estado.

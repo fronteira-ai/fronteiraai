@@ -4,7 +4,7 @@
 **Data**: 2026-08-26 (Produt Rebaseline V2)
 **Status**: REGISTRADO — requisitos formais para backlog/roadmap. NENHUM implementado nesta missão (auditoria somente).
 
-> **Atualização 2026-08-26 (Sprint "Search Ordering + Out-of-Stock + SEO Recovery")**: PR-001 e PR-002 tiveram a **implementação de código iniciada** (ordenação global via RPC, testes 1025 PASS). **NÃO marcados como implementados em produção** — conforme ETAPA 16, só após a validação pós-deploy. Estado: código GREEN PRONTO; aplicação de produção (RPC no self-hosted, `NEXT_PUBLIC_SITE_URL`, merge para `main`, deploy) é **RED e aguarda aprovação**. Ver `docs/operations/CHANGELOG.md` (2026-08-26) e `docs/operations/PROJECT_STATUS.md`.
+> **Atualização 2026-08-26 (Sprint "Search Ordering + Out-of-Stock + SEO Recovery")**: PR-001 e PR-002 **implementados e aplicados em produção** (ordenação global via RPC; RPCs aplicadas/validadas no self-hosted; `NEXT_PUBLIC_SITE_URL` em Vercel Production; merge para `main` publicado em `7eba0e1`). **Validação pós-deploy ainda pendente** (confirmar o deploy Vercel e o comportamento da busca/robots no host público). Ver `docs/operations/CHANGELOG.md` (2026-08-26) e `docs/operations/PROJECT_STATUS.md`.
 
 > Registro formal dos novos requisitos de produto PR-001 a PR-006 introduzidos no
 > **Product Rebaseline V2**. Este documento é a âncora normativa de cada requisito:

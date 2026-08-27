@@ -4,15 +4,15 @@ Auditoria gerada por leitura completa do código-fonte. Substitui o conteúdo an
 
 ## Atualização factual — Product Rebaseline V2 (2026-08-26)
 
-### Sprint "Search Ordering + Out-of-Stock + SEO Recovery" — IMPLEMENTADO (código), PENDENTE deploy
+### Sprint "Search Ordering + Out-of-Stock + SEO Recovery" — CÓDIGO + APLICAÇÃO EM PRODUÇÃO
 
-> Estado de implementação da Sprint que corrige PR-001/PR-002/SEO. **Redigido e testado (GREEN)**; **aplicação de produção (RED) aguarda aprovação do owner** — ver `docs/operations/CHANGELOG.md` (entrada 2026-08-26).
+> Estado da Sprint que corrige PR-001/PR-002/SEO. **Código (GREEN) e aplicação de produção (RED) concluídos em 2026-08-26**: RPCs aplicadas e validadas no self-hosted; `NEXT_PUBLIC_SITE_URL` configurada em produção; merge para `main` executado e publicado (fast-forward, sem conflitos). Ver `docs/operations/CHANGELOG.md` (2026-08-26).
 
-- **Ordenação global em SQL**: RPC `search_products_global` (nova, `20260827000000`) para `/search`; `search_products_catalog` (`20260809120000`) estendida com `has_stock DESC` para `/products`. Regra canônica: disponíveis → esgotados, preço ASC (null por último), determinístico por id.
-- **`services/search.service.ts`**: chama a RPC com fallback determinístico (não quebra `/search` se a RPC ainda não estiver aplicada).
-- **SEO**: `lib/env.ts` exige `NEXT_PUBLIC_SITE_URL` em produção (fail-fast); sem fallback localhost em prod.
-- **Quality gates**: lint 0, typecheck 0, **1025 testes** (147 suítes), build PASS, `db:lint` OK. `MIGRATION_REVIEW = PASS`.
-- **RED aguardando aprovação**: aplicar as duas RPCs no self-hosted; configurar `NEXT_PUBLIC_SITE_URL` no deploy; merge para `main` + deploy; validação pós-deploy.
+- **Ordenação global em SQL**: RPC `search_products_global` (nova, `20260827000000`) para `/search`; `search_products_catalog` (`20260809120000`) estendida com `has_stock DESC` para `/products`. [x] **Aplicadas e validadas no self-hosted** (anon EXECUTE concedido; no-filter price_asc/desc ~ms após remover `SET search_path` que bloqueava inlining).
+- **`services/search.service.ts`**: chama a RPC com fallback determinístico. [x] Em `main`.
+- **SEO**: `lib/env.ts` exige `NEXT_PUBLIC_SITE_URL` em produção (fail-fast). [x] `NEXT_PUBLIC_SITE_URL=https://www.fronteiraai.com` configurada em Vercel Production.
+- **Publish**: [x] merge fast-forward `227caf3 → 7eba0e1` para `main`, push publicado (trigga deploy Vercel).
+- **Pendente/implicação**: validar pós-deploy em produção (rotas + ordenação + robots no host real) e confirmar o deploy Vercel com a env configurada.
 
 ### Auditoria factual (rebaseline) — quadro de origem
 

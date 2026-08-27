@@ -19,17 +19,18 @@ Auditoria somente (zero código/migration/deploy). Detalhes e requisitos formais
 
 ## Próximos Sprints (recomendados)
 
-### Sprint 1 (NOW) — Search Ordering + Out-of-Stock + SEO fix — **CÓDIGO PRONTO, deploy RED pendente**
+### Sprint 1 (NOW) — Search Ordering + Out-of-Stock + SEO fix — **CÓDIGO + PRODUÇÃO**
 
-> **Implementado nesta Sprint (GREEN) e disponível no baseline**: ordenação global via RPC, fallback determinístico, SEO fail-fast, 9 testes novos (1025 no total). Ações de produção restantes são **RED e aguardam aprovação** (aplicar RPC no self-hosted, configurar `NEXT_PUBLIC_SITE_URL` no deploy, merge para `main`, rodar validação pós-deploy). Ver `docs/operations/CHANGELOG.md` (2026-08-26).
+> **Entregue (GREEN código + RED produção concluídos 2026-08-26)**: ordenação global via RPC, fallback determinístico, SEO fail-fast, 10 testes novos (1026 no total), RPCs aplicadas/validadas no self-hosted, `NEXT_PUBLIC_SITE_URL` em Vercel Production, e merge fast-forward para `main` publicado. Ver `docs/operations/CHANGELOG.md` (2026-08-26).
 
 - [x] Código de ordenação global (RPC search_products_global + search_products_catalog estendida) redigido e testado.
 - [x] Fallback determinístico em `services/search.service.ts` (não quebra `/search` sem a RPC).
 - [x] SEO: `lib/env.ts` exige `NEXT_PUBLIC_SITE_URL` em produção (fail-fast), sem localhost.
-- [x] 9 testes de ordenação; quality gates verdes (lint 0, typecheck, 1025 testes, build, db:lint).
-- [ ] **RED**: aplicar `20260827000000_search_products_global.sql` + `20260809120000_search_products_catalog.sql` no self-hosted (após aprovação).
-- [ ] **RED**: configurar `NEXT_PUBLIC_SITE_URL=https://www.fronteiraai.com` no ambiente de deploy.
-- [ ] **RED**: merge/PR para `main` e deploy; validação pós-deploy.
+- [x] 10 testes de ordenação; quality gates verdes (lint, typecheck, 1026 testes, build).
+- [x] **RED**: `20260827000000_search_products_global.sql` + `20260809120000_search_products_catalog.sql` aplicadas no self-hosted e validadas (anon EXECUTE; no-filter price_asc/desc em ms após remover `SET search_path`).
+- [x] **RED**: `NEXT_PUBLIC_SITE_URL=https://www.fronteiraai.com` configurada em Vercel Production.
+- [x] **RED**: merge fast-forward `227caf3 → 7eba0e1` para `main` e push publicado.
+- [ ] **Validação pós-deploy**: confirmar deploy Vercel e verificar rotas/ordenação/robots no host público (próximo ciclo).
 
 ### Sprint 2 (NOW/NEXT) — Home 2.0 publish + dados
 - Publicar a Home 2.0 do baseline (está congelada ADR-050; publish = deploy, não redesenho).
