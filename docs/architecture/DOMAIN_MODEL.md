@@ -857,7 +857,9 @@ Extensões previstas com evidência no código ou nos ADRs. Não são funcionali
 
 **Migration proposta**: `0003_proposed_product_catalog_price_view.sql` (`product_price_summary`)  
 **Função**: preço mínimo/máximo por produto para ordenação correta do catálogo entre páginas  
-**Bloqueio atual**: ordenação por preço é "best effort" dentro de uma página, não garante ordem global (ADR-011)  
+**Bloqueio atual**: ordenação por preço é "best effort" dentro de uma página, não garante ordem global (ADR-011)
+
+> **Atualização factual (Product Rebaseline V2, 2026-08-26)**: o ADR-011 foi **fechado** no baseline pela RPC `search_products_catalog` (migration `20260809120000`, `services/product.service.ts` ordena→agrega→pagina globalmente para `price_asc`/`price_desc`). A RPC **não está aplicada** no self-hosted de produção → a ordem global depende desse deploy. O Canonical Product é **estado real** (não mais só futura extensão): `offers.canonical_product_id` está preenchido em 61% das ofertas de produção e o Compare opera sobre ele. Nenhum invariante deste documento foi rompido pelas adições de Release.  
 **Impacto**: resolve o único caso onde o catálogo não tem ordenação perfeita
 
 ---

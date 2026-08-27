@@ -1,8 +1,18 @@
 # ARCHITECTURE.md
 
-Mapeamento real da arquitetura, gerado por leitura completa do código. Atualizado em 2026-06-27 (Release 1.4).
+Mapeamento real da arquitetura, gerado por leitura completa do código. Atualizado em 2026-08-26 (Product Rebaseline V2 — auditoria complementar factual).
 
-Documentos relacionados: `docs/engineering/CONVENTIONS.md` (regras de estilo/nomenclatura), `docs/architecture/API_CONTRACTS.md` (contratos de cada service), `docs/architecture/DOMAIN_MODEL.md` (entidades e relacionamentos), `docs/architecture/COMPONENT_INDEX.md` (tabela de todos os componentes), `docs/architecture/DEPENDENCY_GRAPH.md` (grafo de imports entre camadas), `docs/operations/DECISIONS.md` (histórico de decisões arquiteturais).
+> Auditoria somente (2026-08-26). O corpo abaixo foi validado e mantido; esta entrada corrige fatos que mudaram desde a versão de 2026-06-27 sem reescrever o mapeamento íntegro.
+
+**Camada canônica hoje é dupla e coexiste intencionalmente**:
+- **Arquitetura clássica (produto público)**: `types/*` → `services/*.service.ts` → `hooks/use*.ts` → `components/*` → `app/*`. É o caminho do Core commerce (Busca, Produto, Loja, Catálogo, Compare).
+- **Domínios (estratégicos)**: `src/domains/*` com **19 domínios** (canonical-catalog, buyer-intelligence, realtime-commerce, exchange, market-insights, marketplace-operations, connectors, trust, taxonomy, product-identity, product-intelligence, merchant-* , etc.), consumidos por **factories** em `lib/*-factory.ts` (ex.: `lib/home-premium-service.ts` compõe os domínios para a Home/Categorias — única fonte de leitura da Home; `lib/buyer-intelligence-factory.ts` alimenta a página de produto/compare).
+
+**Services públicos reais** (`services/*.service.ts`): `search`, `search-suggestions`, `product`, `offer`, `store`, `stores-public`, `brand`, `category`, `compare`, `merchant`, `ai` (placeholder vazio). Hooks: `useSearch`, `useProduct`, `useOffers`, `useStore`, `useCompare`, `useFavorites`, `useProductFilters`, `useAnalytics`.
+
+**Home 2.0** (`app/page.tsx`): **não publicada em produção** (existe no baseline `sprint-0/baseline-recovery`, ausente em `main`) — ISR `revalidate=60`, `Suspense` por bloco, busca como ação principal do fold, `getPopularSearchSuggestions` reais.
+
+**Dado real de produção (2026-08-26)**: 52.589 produtos, 7 lojas (logo 0%, latlng 0/7), 72.413 linhas `price_history`; `canonical_products` = 0; ecossistema vazio (profiles/favorites/reviews/buyers/merchants = 0). RPC `search_products_catalog` (migration `20260809120000`) **não aplicada** no self-hosted.
 
 ---
 
