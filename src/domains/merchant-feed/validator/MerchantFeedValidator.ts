@@ -8,6 +8,7 @@
 import { SecureFeedFetcher, assertSafeFeedUrl, type FeedFetchResult } from "../fetcher/SecureFeedFetcher";
 import { MerchantFeedParser } from "../parser/MerchantFeedParser";
 import { MerchantJsonFeedParser } from "../parser/MerchantJsonFeedParser";
+import { MerchantCsvFeedParser } from "../parser/MerchantCsvFeedParser";
 import { DEFAULT_FIELD_MAPPING, type MerchantSourceConfig } from "../config/MerchantSourceConfig";
 import type { RawOffer } from "../../connectors/types/raw.types";
 
@@ -131,6 +132,35 @@ export class MerchantFeedValidator {
         fieldMapping: DEFAULT_FIELD_MAPPING,
       };
       const parsed = new MerchantJsonFeedParser(cfg).parse(body);
+      const { duplicates, priceErrors, stockErrors } = analyzeOffers(parsed.offers, parsed.errors);
+      return {
+        fetchStatus: "OK",
+        formatDetected: format,
+        encoding: "utf-8",
+        totalItems: parsed.totalItems,
+        validItems: parsed.validItems,
+        invalidItems: parsed.totalItems - parsed.validItems,
+        duplicateExternalIds: duplicates,
+        priceErrors,
+        stockErrors,
+        imageCoverage: coverage(parsed.offers, (o) => !!o.product.imageUrl),
+        brandCoverage: coverage(parsed.offers, (o) => !!o.product.brand),
+        externalIdCoverage: coverage(parsed.offers, (o) => !!o.product.externalId),
+        httpStatus: meta?.httpStatus ?? 200,
+        bytes: meta?.bytes ?? 0,
+        notModified: false,
+        errors: parsed.errors,
+        offers: parsed.offers,
+      };
+    }
+
+    if (format === "CSV_FEED") {
+      const cfg: MerchantSourceConfig = this.deps.sourceConfig ?? {
+        sourceType: "CSV_FEED",
+        feedUrl: "inline",
+        fieldMapping: {},
+      };
+      const parsed = new MerchantCsvFeedParser(cfg).parse(body);
       const { duplicates, priceErrors, stockErrors } = analyzeOffers(parsed.offers, parsed.errors);
       return {
         fetchStatus: "OK",

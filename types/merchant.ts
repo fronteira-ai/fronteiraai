@@ -7,7 +7,8 @@ export type AuditEventType =
   | "product_added" | "product_updated" | "product_deleted"
   | "price_changed" | "store_linked" | "store_unlinked"
   | "onboarding_step" | "onboarding_complete"
-  | "plan_changed" | "settings_updated";
+  | "plan_changed" | "settings_updated"
+  | "authorization_updated" | "csv_import" | "export_downloaded";
 
 export type RecommendationPriority = "critical" | "warning" | "info";
 

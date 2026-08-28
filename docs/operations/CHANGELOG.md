@@ -2,6 +2,21 @@
 
 Reconstruído a partir do histórico real de commits (`git log`) e do estado atual do código. Formato: data, commit, o que mudou de fato (verificado no diff/estado resultante, não só na mensagem).
 
+## 2026-08-28 — SPRINT "MERCHANT CONSOLE V1 — PARTNER EXPERIENCE"
+
+**Objetivo**: dar a cada loja parceira uma área privada segura (controlar presença no ParaguAI + ver valor gerado). É UI/camada de parceria sobre capacidades existentes — NÃO outro pipeline de ingestão.
+
+- **CSV_FEED adapter V1** (`MerchantCsvFeedParser`): UTF-8/BOM, delimitador `,`/`;`/tab auto-detectado, cabeçalho com inferência de slot (codigo/produto/preco/estoque/imagem...), mapping declarativo coluna→slot, **neutralização de injeção de fórmula** (prefixos `=`,`+`,`-`,`@`), reject de arquivo grande/encoding binário → **RawOffer** (reuso `rowToOffer`). Roteado no `MerchantFeedValidator` (CSV_FEED) e no `MerchantFeedConnector` (`fetchStream`).
+- **`merchant_authorizations`** (migração 0018): persistir o `MerchantAuthorizationRecord` — trilha de auditoria (authorized_by/date/source_url/allowed_usage/evidence_reference/status), RLS tenant (`merchant_authz_own`). `MerchantAuthorizationService` + `app/api/merchant/authorizations` (GET list, POST upsert com re-audit de posse + `logAuditEvent`).
+- **Import preview** (`app/api/merchant/imports/upload`): upload CSV/XML/JSON → VALIDATE+PREVIEW (total/valid/invalid/matched/new/ambiguous/price/stock/image), server-side posse via `merchant_stores`, **sem escrita** (committed:false), reuso parsers do Merchant Feed.
+- **Export CSV** (`services/merchant-export.service` + `app/api/merchant/exports/catalog`): catálogo da loja autorizada, proteção contra injeção de fórmula (`escapeCsvCell`), re-audit de posse, `logAudit export_downloaded`.
+- **Security/tests**: `services/__tests__/merchant-console-security.test.ts` (+7) — **Merchant A NÃO acessa store de Merchant B (FAIL)**; export cross-tenant → FORBIDDEN; canOnboard não inventa; CSV-injection; http(s) only. CSV: `MerchantCsvFeedParser.test` (+9) + `MerchantFeedConnectorCsv.test` (+1).
+- **Reuso/hardening**: console `/merchant` + APIs (dashboard/products/imports/analytics/settings/stores/delegates/audit) já exigem `requireMerchant` (server-side); tenancy via `merchant_stores`; RLS em tabelas merchant; LOGS de auditoria reusados.
+- Gates: **1176** testes (169 suítes; +17), lint 0, typecheck 0, build PASS. Produção intacta (nenhum merchant falso ativado).
+
+## 2026-08-28 — SPRINT "FIRST MERCHANT ONBOARDING PILOT V1"
+
+
 ## 2026-08-28 — SPRINT "FIRST MERCHANT ONBOARDING PILOT V1"
 
 **Objetivo**: deixar o ParaguAI pronto para o primeiro parceiro real com o menor esforço possível do lojista ("você já tem feed/lista? manda o link").

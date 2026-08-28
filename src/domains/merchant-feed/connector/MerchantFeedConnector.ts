@@ -15,6 +15,7 @@ import type { RawOffer, RawOfferStream } from "../../connectors/types/raw.types"
 import { ConnectorType } from "../../connectors/types/enums";
 import { MerchantFeedParser } from "../parser/MerchantFeedParser";
 import { MerchantJsonFeedParser } from "../parser/MerchantJsonFeedParser";
+import { MerchantCsvFeedParser } from "../parser/MerchantCsvFeedParser";
 import { MerchantJsonPaginator } from "../parser/MerchantJsonPaginator";
 import { DEFAULT_FIELD_MAPPING } from "../config/MerchantSourceConfig";
 import { SecureFeedFetcher } from "../fetcher/SecureFeedFetcher";
@@ -110,6 +111,15 @@ export class MerchantFeedConnector implements IConnector {
         fieldMapping: DEFAULT_FIELD_MAPPING,
       };
       const parsed = new MerchantJsonFeedParser(cfg).parse(body);
+      return { offers: parsed.offers, errors: parsed.errors };
+    }
+    if (this.cfg.sourceType === "CSV_FEED" || this.cfg.sourceConfig?.sourceType === "CSV_FEED") {
+      const cfg = this.cfg.sourceConfig ?? {
+        sourceType: "CSV_FEED" as const,
+        feedUrl: this.cfg.feedUrl,
+        fieldMapping: {},
+      };
+      const parsed = new MerchantCsvFeedParser(cfg).parse(body);
       return { offers: parsed.offers, errors: parsed.errors };
     }
     const parsed = new MerchantFeedParser().parse(body);

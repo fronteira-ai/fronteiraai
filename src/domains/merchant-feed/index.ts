@@ -9,6 +9,7 @@ export { MerchantFeedParser } from "./parser/MerchantFeedParser";
 export { parseMerchantPrice } from "./parser/MerchantPriceParser";
 export { MerchantJsonFeedParser } from "./parser/MerchantJsonFeedParser";
 export { MerchantJsonPaginator } from "./parser/MerchantJsonPaginator";
+export { MerchantCsvFeedParser, neutralizeFormula } from "./parser/MerchantCsvFeedParser";
 export { rowToOffer, parseInteger, normalizeAvailability2 } from "./parser/rowNormalizer";
 export { MerchantFeedValidator, type FeedValidationStats } from "./validator/MerchantFeedValidator";
 export { SecureFeedFetcher, assertSafeFeedUrl } from "./fetcher/SecureFeedFetcher";
