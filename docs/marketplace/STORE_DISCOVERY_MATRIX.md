@@ -4,6 +4,11 @@
 **Data**: 2026-08-27 (Sprint Store Expansion + Catalog Coverage + Search Recall V1).
 **Método**: probing leve/read-only (robots.txt, sitemap, HTTP status, tamanho de HTML) — respeito à fonte, sem burlar anti-bot, sem uma loja inteira gastando a Sprint.
 
+## Atualização — Sprint "Connector Expansion V1" (2026-08-27): TOPDEK INTEGRADO
+- **TopDek = INTEGRADO** (conector Shopify + sitemap + JSON-LD). Real ingestão: **68 produtos/ofertas** em produção, página de loja ok, searchable, sync diário habilitado. Detalhes no CHANGELOG.
+- **New Zone / Super Games = PARTIAL/BLOCKED (nesta rodada)**: produto é **CSR/AJAX** — New Zone páginas de produto 26KB sem preço server-side, sem sitemap (robots = "content signals"); Super Games categoria (iPhone 17 Pro) sem preço no HTML (Prestashop 2014, malha via AJAX). Extração confiável exigira reverse-engineering de API client (fácil quebrar, anti-bot) → **não burlado**; ficam como candidatos para abordagem via API/JS quando houver caminho limpo (ou documentação do fornecedor).
+
+
 > Objetivo da missão: `QUALITY + RELEVANCE > RAW STORE COUNT`. Esta matriz classifica os 13 candidatos obrigatórios +
 > observações das 7 lojas atuais. **Não fabrica integração**: registra evidência real e prioriza o que é confiável.
 

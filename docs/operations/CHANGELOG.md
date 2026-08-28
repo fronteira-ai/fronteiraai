@@ -2,6 +2,20 @@
 
 Reconstruído a partir do histórico real de commits (`git log`) e do estado atual do código. Formato: data, commit, o que mudou de fato (verificado no diff/estado resultante, não só na mensagem).
 
+## 2026-08-27 — SPRINT "CONNECTOR EXPANSION V1" (integração real de loja)
+
+**Objetivo = EXECUTION (integração real, não mais um relatório de candidatos).**
+
+- **TopDek — INTEGRADO (novo conector + ingestão real)**.
+  - `src/domains/connectors/crawler/topdek/`: connector Shopify baseado em sitemap (`SitemapConnectorStream` + Delta Import + checkpoint, REUSE>REWRITE) com JSON-LD Product parse (name/brand/price/currency/availability/image); `syncFrequencyHours=24` (coleta contínua); `sync:topdek` script.
+  - **Store `topdek` criada** em produção (identidade verificada, campos honestos, sem logo → fallback monograma).
+  - **Ingestão real**: 220 recebidos / 0 erros por estágio (validation/normalization/dedup/product-identity/media/persistence/canonical-link/market-change) → **68 produtos/ofertas** persistidos em produção (preço USD/estoque/URL reais).
+  - **Página de loja `/lojas/topdek` = 200** (com "Como chegar"), produtos pesquisáveis, `GOLDEN_QUERY_PASS_RATE = 100%`.
+  - **8 testes** (normal/promoção/oos/brand-ausente/malformado/sem-preço + listing url detection). Live-validated em 2 produtos reais.
+- **New Zone / Super Games — PARTIAL/não-integrados**: probing mostrou produto CSR/AJAX sem sitemap-server-side nem preço no HTML (filmes: New Zone páginas de produto 26KB sem preço; Super Games categoria sem preço server-rendered; New Zone sem sitemap, robots só 'content signals'). Extração confiável exigiria reverse-engineering de API client (fragil/anti-bot) → registrado como PARTIAL/BLOCKED em `docs/marketplace/STORE_DISCOVERY_MATRIX.md` (não burlar anti-bot; QUALITY+RELEVANCE>RAW COUNT).
+- **TopDek não é varejo de eletrônicos** (é decking/espumas/foam sheets — 68 produtos não-Apple); ainda assim é a integração CONFIÁVEL desta Sprint (padrão de conector real + ingestão + searchable + schedule + prod validado).
+- Deploy Production **Ready** (`dd816ee`). Quality: lint 0, tsc 0, **1061/1061 testes**, build PASS.
+
 ## 2026-08-27 — SPRINT "STORE EXPANSION + CATALOG COVERAGE + SEARCH RECALL V1 + CONTINUOUS PRICE COLLECTION"
 
 **Search Recall** (causa raiz do incidente "iPhone 17 Pro"):
