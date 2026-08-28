@@ -40,6 +40,8 @@
     "sync:mobilezone:execute": "tsx scripts/sync-mobilezone.ts --execute",
     "sync:topdek": "tsx scripts/sync-topdek.ts",
     "sync:topdek:execute": "tsx scripts/sync-topdek.ts --execute",
+    "sync:newzone": "tsx scripts/sync-newzone.ts",
+    "sync:newzone:execute": "tsx scripts/sync-newzone.ts --execute",
     "canonical-catalog:bootstrap": "tsx scripts/canonical-catalog-bootstrap.ts",
     "canonical-catalog:bootstrap:execute": "tsx scripts/canonical-catalog-bootstrap.ts --execute",
     "marketplace-memory:backfill": "tsx scripts/marketplace-memory-backfill.ts",

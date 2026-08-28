@@ -60,13 +60,21 @@ export class SupabaseCatalogRepository implements ICatalogRepository {
     const map = new Map<string, string>();
     if (slugs.length === 0) return map;
 
-    const { data, error } = await this.client.from("products").select("id, slug").in("slug", slugs);
-    if (error) {
-      console.error("[SupabaseCatalogRepository.findProductIdsBySlugs]", error.message);
-      return map;
-    }
-    for (const row of data ?? []) {
-      map.set(row.slug as string, row.id as string);
+    // Chunked `.in()` — PostgREST/Kong caps a query URI at ~8 KB; a batch of
+    // hundreds of ~80-char slugs exceeds it (seen real: "URI too long" on a
+    // 200-product New Zone batch → dedup failed → products/offers not
+    // persisted). Chunks of 60 keep each query well under the cap without N+1.
+    const CHUNK = 60;
+    for (let i = 0; i < slugs.length; i += CHUNK) {
+      const slice = slugs.slice(i, i + CHUNK);
+      const { data, error } = await this.client.from("products").select("id, slug").in("slug", slice);
+      if (error) {
+        console.error("[SupabaseCatalogRepository.findProductIdsBySlugs]", error.message);
+        continue;
+      }
+      for (const row of data ?? []) {
+        map.set(row.slug as string, row.id as string);
+      }
     }
     return map;
   }

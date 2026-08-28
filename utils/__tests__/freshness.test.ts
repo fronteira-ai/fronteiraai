@@ -2,6 +2,7 @@ import {
   classifyFreshness,
   dataAgeMs,
   DEFAULT_FRESHNESS_RULES,
+  formatFreshnessLabel,
   type FreshnessRules,
 } from "@/utils/freshness";
 
@@ -63,5 +64,24 @@ describe("classifyFreshness", () => {
     const rules: FreshnessRules = { freshMaxAgeMs: HOUR, staleAfterMs: 24 * HOUR };
     expect(classifyFreshness(new Date(now - 2 * HOUR).toISOString(), rules, now)).toBe("AGING");
     expect(classifyFreshness(new Date(now - 25 * HOUR).toISOString(), rules, now)).toBe("STALE");
+  });
+});
+
+describe("formatFreshnessLabel — Market Freshness UX V1", () => {
+  const now = Date.now();
+  it("retorna null para timestamp ausente/inválido (não inventa frescor)", () => {
+    expect(formatFreshnessLabel(null, now)).toBeNull();
+    expect(formatFreshnessLabel("garbage", now)).toBeNull();
+  });
+  it("minutos: 'Atualizado agora' / 'Atualizado há X min'", () => {
+    expect(formatFreshnessLabel(new Date(now - 10_000).toISOString(), now)).toBe("Atualizado agora");
+    expect(formatFreshnessLabel(new Date(now - 18 * 60_000).toISOString(), now)).toBe("Atualizado há 18 min");
+  });
+  it("horas: 'Atualizado há 3 h'", () => {
+    expect(formatFreshnessLabel(new Date(now - 3 * HOUR).toISOString(), now)).toBe("Atualizado há 3 h");
+  });
+  it("dias: 'Verificado ontem' / 'Verificado há N d'", () => {
+    expect(formatFreshnessLabel(new Date(now - 25 * HOUR).toISOString(), now)).toBe("Verificado ontem");
+    expect(formatFreshnessLabel(new Date(now - 5 * 24 * HOUR).toISOString(), now)).toBe("Verificado há 5 d");
   });
 });

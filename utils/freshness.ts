@@ -69,3 +69,22 @@ export function classifyFreshness(
   if (age <= rules.staleAfterMs) return "AGING";
   return "STALE";
 }
+
+/** Formata a idade de um timestamp em label honesta de frescor (pt-BR), ex.:
+ * "há 18 min", "há 3 h", "Verificado ontem". Retorna null sem timestamp
+ * válido (não inventar frescor). Usa o timestamp de OBSERVAÇÃO real
+ * (ex.: `offer.updated_at` de sync) — nunca created_at/render time. */
+export function formatFreshnessLabel(
+  timestamp: string | number | Date | null | undefined,
+  now: number = Date.now()
+): string | null {
+  const ageMs = dataAgeMs(timestamp, now);
+  if (ageMs === null) return null;
+  const minutes = Math.floor(ageMs / 60_000);
+  if (minutes < 60) return minutes < 1 ? "Atualizado agora" : `Atualizado há ${minutes} min`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `Atualizado há ${hours} h`;
+  const days = Math.floor(hours / 24);
+  if (days === 1) return "Verificado ontem";
+  return `Verificado há ${days} d`;
+}

@@ -13,6 +13,7 @@ import "./romashopping/index";
 import "./atacadoconnect/index";
 import "./mobilezone/index";
 import "./topdek/index";
+import "./newzone/index";
 
 let bootstrapped = false;
 

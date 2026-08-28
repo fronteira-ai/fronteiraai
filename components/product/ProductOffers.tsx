@@ -2,6 +2,7 @@ import { memo } from "react";
 import { OfferWithStore } from "@/types/offer";
 import { formatUSD, formatBRL } from "@/src/domains/exchange";
 import { formatOfferCondition } from "@/utils/offerPresentation";
+import { formatFreshnessLabel } from "@/utils/freshness";
 import OfferLink from "@/components/product/OfferLink";
 import StoreDirectionsButton from "@/components/store/StoreDirectionsButton";
 
@@ -71,6 +72,19 @@ function ProductOffers({ offers }: Props) {
                   ) : null}
 
                 </div>
+
+                {/* Freshness (PR: Market Freshness UX V1) — usa offer.updated_at
+                    (timestamp real de observação/sync), nunca created_at/render. */}
+                {(() => {
+                  const label = offer.updated_at ? formatFreshnessLabel(offer.updated_at) : null;
+                  if (!label) return null;
+                  return (
+                    <p className="mt-2 flex items-center gap-1.5 text-xs text-slate-500">
+                      <span className="h-1.5 w-1.5 rounded-full bg-emerald-500/70" />
+                      {label}
+                    </p>
+                  );
+                })()}
               </div>
 
               <div className="text-right">
