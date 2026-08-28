@@ -2,6 +2,15 @@
 
 Reconstruído a partir do histórico real de commits (`git log`) e do estado atual do código. Formato: data, commit, o que mudou de fato (verificado no diff/estado resultante, não só na mensagem).
 
+## 2026-08-28 — SPRINT "REAL MERCHANT FEED COMPATIBILITY AUDIT V1" (commit `a9b892f`)
+
+- **Descoberta (OSINT público, evidência > suposição)**: ecossistema agregador de CdE — `comprasparaguai.com.br` / `comprasparaguai.com.ar` / `lojasparaguai.com.br` indexam **20 lojas CDE** com ofertas estruturadas (`variant_id`, SKU/Código, preço USD, imagem, `/lojas/<slug>/`), cobrindo **10–13 das 15 lojas prioritárias** (cellshop, nissei, visaovip, mario-cell, star-company, atacado-connect, shopping-china, mega, new-zone, mobile-zone, topdek). Prova que os lojistas **já alimentam um comparador** → o pitch "mande o link" é aderente ao modelo real.
+  - Nota crítica: ofertas agregadas **nem sempre estão vivas/in-stock na origem** (ex.: US$7 no agregador → 404 em Shopping China) → reforça `unknown ≠ available` / `fetch failure ≠ out_of_stock`.
+- `docs/marketplace/MERCHANT_FEED_REAL_WORLD_AUDIT.md`: matriz de **16 lojas** (score 0–100, classe A–E, merchant effort ZERO–HIGH, identidade/estoque/imagem/freshness), TOP 5 primeiro parceiro, `SOURCE_PRIORITY_ARCHITECTURE=PASS`, product-identity scale risk (feed 5k)=`MEDIUM`, decisões: `JSON_FEED=YES`, `CSV_FEED=YES` (recomendado, baixa prioridade), `SELF_SERVICE_UI=NO`.
+- `docs/business/MERCHANT_ONBOARDING_ONE_PAGER.md`: um-pager de parceria em **português simples** + escada fallback ("não temos XML"). Em `docs/business/` (categoria oficial p/ parcerias; `docs/merchant/` não é categoria do Knowledge System).
+- `src/domains/merchant-feed/__tests__/RealMarketDataShape.test.ts`: fixture sanitizada do padrão real CDE → V1 consome SKU / `US$ 1.150,00` / imagem / estoque sem escrita (dry-run) — 3 testes.
+- Gates: **1125** testes (161 suítes; +3), lint 0 erros, typecheck 0, build PASS. Produção intacta (sem ativação de merchant feed, sem escrita, sem bypass). `REAL_FEED_DRY_RUNS=0` (nenhum merchant XML feed autorizado na web pública — honesto).
+
 ## 2026-08-28 — SPRINT "MERCHANT FEED PLATFORM V1" (commit `2e7d95f`)
 
 **Estratégia**: tornar a integração mais fácil para a LOJA — um lojista que já mantém um feed XML informa apenas a URL; o ParaguAI valida, prevê, ativa e sincroniza via Adaptive Sync (sem cron paralelo).
