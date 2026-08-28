@@ -2,6 +2,21 @@
 
 Reconstruído a partir do histórico real de commits (`git log`) e do estado atual do código. Formato: data, commit, o que mudou de fato (verificado no diff/estado resultante, não só na mensagem).
 
+## 2026-08-28 — SPRINT "MERCHANT FEED PLATFORM V1" (commit `2e7d95f`)
+
+**Estratégia**: tornar a integração mais fácil para a LOJA — um lojista que já mantém um feed XML informa apenas a URL; o ParaguAI valida, prevê, ativa e sincroniza via Adaptive Sync (sem cron paralelo).
+
+- **`src/domains/merchant-feed/`**:
+  - `MerchantFeedParser` (parser `saxes` streaming-safe) — RSS/channel/item → `RawOffer`; item malformado isolado; `codigo`→externalId, `preco/price_iva`, `estoque/disponibilidade`, `marca`, `link_imagem`, `tipo_venda`.
+  - `MerchantPriceParser` — `199.50` / `1,199.50` / `1199.50` / `199.50 USD`; inválido → **rejeita, nunca zero**.
+  - `SecureFeedFetcher` — **SSRF** (bloqueia localhost/privado/metadata), bounded 20 MiB, timeout, **ETag/If-None-Match/Last-Modified** (304 = no-change).
+  - `MerchantFeedValidator` — fetch + format detect + stats (total/valid/invalid/dup/price/stock/brand/image/externalId) **sem ingestão**.
+  - `MerchantFeedMatchPreview` (`MATCHED`/`NEW`/`AMBIGUOUS`/`INVALID`, sem false-merge) + `MerchantFeedOnboardingService` (validate→activate).
+  - `MerchantFeedConnector` (IConnector XML_FEED → RawOffer, reuso SyncOrchestrator/Gatekeeper) + `MerchantFeedRegistrationService` (persiste em `connectors` com `syncFrequencyHours` p/ o cron achar; registra no registry; bootstrap no connector-factory).
+- **Docs/fixtures** (sem branding 3o): `docs/operations/MERCHANT_FEED_SPEC.md` + `MERCHANT_FEED_EXAMPLE.xml` (reference: codigo 123456 / 199.50 USD / LG / em estoque / loja+internet).
+- **Testes**: +37 (price, reference, malformado, invalid price, missing codigo, dup, imagem, stock 0, UTF-8 pt/es, idempotência, match/ambiguous, SSRF, 304, connector/registration) → **1122** (160 suítes). lint 0, tsc 0, build PASS. Deploy `2e7d95f` Ready.
+- **Validação produção**: validator no feed de referência → `XML_FEED`, 4 válidos/0 inválidos/0 dup, cobertura 100%. **Nenhum feed real ativado** (sem URL de lojista autorizada — §42). Conectores existentes (7) seguem `active`/agendados (regressão OK).
+
 ## 2026-08-28 — SPRINT "CATALOG CONVERGENCE + PRODUCT IDENTITY V1"
 
 **Raiz de IDENTIDADE do produto (Part A, commit `f3f0a55`)**:
