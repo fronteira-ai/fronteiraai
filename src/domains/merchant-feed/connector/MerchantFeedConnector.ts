@@ -14,6 +14,9 @@ import type { ConnectorCapabilities } from "../../connectors/types/capability.ty
 import type { RawOffer, RawOfferStream } from "../../connectors/types/raw.types";
 import { ConnectorType } from "../../connectors/types/enums";
 import { MerchantFeedParser } from "../parser/MerchantFeedParser";
+import { MerchantJsonFeedParser } from "../parser/MerchantJsonFeedParser";
+import { MerchantJsonPaginator } from "../parser/MerchantJsonPaginator";
+import { DEFAULT_FIELD_MAPPING } from "../config/MerchantSourceConfig";
 import { SecureFeedFetcher } from "../fetcher/SecureFeedFetcher";
 import type { MerchantFeedConfig } from "../config/MerchantFeedConfig";
 
@@ -48,7 +51,7 @@ export class MerchantFeedConnector implements IConnector {
       version: "1.0.0",
       type: ConnectorType.XmlFile,
       storeSlug,
-      description: `Feed oficial de ${storeSlug} (XML_FEED)`,
+      description: `Feed oficial de ${storeSlug} (${cfg.sourceType ?? "XML_FEED"})`,
       capabilities: CAPABILITIES,
     };
   }
@@ -56,7 +59,7 @@ export class MerchantFeedConnector implements IConnector {
   /** Batch de uma vez (retrocompat). */
   async fetch(): Promise<{ connectorId: string; connectorVersion: string; fetchedAt: string; items: RawOffer[] }> {
     const { body } = await this.fetchBody();
-    const parsed = new MerchantFeedParser().parse(body);
+    const parsed = this.parseBody(body);
     const offers = parsed.offers.map((o) => ({ ...o, storeSlug: this.storeSlug }));
     return { connectorId: this.metadata.id, connectorVersion: this.metadata.version, fetchedAt: new Date().toISOString(), items: offers };
   }
@@ -66,8 +69,30 @@ export class MerchantFeedConnector implements IConnector {
    * (10k/50k itens), memória limitada pelo lote do SyncOrchestrator.
    */
   async *fetchStream(): RawOfferStream {
+    const isJson = this.cfg.sourceType === "JSON_FEED" || this.cfg.sourceConfig?.sourceType === "JSON_FEED";
+    const pagination = this.cfg.sourceConfig?.pagination;
+
+    // JSON paginado: processa página a página (bounded, sem materializar tudo).
+    if (isJson && pagination?.nextPageField) {
+      const paginator = new MerchantJsonPaginator({ fetchPage: async (url) => this.fetchPageBody(url) });
+      const { bodies, lastError } = await paginator.collect(this.cfg.feedUrl, pagination);
+      if (lastError) {
+        console.warn(`[merchant-feed:${this.storeSlug}] pagination stopped: ${lastError}`);
+      }
+      for (const body of bodies) {
+        const parsed = this.parseBody(body);
+        for (const offer of parsed.offers) {
+          yield { ...offer, storeSlug: this.storeSlug };
+        }
+        for (const err of parsed.errors) {
+          console.warn(`[merchant-feed:${this.storeSlug}] item rejected: ${err.reason}${err.codigo ? ` (#${err.codigo})` : ""}`);
+        }
+      }
+      return;
+    }
+
     const { body } = await this.fetchBody();
-    const parsed = new MerchantFeedParser().parse(body);
+    const parsed = this.parseBody(body);
     for (const offer of parsed.offers) {
       yield { ...offer, storeSlug: this.storeSlug };
     }
@@ -77,12 +102,44 @@ export class MerchantFeedConnector implements IConnector {
     }
   }
 
-  private async fetchBody(): Promise<{ body: string }> {
-    if (this.deps.fetchBody) {
-      return this.deps.fetchBody(this.cfg.feedUrl, this.cfg.etag, this.cfg.lastModified);
+  private parseBody(body: string): { offers: RawOffer[]; errors: Array<{ codigo?: string; reason: string }> } {
+    if (this.cfg.sourceType === "JSON_FEED" || this.cfg.sourceConfig?.sourceType === "JSON_FEED") {
+      const cfg = this.cfg.sourceConfig ?? {
+        sourceType: "JSON_FEED" as const,
+        feedUrl: this.cfg.feedUrl,
+        fieldMapping: DEFAULT_FIELD_MAPPING,
+      };
+      const parsed = new MerchantJsonFeedParser(cfg).parse(body);
+      return { offers: parsed.offers, errors: parsed.errors };
+    }
+    const parsed = new MerchantFeedParser().parse(body);
+    return { offers: parsed.offers, errors: parsed.errors };
+  }
+
+  private async fetchPageBody(url: string): Promise<{ body: string; ok: boolean; error?: string }> {
+    if (this.cfg.sourceConfig?.sourceType !== "JSON_FEED") {
+      // fallback ao fetchBody configurado (teste) quando não há network.
+      try {
+        const { body } = await this.fetchBody(url);
+        return { body, ok: true };
+      } catch (e) {
+        return { body: "", ok: false, error: (e as Error).message };
+      }
     }
     const fetcher = new SecureFeedFetcher();
-    const res = await fetcher.fetch({ url: this.cfg.feedUrl, etag: this.cfg.etag, lastModified: this.cfg.lastModified });
+    const res = await fetcher.fetch({ url });
+    if (!res.ok || res.notModified) {
+      return { body: "", ok: false, error: res.error ?? `HTTP_${res.status}` };
+    }
+    return { body: res.body, ok: true };
+  }
+
+  private async fetchBody(url: string = this.cfg.feedUrl): Promise<{ body: string }> {
+    if (this.deps.fetchBody) {
+      return this.deps.fetchBody(url, this.cfg.etag, this.cfg.lastModified);
+    }
+    const fetcher = new SecureFeedFetcher();
+    const res = await fetcher.fetch({ url, etag: this.cfg.etag, lastModified: this.cfg.lastModified });
     if (!res.ok || res.notModified) {
       throw new Error(`FEED_FETCH_FAILED:${res.error ?? `HTTP_${res.status}`}`);
     }

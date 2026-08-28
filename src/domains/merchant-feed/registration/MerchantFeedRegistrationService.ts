@@ -19,6 +19,8 @@ import { ConnectorType, ConnectorStatus } from "../../connectors/types/enums";
 import type { Connector } from "../../connectors/domain/Connector";
 import { MerchantFeedConnector } from "../connector/MerchantFeedConnector";
 import type { MerchantFeedConfig, MerchantFeedSourceType, MerchantFeedSourceTrust } from "../config/MerchantFeedConfig";
+import type { MerchantSourceConfig } from "../config/MerchantSourceConfig";
+import { validateMerchantSourceConfig } from "../config/MerchantSourceConfig";
 import { classifyHealth, type ConnectorSyncState } from "../../connectors/scheduler/AdaptiveSyncEngine";
 
 export interface MerchantFeedRegistrationInput {
@@ -27,6 +29,8 @@ export interface MerchantFeedRegistrationInput {
   sourceType?: MerchantFeedSourceType;
   trust?: MerchantFeedSourceTrust;
   preferredTier?: "HOT" | "WARM";
+  /** Config declarativa (fieldMapping/rootPath/currency) para feeds JSON. */
+  sourceConfig?: MerchantSourceConfig;
 }
 
 export interface MerchantFeedRegistrationResult {
@@ -41,15 +45,18 @@ export class MerchantFeedRegistrationService {
   /** Persiste o feed em connectors + registra o IConnector. Não depara com
    * scheduler paralelo: o Adaptive Sync Engine existente agenda via isDue. */
   async register(input: MerchantFeedRegistrationInput): Promise<MerchantFeedRegistrationResult> {
+    if (input.sourceConfig) validateMerchantSourceConfig(input.sourceConfig);
     const config: MerchantFeedConfig = {
       feedUrl: input.feedUrl,
-      sourceType: input.sourceType ?? "XML_FEED",
+      sourceType: input.sourceType ?? input.sourceConfig?.sourceType ?? "XML_FEED",
       trust: input.trust ?? "OFFICIAL_MERCHANT_FEED",
       preferredTier: input.preferredTier ?? "HOT",
       enabled: true,
+      sourceConfig: input.sourceConfig,
     };
 
     const connectorKey = `merchant-feed-${input.storeSlug}`;
+    const connType = config.sourceType === "JSON_FEED" ? ConnectorType.JsonFile : ConnectorType.XmlFile;
     // upsert linha em connectors (config inclui feed_url; sync_state agenda HOT/WARM).
     const syncState: ConnectorSyncState = {
       tier: config.preferredTier,
@@ -62,12 +69,12 @@ export class MerchantFeedRegistrationService {
           connector_key: connectorKey,
           name: `${input.storeSlug} (feed oficial)`,
           version: "1.0.0",
-          type: ConnectorType.XmlFile,
+          type: connType,
           store_slug: input.storeSlug,
-          description: "Feed oficial do lojista (XML_FEED)",
+          description: `Feed oficial do lojista (${config.sourceType})`,
           status: ConnectorStatus.Active,
           // syncFrequencyHours: legacy opt-in gate do cron (todo connector com
-          // cadência entrou pelo caminho isDue→onSyncOutcome). Aqui HOT=30min/WARM=2h.
+          // cadência entrou pelo caminho isDue→onSyncOutcome). HOT=30min/WARM=2h.
           config: { merchantFeed: config, syncFrequencyHours: config.preferredTier === "HOT" ? 0.5 : 2 },
           sync_state: syncState,
         },

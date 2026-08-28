@@ -2,7 +2,23 @@
 
 Reconstruído a partir do histórico real de commits (`git log`) e do estado atual do código. Formato: data, commit, o que mudou de fato (verificado no diff/estado resultante, não só na mensagem).
 
+## 2026-08-28 — SPRINT "FIRST MERCHANT ONBOARDING PILOT V1"
+
+**Objetivo**: deixar o ParaguAI pronto para o primeiro parceiro real com o menor esforço possível do lojista ("você já tem feed/lista? manda o link").
+
+- **JSON_FEED adapter** (`MerchantJsonFeedParser`): array raiz e `{"products":[...]}` (rootPath), paths aninhados declarativos (`product.sku`, `pricing.usd`, `inventory.quantity`, `images.primary.url`), field mapping por slot (`MerchantSourceConfig`) → normaliza no **MESMO contrato** `RawOffer` do XML (reuso `rowToOffer`). **REUSE > NEW** (um único pipeline downstream).
+- **Config declarativa** (`MerchantSourceConfig` + `validateMerchantSourceConfig`): root_path, pagination (cursor), currency (use_feed/force_usd/force_pyg), field_mapping/aliases (id/sku/codigo→external_id, name→title, preco→price...), headers seguros. **Sem eval / sem JS arbitrário**; config inválida falha antes da ativação.
+- **Pagination** (`MerchantJsonPaginator`): iteração bounded (MAX_PAGES, para em cursor repetido), SSRF/bounded/timeout reusados.
+- **Operator workflow** (`MerchantOperatorWorkflow` + CLI `scripts/merchant-feed-onboard.ts`): CREATE/SELECT STORE → VALIDATE → PREVIEW (métricas §17) → REVIEW → ACTIVATE (gate §18: **validate ≠ activate**) → INITIAL SYNC → VERIFY → SCHEDULE. **Sem dashboard/self-service de lojista.**
+- **Authorization record** (`MerchantAuthorization`): registro interno `authorized_by/date/source_url/allowed_usage/status`; `canOnboardMerchant` só ativa com consentimento real. **Não inventa autorização.**
+- **Source priority + migration dry-run** (`MerchantSourceMigration`): prioridade API oficial>feed oficial>public API>structured>crawler; crawler→feed (STORE+EXTERNAL_ID + reconciliação brand+modelo; unmatched/new/ambiguous/price/stock diffs; cutover seguro sem duplicar/destruir); **official image/stock precedence** (não sobrescreve canônica melhor; não inventa disponibilidade).
+- **Validator/onboarding**: JSON_FEED roteado no `MerchantFeedValidator.fromBody` (layout/coverage); dry-run offline (`validateBody`).
+- **Commercial handoff**: `docs/business/FIRST_MERCHANT_PARTNER_KIT.md` + `docs/business/FIRST_MERCHANT_WHATSAPP.md` (linguagem de negócios, sem jargão dev).
+- **Pilot simulation** (`MerchantFeedPilotSimulation.test`): STORE→SOURCE→VALIDATE→PREVIEW→ACTIVATE→SYNC→RE-SYNC→price/stock change→price history (fixtures apenas, sem lojista real em produção); **SCALE 100/1k/10k** (parse+normalize); identidade: **Pro ≠ Pro Max, 128 ≠ 256** → **false-merge NÃO ocorre**.
+- Gates: **1159** testes (166 suites; +34), lint 0, typecheck 0, build PASS. Produção intacta.
+
 ## 2026-08-28 — SPRINT "REAL MERCHANT FEED COMPATIBILITY AUDIT V1" (commit `a9b892f`)
+
 
 - **Descoberta (OSINT público, evidência > suposição)**: ecossistema agregador de CdE — `comprasparaguai.com.br` / `comprasparaguai.com.ar` / `lojasparaguai.com.br` indexam **20 lojas CDE** com ofertas estruturadas (`variant_id`, SKU/Código, preço USD, imagem, `/lojas/<slug>/`), cobrindo **10–13 das 15 lojas prioritárias** (cellshop, nissei, visaovip, mario-cell, star-company, atacado-connect, shopping-china, mega, new-zone, mobile-zone, topdek). Prova que os lojistas **já alimentam um comparador** → o pitch "mande o link" é aderente ao modelo real.
   - Nota crítica: ofertas agregadas **nem sempre estão vivas/in-stock na origem** (ex.: US$7 no agregador → 404 em Shopping China) → reforça `unknown ≠ available` / `fetch failure ≠ out_of_stock`.

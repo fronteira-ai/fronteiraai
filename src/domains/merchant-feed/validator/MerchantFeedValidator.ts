@@ -7,6 +7,8 @@
 
 import { SecureFeedFetcher, assertSafeFeedUrl, type FeedFetchResult } from "../fetcher/SecureFeedFetcher";
 import { MerchantFeedParser } from "../parser/MerchantFeedParser";
+import { MerchantJsonFeedParser } from "../parser/MerchantJsonFeedParser";
+import { DEFAULT_FIELD_MAPPING, type MerchantSourceConfig } from "../config/MerchantSourceConfig";
 import type { RawOffer } from "../../connectors/types/raw.types";
 
 export type FeedFormat = "XML_FEED" | "JSON_FEED" | "CSV_FEED" | "UNKNOWN";
@@ -33,6 +35,8 @@ export interface FeedValidationStats {
 
 export interface FeedValidatorOptions {
   fetch?: Pick<SecureFeedFetcher, "fetch">;
+  /** Config declarativa para feeds JSON (fieldMapping/rootPath/currency). */
+  sourceConfig?: MerchantSourceConfig;
 }
 
 export class MerchantFeedValidator {
@@ -120,7 +124,36 @@ export class MerchantFeedValidator {
       };
     }
 
-    // Formatos não implementados no V1 → contagem honesta sem ingestão.
+    if (format === "JSON_FEED") {
+      const cfg: MerchantSourceConfig = this.deps.sourceConfig ?? {
+        sourceType: "JSON_FEED",
+        feedUrl: "inline",
+        fieldMapping: DEFAULT_FIELD_MAPPING,
+      };
+      const parsed = new MerchantJsonFeedParser(cfg).parse(body);
+      const { duplicates, priceErrors, stockErrors } = analyzeOffers(parsed.offers, parsed.errors);
+      return {
+        fetchStatus: "OK",
+        formatDetected: format,
+        encoding: "utf-8",
+        totalItems: parsed.totalItems,
+        validItems: parsed.validItems,
+        invalidItems: parsed.totalItems - parsed.validItems,
+        duplicateExternalIds: duplicates,
+        priceErrors,
+        stockErrors,
+        imageCoverage: coverage(parsed.offers, (o) => !!o.product.imageUrl),
+        brandCoverage: coverage(parsed.offers, (o) => !!o.product.brand),
+        externalIdCoverage: coverage(parsed.offers, (o) => !!o.product.externalId),
+        httpStatus: meta?.httpStatus ?? 200,
+        bytes: meta?.bytes ?? 0,
+        notModified: false,
+        errors: parsed.errors,
+        offers: parsed.offers,
+      };
+    }
+
+    // Formatos não implementados → contagem honesta sem ingestão.
     return {
       fetchStatus: "OK",
       formatDetected: format,
