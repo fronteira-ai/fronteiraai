@@ -21,12 +21,29 @@ import {
 } from "@/src/domains/marketplace-memory";
 import { createCanonicalCatalogServices } from "@/lib/canonical-catalog-factory";
 import { SupabaseCanonicalSuggestionOutboxRepository } from "@/src/domains/connectors/infrastructure/SupabaseCanonicalSuggestionOutboxRepository";
+import { MerchantFeedRegistrationService } from "@/src/domains/merchant-feed/registration/MerchantFeedRegistrationService";
+
+/** Registra os IConnector de feeds persistidos (best-effort, assíncrono). */
+async function bootstrapMerchantFeeds(service: MerchantFeedRegistrationService, client: SupabaseClient) {
+  try {
+    const repo = new SupabaseConnectorRepository(client);
+    const persisted = await repo.list();
+    await service.bootstrap(persisted);
+  } catch (e) {
+    console.warn("[merchant-feed] bootstrap skipped:", (e as Error).message.slice(0, 80));
+  }
+}
 
 export function createConnectorsServices(client: SupabaseClient) {
   bootstrapConnectors();
 
-  const connectorRepo = new SupabaseConnectorRepository(client);
-  const syncRunRepo = new SupabaseSyncRunRepository(client);
+  // Merchant Feed Platform — registra IConnector de feeds persistidos para o
+  // Adaptive Sync Engine (cron dispatcher) achar por connector_key.
+  // Best-effort: um feed sem registro não bloqueia o dispatch dos demais.
+  const merchantFeedService = new MerchantFeedRegistrationService(client);
+  void bootstrapMerchantFeeds(merchantFeedService, client);
+
+  const connectorRepo = new SupabaseConnectorRepository(client);  const syncRunRepo = new SupabaseSyncRunRepository(client);
   const catalogRepo = new SupabaseCatalogRepository(client);
   const eventService = new EventService(new SupabaseTrustEventRepository(client));
 
@@ -82,5 +99,6 @@ export function createConnectorsServices(client: SupabaseClient) {
     canonicalCatalogRepo,
     canonicalSuggestionOutboxRepo,
     healthService,
+    merchantFeedService,
   };
 }

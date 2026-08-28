@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Merchant Feed Platform V1 — REFERENCE INPUT FORMAT
+  Exemplo de feed XML compatível com o ParaguAI (schema documentado em
+  docs/operations/MERCHANT_FEED_SPEC.md). Este arquivo é FIXTURE/TESTE e
+  NÃO representa um lojista real (sem branding de terceiros).
+
+  Como lojista que já possui um feed neste estilo: informe a URL do feed e o
+  ParaguAI cuida da integração — sem redesenhar sua exportação.
+-->
+<rss version="2.0">
+  <channel>
+    <title>Feed de produtos</title>
+    <link>https://example.com/feed</link>
+    <description>Catálogo XML compatível com ParaguAI</description>
+    <item>
+      <title>Lavadora LG 11kg</title>
+      <title_es>Lavarropas LG 11kg</title_es>
+      <description>Lavadora frontal 11kg, eficiência A</description>
+      <description_es>Lavadora frontal de carga frontal, 11kg</description_es>
+      <codigo>123456</codigo>
+      <preco>199.50 USD</preco>
+      <price_iva>219.45 USD</price_iva>
+      <estoque>109</estoque>
+      <disponibilidade>em estoque</disponibilidade>
+      <marca>LG</marca>
+      <link>https://example.com/la-123456</link>
+      <link_imagem>https://example.com/img/123456.jpg</link_imagem>
+      <link_comprar>https://example.com/buy/123456</link_comprar>
+      <preco_normal_sem_liquidacao>249.90 USD</preco_normal_sem_liquidacao>
+      <tipo_venda>loja+internet</tipo_venda>
+    </item>
+    <item>
+      <title>Smart TV Samsung 55"</title>
+      <codigo>778899</codigo>
+      <preco>1,199.50 USD</preco>
+      <price_iva>1,319.45 USD</price_iva>
+      <estoque>12</estoque>
+      <disponibilidade>em estoque</disponibilidade>
+      <marca>Samsung</marca>
+      <link>https://example.com/tv-778899</link>
+      <link_imagem>https://example.com/img/778899.jpg</link_imagem>
+      <link_comprar>https://example.com/buy/778899</link_comprar>
+      <tipo_venda>internet</tipo_venda>
+    </item>
+    <item>
+      <title>Auriculares Sony inalámbricos</title>
+      <codigo>102030</codigo>
+      <preco>199.50</preco>
+      <price_iva>219.45</price_iva>
+      <estoque>0</estoque>
+      <disponibilidade>sem estoque</disponibilidade>
+      <marca>Sony</marca>
+      <link>https://example.com/hp-102030</link>
+      <link_imagem>https://example.com/img/102030.jpg</link_imagem>
+      <link_comprar>https://example.com/buy/102030</link_comprar>
+      <tipo_venda>loja</tipo_venda>
+    </item>
+    <item>
+      <title>Notebook Lenovo Ideapad</title>
+      <codigo>445566</codigo>
+      <preco>1199.50 USD</preco>
+      <price_iva>1319.45 USD</price_iva>
+      <estoque>3</estoque>
+      <disponibilidade>em estoque</disponibilidade>
+      <marca>Lenovo</marca>
+      <link>https://example.com/nb-445566</link>
+      <link_imagem>https://example.com/img/445566.jpg</link_imagem>
+      <link_comprar>https://example.com/buy/445566</link_comprar>
+      <tipo_venda>loja+internet</tipo_venda>
+    </item>
+  </channel>
+</rss>
