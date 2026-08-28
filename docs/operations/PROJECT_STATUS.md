@@ -4,6 +4,16 @@ Auditoria gerada por leitura completa do código-fonte. Substitui o conteúdo an
 
 ## Atualização factual — Product Rebaseline V2 (2026-08-26)
 
+### Sprint "Autonomy Upgrade V1 + Store Experience" (2026-08-27) — PR-004/PR-005 VALIDATED_IN_PRODUCTION
+
+> Ver `docs/operations/CHANGELOG.md` (2026-08-27) e `docs/product/PRODUCT_REBASELINE_REQUIREMENTS.md`.
+
+- **Autonomia (Parte A)**: `AUTONOMOUS EXECUTION POLICY` (GREEN/YELLOW/RED) canônica em `ENGINEERING_CONSTITUTION.md` + `AGENTS.md`. `GREEN_AUTONOMY=PASS`, `RED_GATES_PRESERVED=PASS`, `OWNER_INTERRUPTION_TARGET=0`.
+- **PR-004** ✅: `STORE_LOGO_COVERAGE = 57%` (4/7) — logos oficiais publicados e renderizando na Home + lojas (mega-eletronicos, shopping-china, roma-shopping, atacado-connect). Fallback monograma; 0 imagens quebradas.
+- **PR-005** ✅: CTA "Como chegar" (Ponte da Amizade → loja) em StoreCard, oferta de produto e página de loja; origen/destino validados em 6+ rotas de produção. Geodata lat/lng segue **0/7** (não geocodificar endereços vagos).
+- Deploy Production **Ready** (`56e3f1b`). P2 (overflow 768px, footer/decorativo) permanece documentado.
+
+
 ### Sprint "Search Ordering + Out-of-Stock + SEO Recovery" — CÓDIGO + APLICAÇÃO EM PRODUÇÃO
 
 > Estado da Sprint que corrige PR-001/PR-002/SEO. **Código (GREEN) e aplicação de produção (RED) concluídos em 2026-08-26**: RPCs aplicadas e validadas no self-hosted; `NEXT_PUBLIC_SITE_URL` configurada em produção; merge para `main` executado e publicado (fast-forward, sem conflitos). Ver `docs/operations/CHANGELOG.md` (2026-08-26).

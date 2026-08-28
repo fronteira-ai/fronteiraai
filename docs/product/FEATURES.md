@@ -13,9 +13,11 @@ Inventário de funcionalidades por estado real. Atualizado em 2026-08-26 (Produc
 - **Compare funcional** (`/compare/[slug]`): ranking `OfferRankingService` (price/availability/recency/trust/quality), BestDeal + ShouldIBuyNow + Trust, operando via `offers.canonical_product_id` (61% das ofertas preenchidas em prod).
 - **Price Intelligence backend**: `price_history` com **72.413 linhas** em produção (via `updateOfferPrice` único caminho de escrita). Sem UI pública de histórico.
 
-**Funcionalidades de produção confirmadas**: Busca `/search`, Produto `/product/[slug]` (Advisor/BestDeal/Trust/Related), Catálogo `/products` (filtros+paginação; ordenação global por preço **depende de RPC não aplicada**), Loja `/lojas` + `/lojas/[slug]`, Compare, Admin (24+ rotas), Merchant portal (11+ rotas), sitemap/robots (sitemaps em `localhost` em prod — BUG de `NEXT_PUBLIC_SITE_URL`).
+**Funcionalidades de produção confirmadas (2026-08-27)**: Busca `/search` (ordenação global via RPC), Produto `/product/[slug]` (Advisor/BestDeal/Trust/Related), Catálogo `/products`, Loja `/lojas` + `/lojas/[slug]` (**logo oficial + "Como chegar" Maps**), Compare, Admin, Merchant portal, sitemap/robots (SITE_URL real destravada).
 
-**Backlog / gate de produto (não implementado)**: Câmeras ao vivo (PR-003, `LiveCameras` é placeholder "Em breve"), Logos oficiais (PR-004, `STORE_LOGO_COVERAGE=0%`), Maps Directions (PR-005, sem coordenadas/address nas lojas), IA real com LLM (nenhum provedor integrado), Price History UI, Reviews públicos, Favoritos/Alertas sincronizados (requer Auth — hoje localStorage), Autonomia de agentes (PR-006, matriz proposta em `docs/product/PRODUCT_REBASELINE_REQUIREMENTS.md`).
+**Entregues (Sprint Autonomy+Store, 2026-08-27)**: **PR-004** — logomarcas oficiais (4/7 lojas, `STORE_LOGO_COVERAGE=57%`) com fallback monograma; **PR-005** — Google Maps Directions (origem Ponte da Amizade → loja) via `utils/maps.ts` + CTA "Como chegar" em StoreCard/oferta/loja, validado em produção.
+
+**Backlog / gate de produto (não implementado)**: Câmeras ao vivo (PR-003, `LiveCameras` placeholder "Em breve"), IA real com LLM (nenhum provedor integrado), Price History UI, Reviews públicos, Favoritos/Alertas sincronizados (requer Auth — hoje localStorage). Dependência de dados: geodata lat/lng das lojas (0/7) para destino Maps preciso.
 
 ---
 

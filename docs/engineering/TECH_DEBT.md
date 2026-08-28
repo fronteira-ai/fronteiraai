@@ -14,19 +14,20 @@ Itens identificados por leitura completa do código. Nenhum é bloqueante hoje (
 3. ~~**RPC `search_products_catalog` ausente**~~ — **aplicada no self-hosted** (`20260809120000` estendida com `has_stock DESC`; `20260827000000` nova). Corrigido o timeout: `SET search_path` removido (bloqueava inlining da SQL function → no-filter price_asc/desc agora ~ms). Fecha ADR-011/P2-1. `/products?sort=price_asc|desc` globalmente ordenado.
 4. ~~**Catálogo não separava esgotados por último**~~ — **corrigido e aplicado**: `search_products_catalog` ordena `has_stock DESC` primeiro nas duas direções de preço (PR-002 no catálogo).
 
-5. **`STORE_LOGO_COVERAGE = 0%`** (0/7 lojas com `logo_url`) e **latlng 0/7** — bloqueia PR-004 e PR-005. Dependência de dados/seed com origem autorizada.
+5. ~~**`STORE_LOGO_COVERAGE = 0%`**~~ — **resolvido p/ PR-004** (Sprint Autonomy+Store, 2026-08-27): logos oficiais de 4/7 lojas publicados (`STORE_LOGO_COVERAGE = 57%`; seed em `scripts/store-logos-seed.ts`). **Geodata latlng continua 0/7** — endereços vagos ("Centro") não são geocodificados (não inventar); PR-005 usa nome+cidade como destino Maps. Preencher `latitude`/`longitude`/endereço real é dependência de dados (não código) e destrava destino Maps + coorte de loja.
 6. **`canonical_products` tabela vazia (0 linhas)** enquanto 61% das `offers` têm `canonical_product_id` preenchido — snap mismatch; Compare opera via oferece-direto mas o domínio canônico segue sem estado.
 
 ### P2 — UX / PERFORMANCE / DATA
 7. **Price History sem UI pública** — backend tem 72.413 linhas (`getOfferPriceMetrics`, `updateOfferPrice`), nenhum gráfico/histórico em `/product/[slug]`.
 8. **Ecossistema vazio em produção** (favorites 0, profiles 0, buyer_events 0, merchants 0, reviews 0) — nenhuma feature de conta/comprador ativa; Favoritos são localStorage sem sincronização; IA rule-based sem loop de aprendizado real.
 9. **Câmeras ao Vivo sem fonte legal** (PR-003) — `LiveCameras.tsx` é placeholder honesto; precisa de análise de fonte oficial/CORS/direitos antes de integrar.
+10. **Overflow horizontal ~81px em 768px** (footer/decorativo, pré-existente) — confundência de `document.documentElement.scrollWidth > innerWidth` em 768px vem de colunas do Footer + div decorativa off-canvas (`absolute -right-20`); NÃO é causado por StoreLogo/StoreCard/CTA (validado). Correção seria redesign de Footer (scope creep) — mantido P2 (Sprint Autonomy+Store, 2026-08-27). **Geodata lat/lng 0/7** — ver item 5.
 
 ### P3 — TECH_DEBT / SEO
-10. **`LiveCameras` lê placeholder "Em breve"** — sem feed real (design correto, dado pendente).
-11. **Tokens de design duplicados** — `@theme` OKLCH (autoridade) + `styles/*.ts` + `constants/colors.ts` (consolidar, `HOME_2_0_FOUNDATION.md §3`).
-12. **`constants/navigation.ts` código morto** (3 rotas inexistentes) e `SearchResults.tsx:106` link `/categories/{slug}` → 404 (corrigir para `/categorias`).
-13. **Warning de lint** — `scripts/comparison-forensics-audit.ts:19` `MergeCandidateStatus` não usado.
+11. **`LiveCameras` lê placeholder "Em breve"** — sem feed real (design correto, dado pendente).
+12. **Tokens de design duplicados** — `@theme` OKLCH (autoridade) + `styles/*.ts` + `constants/colors.ts` (consolidar, `HOME_2_0_FOUNDATION.md §3`).
+13. **`constants/navigation.ts` código morto** (3 rotas inexistentes) e `SearchResults.tsx:106` link `/categories/{slug}` → 404 (corrigir para `/categorias`).
+14. **Warning de lint** — `scripts/comparison-forensics-audit.ts:19` `MergeCandidateStatus` não usado.
 
 
 ## PROGRAM Z — RC-3 — Infrastructure Decoupling (2026-07-06) — pendência de configuração manual

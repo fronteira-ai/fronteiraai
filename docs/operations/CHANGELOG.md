@@ -2,6 +2,18 @@
 
 Reconstruído a partir do histórico real de commits (`git log`) e do estado atual do código. Formato: data, commit, o que mudou de fato (verificado no diff/estado resultante, não só na mensagem).
 
+## 2026-08-27 — SPRINT "AUTONOMY UPGRADE V1 + STORE EXPERIENCE" (Parte A + PR-004/PR-005)
+
+**Parte A — Agent Autonomy**: formalizada a `AUTONOMOUS EXECUTION POLICY` (GREEN/YELLOW/RED) como regra canônica em `docs/engineering/ENGINEERING_CONSTITUTION.md` (`AGENT_AUTONOMY_MATRIX`) e referenciada em `AGENTS.md` (commit `3636ba9`). Não ressuscita o PEF arquivado; `reasonix.toml`/`.claude` continuam as allowlists GREEN precisas (sem `bash:*`, sem destrutivos — RED gates preservados). `GREEN_AUTONOMY=PASS`, `RED_GATES_PRESERVED=PASS`, `OWNER_INTERRUPTION_TARGET=0`.
+
+**Parte B — Store Experience**:
+- **PR-004 (logomarcas oficiais)**: `utils/maps.ts` não é logo; logos via `components/store/StoreLogo.tsx` (logo oficial + fallback monograma, nunca imagem quebrada). `StoreCard` mostra logo oficial + CTA; `StoreCarousel` ("Lojas em Destaque") mostra logo (fallback initials). Seed `scripts/store-logos-seed.ts` (dry-run/--execute, production-gated) populou `stores.logo_url` de **4/7** lojas (mega-eletronicos, shopping-china, roma-shopping, atacado-connect) com asset do PRÓPRIO site oficial. **`STORE_LOGO_COVERAGE = 57%`** (0/7 → 4/7). Validado em produção (4 logos renderizando, 0 quebrados).
+- **PR-005 (Google Maps)**: `utils/maps.ts` — origem canônica **Ponte Internacional da Amizade** centralizada + `buildGoogleMapsDirectionsUrl()` (destino por prioridade lat/lng → endereço → nome+cidade; nunca inventa coordenadas) + `canBuildRoute()`. CTA **"Como chegar"** (`StoreDirectionsButton`) em `StoreCard`, oferta de produto (`ProductOffers`) e página de loja (`/lojas/[slug]`). Validado em produção: origem=Ponte, destino=loja para **6+ rotas reais**. **Geodata**: lat/lng segue **0/7** — endereços vagos ("Centro") não são geocodificados (não inventar); Maps usa nome+cidade como destino resolvível.
+- Tests: 10 novos (`utils/__tests__/maps.test.ts`) → **1036/1036**.
+- Quality gates: lint 0, tsc 0, 1036/1036 testes, build PASS. Deploy Production **Ready** (`56e3f1b`).
+
+**P2 (não tratado nesta Sprint)**: overflow horizontal ~81px em 768px permanece (footer/decorativo pré-existente; correção seria redesign de footer — fora de escopo). Ver `docs/engineering/TECH_DEBT.md`.
+
 ## 2026-08-26 — PRODUCT REBASELINE, SPRINT "Search Ordering + Out-of-Stock + SEO Recovery" (PR-001/PR-002)
 
 Fecha a correção de produto priorizada no Rebaseline V2. Comportamento-alvo: produtos DISPONÍVEIS sempre antes de ESGOTADOS; dentro de cada grupo, preço crescente (`price ASC`), preço null por último; ordenação GLOBAL (SQL/RPC), não sort de subconjunto no browser; SEO de produção destravado (sem fallback localhost).

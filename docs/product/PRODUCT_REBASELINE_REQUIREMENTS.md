@@ -6,6 +6,8 @@
 
 > **Atualização 2026-08-26 (Sprint "Search Ordering + Out-of-Stock + SEO Recovery")**: PR-001 e PR-002 **implementados e aplicados em produção** (ordenação global via RPC; RPCs aplicadas/validadas no self-hosted; `NEXT_PUBLIC_SITE_URL` em Vercel Production; merge para `main` publicado em `7eba0e1`). **Validação pós-deploy ainda pendente** (confirmar o deploy Vercel e o comportamento da busca/robots no host público). Ver `docs/operations/CHANGELOG.md` (2026-08-26) e `docs/operations/PROJECT_STATUS.md`.
 
+> **Atualização 2026-08-27 (Sprint "Autonomy Upgrade V1 + Store Experience")**: **PR-004 = VALIDATED_IN_PRODUCTION = YES** (4/7 lojas com logomarca oficial publicada e renderizando na Home e páginas de loja; `STORE_LOGO_COVERAGE = 57%`). **PR-005 = VALIDATED_IN_PRODUCTION = YES** (CTA "Como chegar" com origem = Ponte da Amizade e destino = loja, validado em 6+ rotas reais de produção). Autonomia (Parte A) formalizada em `ENGINEERING_CONSTITUTION`/`AGENTS.md`. Geodata lat/lng permanece **0/7** (endereços vagos não geocodificados — não inventar coordenadas); PR-005 usa nome+cidade como destino Maps resolvível. Deploy Production `56e3f1b` Ready. Ver `docs/operations/CHANGELOG.md` (2026-08-27).
+
 > Registro formal dos novos requisitos de produto PR-001 a PR-006 introduzidos no
 > **Product Rebaseline V2**. Este documento é a âncora normativa de cada requisito:
 > escopo, regra de negócio, estado atual auditado e sequência de Sprint sugerida.
