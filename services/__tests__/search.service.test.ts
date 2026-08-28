@@ -230,4 +230,27 @@ describe("searchEverything — ordenação global por disponibilidade + preço (
 
     expect(result.products.map((p) => p.id)).toEqual(["av100"]);
   });
+
+  // GOLDEN QUERY SUITE (Search Recall V1): o serviço deve encaminhar o termo
+  // (inclusive variante continuada) à RPC search_products_global, que é quem
+  // aplica o recall (match com e sem espaços). Regressão: uma variante como
+  // "iphone17pro" não pode ser quebrada/reescrita pelo serviço.
+  it("repassa termos continuados (ex: iphone17pro) à RPC sem quebrar recall", async () => {
+    const rows = [buildProduct("iphone17pro", [{ price_usd: 1200, in_stock: true }])];
+    const ranked = [{ product_id: "iphone17pro", has_stock: true, total_count: 1 }];
+    arrangeRpcPath(rows, ranked);
+    await searchEverything("iphone17pro");
+    expect(mockRpc).toHaveBeenCalledWith(
+      "search_products_global",
+      expect.objectContaining({ p_term: "iphone17pro", p_limit: 8 })
+    );
+  });
+
+  it("repassa termo com espaços e maiúsculas à RPC (IPC: IPHONE 17 PRO)", async () => {
+    const rows = [buildProduct("p1", [{ price_usd: 1200, in_stock: true }])];
+    arrangeRpcPath(rows, [{ product_id: "p1", has_stock: true, total_count: 1 }]);
+    await searchEverything("  IPHONE 17 PRO  ");
+    // trim preservado; escapeLikePattern não altera letras/espaços
+    expect(mockRpc).toHaveBeenCalledWith("search_products_global", expect.objectContaining({ p_term: "IPHONE 17 PRO" }));
+  });
 });

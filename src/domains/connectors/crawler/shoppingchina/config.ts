@@ -21,6 +21,14 @@ export const SHOPPING_CHINA_CONFIG = {
   // precedent.
   maxProducts: 22_000,
 
+  // Continuous Price Collection (Sprint Store Expansion + Price Collection,
+  // Sprint corrente): habilita o sweep diário existente
+  // (/api/cron/connectors/sync, vercel.json "0 6 * * *") para esta loja.
+  // SEM isto o scheduler interval-based pulava a loja (sem syncFrequencyHours)
+  // e price_history nunca acumulava série multi-dia. 24h = catálogo completo
+  // diário (mecanismo simples e confiável; Delta Import torna leve).
+  syncFrequencyHours: 24,
+
   // Milliseconds to wait between HTTP requests (be respectful)
   requestDelayMs: 500,
 

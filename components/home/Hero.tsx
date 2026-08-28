@@ -43,7 +43,7 @@ export default async function Hero() {
 
           <Reveal direction="up" delay={180}>
             <p className="mt-6 max-w-md text-[15px] leading-relaxed text-slate-400">
-              Preços reais, lojas verificadas e histórico — antes de atravessar a ponte.
+              Preços reais, lojas verificadas e inteligência para comprar melhor.
             </p>
           </Reveal>
         </div>

@@ -24,6 +24,8 @@ export const ROMA_SHOPPING_CONFIG = {
 
   // No declared Crawl-delay in robots.txt — self-imposed courtesy delay,
   // same reasoning as Shopping China/Mega Eletrônicos.
+  // Continuous Price Collection (cron diário): habilita sweep diário.
+  syncFrequencyHours: 24,
   requestDelayMs: 500,
   timeoutMs: 15_000,
 } as const;

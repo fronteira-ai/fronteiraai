@@ -33,6 +33,9 @@ export const MOBILE_ZONE_CONFIG = {
   // a one-time coverage catch-up, not a standing operational cadence change.
   maxProducts: 8000,
 
+  // Continuous Price Collection (cron diário): habilita sweep diário.
+  syncFrequencyHours: 24,
+
   // Page size for the /products?offset=&limit= endpoint.
   pageSize: 100,
 

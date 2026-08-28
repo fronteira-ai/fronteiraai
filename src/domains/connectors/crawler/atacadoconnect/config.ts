@@ -22,6 +22,9 @@ export const ATACADO_CONNECT_CONFIG = {
   // any already-fetched work.
   maxProducts: 20_000,
 
+  // Continuous Price Collection (cron diário): habilita sweep diário.
+  syncFrequencyHours: 24,
+
   requestDelayMs: 500,
   timeoutMs: 15_000,
 } as const;

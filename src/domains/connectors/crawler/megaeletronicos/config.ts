@@ -22,6 +22,10 @@ export const MEGA_ELETRONICOS_CONFIG = {
   // one-time coverage catch-up, not a standing operational cadence change.
   maxProducts: 6000,
 
+  // Continuous Price Collection (cron diário 0 6 * * *): habilita o sweep
+  // diário desta loja → price_history acumula série multi-dia.
+  syncFrequencyHours: 24,
+
   requestDelayMs: 500,
   timeoutMs: 15_000,
 } as const;

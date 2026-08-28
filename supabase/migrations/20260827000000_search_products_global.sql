@@ -67,7 +67,14 @@ AS $$
   WITH matches AS (
     SELECT p.id
     FROM products p
-    WHERE p_term IS NULL OR p.name ILIKE '%' || p_term || '%'
+    WHERE p_term IS NULL OR
+      -- Recall sistêmico (Sprint Store Expansion + Search Recall): além do
+      -- match com espaços, aceita variantes continuadas ("iphone17pro" casa
+      -- com "iPhone 17 Pro") colapsando espaços dos DOIS lados. Corrige a
+      -- causa raiz de recall (não um workaround p/ "iPhone 17 Pro"):
+      -- aplica-se a qualquer query/termo.
+      p.name ILIKE '%' || p_term || '%'
+      OR replace(lower(p.name), ' ', '') ILIKE '%' || replace(lower(p_term), ' ', '') || '%'
   ),
   agg AS (
     SELECT
