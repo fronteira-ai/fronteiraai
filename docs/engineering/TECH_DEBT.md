@@ -18,10 +18,10 @@ Itens identificados por leitura completa do código. Nenhum é bloqueante hoje (
 6. **`canonical_products` tabela vazia (0 linhas)** enquanto 61% das `offers` têm `canonical_product_id` preenchido — snap mismatch; Compare opera via oferece-direto mas o domínio canônico segue sem estado.
 
 ### P2 — UX / PERFORMANCE / DATA
-7. **Price History sem UI pública** — backend tem 72.413 linhas (`getOfferPriceMetrics`, `updateOfferPrice`), nenhum gráfico/histórico em `/product/[slug]`.
+7. **Price Intelligence UI entregue, mas dados históricos LOW (qualidade)** — model/UI implementados (`PriceIntelligenceCard`, `utils/priceIntelligence.ts`), porém `price_history` tem **72.413 linhas com cobertura ~1,9%** (991 produtos) e **séries dominadas por snapshots de mesmo dia** (985/991 ofertas com registro em 1 dia; ~0 com trend multi-dia real). Por isso a maioria das páginas de produto mostra o estado honesto "histórico insuficiente". A UI passa a exibir gráfico/trend quando dados multi-dia reais acumularem (via sync dos conectores). Melhorar a coleta (cadência diária de `price_history`) é o caminho para destravar a inteligência em escala.
 8. **Ecossistema vazio em produção** (favorites 0, profiles 0, buyer_events 0, merchants 0, reviews 0) — nenhuma feature de conta/comprador ativa; Favoritos são localStorage sem sincronização; IA rule-based sem loop de aprendizado real.
 9. **Câmeras ao Vivo sem fonte legal** (PR-003) — `LiveCameras.tsx` é placeholder honesto; precisa de análise de fonte oficial/CORS/direitos antes de integrar.
-10. **Overflow horizontal ~81px em 768px** (footer/decorativo, pré-existente) — confundência de `document.documentElement.scrollWidth > innerWidth` em 768px vem de colunas do Footer + div decorativa off-canvas (`absolute -right-20`); NÃO é causado por StoreLogo/StoreCard/CTA (validado). Correção seria redesign de Footer (scope creep) — mantido P2 (Sprint Autonomy+Store, 2026-08-27). **Geodata lat/lng 0/7** — ver item 5.
+10. **Overflow horizontal ~81px em 768px** (footer/decorativo, pré-existente) — `document.documentElement.scrollWidth > innerWidth` em 768px vem de colunas do Footer + div decorativa off-canvas (`absolute -right-20`); NÃO é causado por StoreLogo/StoreCard/CTA/PriceIntelligence (validado). Correção seria redesign de Footer (scope creep) — mantido P2 (Sprint Store Data, 2026-08-27). **Geodata lat/lng 0/7** — ver item 5.
 
 ### P3 — TECH_DEBT / SEO
 11. **`LiveCameras` lê placeholder "Em breve"** — sem feed real (design correto, dado pendente).

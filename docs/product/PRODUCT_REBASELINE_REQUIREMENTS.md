@@ -8,6 +8,8 @@
 
 > **Atualização 2026-08-27 (Sprint "Autonomy Upgrade V1 + Store Experience")**: **PR-004 = VALIDATED_IN_PRODUCTION = YES** (4/7 lojas com logomarca oficial publicada e renderizando na Home e páginas de loja; `STORE_LOGO_COVERAGE = 57%`). **PR-005 = VALIDATED_IN_PRODUCTION = YES** (CTA "Como chegar" com origem = Ponte da Amizade e destino = loja, validado em 6+ rotas reais de produção). Autonomia (Parte A) formalizada em `ENGINEERING_CONSTITUTION`/`AGENTS.md`. Geodata lat/lng permanece **0/7** (endereços vagos não geocodificados — não inventar coordenadas); PR-005 usa nome+cidade como destino Maps resolvível. Deploy Production `56e3f1b` Ready. Ver `docs/operations/CHANGELOG.md` (2026-08-27).
 
+> **Atualização 2026-08-27 (Sprint "Store Data Completion + Price Intelligence UI")**: implementada a camada de **Price Intelligence UI** (modelo determinístico/testável + seção na página de produto + estado honesto quando dados insuficientes). **PRICE_HISTORY_DATA_QUALITY = LOW** (72.413 linhas, mas cobertura ~1,9% — 991 produtos — e séries dominadas por snapshots de mesmo dia); por isso a UI mostra "histórico insuficiente" na maioria, ativando o gráfico/trend quando dados multi-dia reais existirem. Store geodata permanece **0/7** (dependência de dados, não fabricado). Deploy Production `0a592df` Ready. Ver `docs/operations/CHANGELOG.md` (2026-08-27).
+
 > Registro formal dos novos requisitos de produto PR-001 a PR-006 introduzidos no
 > **Product Rebaseline V2**. Este documento é a âncora normativa de cada requisito:
 > escopo, regra de negócio, estado atual auditado e sequência de Sprint sugerida.

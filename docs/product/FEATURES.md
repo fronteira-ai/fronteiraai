@@ -17,6 +17,8 @@ Inventário de funcionalidades por estado real. Atualizado em 2026-08-26 (Produc
 
 **Entregues (Sprint Autonomy+Store, 2026-08-27)**: **PR-004** — logomarcas oficiais (4/7 lojas, `STORE_LOGO_COVERAGE=57%`) com fallback monograma; **PR-005** — Google Maps Directions (origem Ponte da Amizade → loja) via `utils/maps.ts` + CTA "Como chegar" em StoreCard/oferta/loja, validado em produção.
 
+**Entregues (Sprint Store Data + Price Intelligence, 2026-08-27)**: **Price Intelligence UI** — modelo determinístico/explicável (`utils/priceIntelligence.ts`), seção na página de produto (`PriceIntelligenceCard`, `/product/[slug]`), estado honesto quando dados insuficientes; Market Pulse/Economia do Dia já reais (sem mocks). `PRICE_HISTORY_DATA_QUALITY = LOW` (cobertura 1,9%), por isso a maioria mostra "histórico insuficiente".
+
 **Backlog / gate de produto (não implementado)**: Câmeras ao vivo (PR-003, `LiveCameras` placeholder "Em breve"), IA real com LLM (nenhum provedor integrado), Price History UI, Reviews públicos, Favoritos/Alertas sincronizados (requer Auth — hoje localStorage). Dependência de dados: geodata lat/lng das lojas (0/7) para destino Maps preciso.
 
 ---

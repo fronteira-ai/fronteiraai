@@ -2,6 +2,21 @@
 
 Reconstruído a partir do histórico real de commits (`git log`) e do estado atual do código. Formato: data, commit, o que mudou de fato (verificado no diff/estado resultante, não só na mensagem).
 
+## 2026-08-27 — SPRINT "STORE DATA COMPLETION + PRICE INTELLIGENCE UI" (Parte A + Parte B)
+
+**Parte A — Store Data Completion**: auditoria das 7 lojas (logo/address/lat-lng). **Não fabrica dados**: endereços das lojas são vagos ("Centro") e coordenadas não são verificáveis de fonte oficial sem geocoding ambíguo → `STORE_GEODATA_COVERAGE` permanece **0/7** (documentado como dependência de dados, `ACCURACY > COVERAGE`); `STORE_LOGO_COVERAGE` **57%** (4/7; cellshop/nissei/mobile-zone sem logo oficial verificável — proveniência não comprova). Maps Phase 2 mantém origem **Ponte da Amizade** e prioriza lat/lng → endereço → nome+cidade (`buildGoogleMapsDirectionsUrl` já canônico). Nenhuma migration (schema já tem fields).
+
+**Parte B — Price Intelligence UI**: modelo determinístico e explicável.
+- `utils/priceIntelligence.ts`: `computePriceIntelligence` (atual/min/max/mediana/Δ7d/Δ30d/tendência/posição) + classificação `best/good/normal/high` com mensagem explicável; resistente a outliers (mediana); `MIN_OBSERVATIONS=3` + span ≥3d; abaixo → `insufficient` (estado honesto, nunca inventa histórico). Sem LLM/promessa financeira.
+- `services/price-intelligence.service.ts`: leitura server-side bounded (max 3000 linhas), join `offers.product_id`, downsampling p/ gráfico.
+- `components/product/PriceIntelligenceCard.tsx`: seção na página de produto (produto→ofertas→inteligência→histórico), gráfico SVG leve (sem chart lib), Mobile-first, **estado honesto** quando insuficiente. Integrado em `app/product/[slug]/page.tsx`.
+- 15 testes (`utils/__tests__/priceIntelligence.test.ts`) → **1051/1051** (149 suítes).
+- **Dado real**: `price_history` 72.413 linhas, mas **cobertura = 991 produtos (~1,9%)** e **qualidade LOW** — série dominadas por snapshots do mesmo dia (985/991 ofertas com registro em 1 dia; ~0 com span multi-dia real). Por isso a UI mostra o estado honesto "histórico insuficiente" para a maioria; o gráfico/trend ativam quando dados multi-dia reais acumularem (via sync). **Validad em produção** (iPhone 16 Pro 256GB → "Inteligência de preço" + estado honesto).
+- Market Pulse / Economia do Dia: já leem dados reais (`market_changes` / `OpportunityEngine`) — **sem mocks reintroduzidos**.
+- Quality gates: lint 0, tsc 0, 1051/1051, build PASS. Deploy Production **Ready** (`0a592df`).
+
+**P2 (aberto)**: overflow horizontal ~81px em 768px (footer/decorativo pré-existente) — investigado, SEM correção (seria redesign de footer, scope creep). Ver `docs/engineering/TECH_DEBT.md`.
+
 ## 2026-08-27 — SPRINT "AUTONOMY UPGRADE V1 + STORE EXPERIENCE" (Parte A + PR-004/PR-005)
 
 **Parte A — Agent Autonomy**: formalizada a `AUTONOMOUS EXECUTION POLICY` (GREEN/YELLOW/RED) como regra canônica em `docs/engineering/ENGINEERING_CONSTITUTION.md` (`AGENT_AUTONOMY_MATRIX`) e referenciada em `AGENTS.md` (commit `3636ba9`). Não ressuscita o PEF arquivado; `reasonix.toml`/`.claude` continuam as allowlists GREEN precisas (sem `bash:*`, sem destrutivos — RED gates preservados). `GREEN_AUTONOMY=PASS`, `RED_GATES_PRESERVED=PASS`, `OWNER_INTERRUPTION_TARGET=0`.
