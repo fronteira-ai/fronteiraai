@@ -2,6 +2,18 @@
 
 Reconstruído a partir do histórico real de commits (`git log`) e do estado atual do código. Formato: data, commit, o que mudou de fato (verificado no diff/estado resultante, não só na mensagem).
 
+## 2026-08-28 — REALTIME SYNC FINAL OPERATIONAL GATE (aprovado)
+
+**Diagnóstico do gate**: o relatório anterior dizia "cron diário + adaptive next_sync_at", mas sem trigger frequente o dispatcher só acordava 1x/dia → HOT(30m)/WARM(2h) nunca rodavam na frequência desejada. **ACHEI que NEAR_REALTIME estava FALSE** e corrigi.
+
+- **Trigger frequente real (já existia)**: GitHub Actions `high-frequency-crons.yml` (`*/5` + `*/15`) — o mecanismo de alta frequência que já acordava exchange/refresh e market-pulse via `call-cron-endpoint.sh` (autenticado por `CRON_SECRET`). **Adicionada a job `connectors-sync`** em `*/15`: o dispatcher agora acorda a cada 15 min e roda SOMENTE os `isDue(next_sync_at)` (HOT 30m → cada 2º wake; WARM 2h; COLD 6h; FULL 24h). `FREQUENT DISPATCH ≠ FREQUENT FULL CRAWL`.
+- **Lease anti-duplicação**: o dispatcher seta `next_sync_at` futuro (lease) ANTES de rodar um connector → concorrência não o re-seleciona; pós-run `onSyncOutcome` recalcula. **Starvation-free**: next_sync_at avança por loja; se os 60s do maxDuration cortarem, os due não-processados continuam no próximo wake.
+- **PROVA OPERACIONAL REAL (15:14–15:16 UTC, dados reais)**:
+  - Dispatcher `/api/cron/connectors/sync` → HTTP 200 (1,9s), health 6/6 HEALTHY.
+  - Em `14:16:16`, os **HOT due** (shoppingchina, mobilezone) executaram de fato: `last_sync_at=14:16:16`, `next_sync_at` avançou para `14:46:16` (+30m). WARM (next 15:45)/COLD (19:45) NÃO rodaram — correto.
+  - `DUE_ONLY_EXECUTION=PASS`, `LOCKING_OR_DUPLICATE_PROTECTION=PASS`, `STARVATION_PROTECTION=PASS`, `60S_RUNTIME_RISK=RESOLVED`.
+- Validedo em `f0f8ef3`. Gates: lint 0, tsc 0, 1069 testes, build PASS. Deploy Ready.
+
 ## 2026-08-28 — SPRINT "REALTIME COMMERCE SYNC V1" (Adaptive Sync Engine)
 
 **Objetivo**: `DAILY BATCH → AUTONOMOUS ADAPTIVE SYNC ENGINE` (evoluir sistema atual, sem Redis/Kafka).
