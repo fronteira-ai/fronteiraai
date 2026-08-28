@@ -2,6 +2,20 @@
 
 Reconstruído a partir do histórico real de commits (`git log`) e do estado atual do código. Formato: data, commit, o que mudou de fato (verificado no diff/estado resultante, não só na mensagem).
 
+## 2026-08-28 — SPRINT "CATALOG CONVERGENCE + PRODUCT IDENTITY V1"
+
+**Raiz de IDENTIDADE do produto (Part A, commit `f3f0a55`)**:
+- **Root cause (sistêmico, todas as lojas)**: `SupabaseCatalogRepository.upsertOffer` (linha) gravava `available: input.inStock` — quando o estoque é falso, **arquivava** (`available=false`) a oferta, que o `getOffersByProduct` (`available=true`) excluía de `/product/[slug]`. Violava `DOMAIN_MODEL.md`/ADR-008 ("esgotada = `in_stock=false` + `available=true`, visível 'Sem estoque', histórico intacto"). Corrigido para `available: true` sempre; `in_stock` reflete estoque. +2 testes de regressão.
+- **Reconcile não destrutivo**: backfill das 7 ofertas New Zone `available=false → true` (preserva `in_stock=false` e `price_history`). **SSR corrigido**: 12/12 produtos New Zone já visíveis; validado ao vivo (`/product/apple-cel-iphone-17-...-blue` 200, mostra New Zone + 1.006,50 + "Sem estoque" + "Atualizado").
+- **Variantes permanecem distintas**: iphone-17 black≠blue, S26 sky-blue≠white são variantes (cores) legítimas — NÃO false-merge (Pro≠ProMax, 256≠512).
+
+**Catalog Convergence / Continuation (Part B, mesmo commit)**:
+- `ConnectorSyncState.sweep` (SweepState) — checkpoint persistente de FULL SWEEP no JSONB `connectors.sync_state` (sem tabela nova): `category_offset`, `processed_categories`, `discovered/valid/invalid/errors`, `started_at/completed_at`.
+- Helpers puros `startSweep`/`advanceSweep`/`sweepProgressPercent`/`isSweepComplete` (+4 testes).
+- Connector New Zone retoma de `checkpoint.categoriesDone`; progresso reportado via `reportProgress`; cron route persiste o cursor avançado após cada wake — um sweep grande completa em batches bounded ao longo dos wakes adaptativos (não em request único de 60s).
+- Qualidade: lint 0, tsc 0, **1085 testes** (155 suítes), build PASS. Deploy `f3f0a55` Ready (`czw9l2rm3`).
+- **Nota honesta**: full *numeric* ingest continua limitado por throttle do enrich (`product_get_one` por família); a demo single-run excede o runtime — por isso a continuation via checkpoint é o caminho operacional correto (não monolítico).
+
 ## 2026-08-28 — SPRINT "NEW ZONE FULL CATALOG + CONNECTOR SCALE V1"
 
 **Objetivo**: transformar o PoC New Zone em conector de catálogo completo (produção). *Operação contínua, não prova.*
