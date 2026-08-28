@@ -20,7 +20,11 @@ export class ManualSyncTrigger {
     const dryRun = options.dryRun ?? false;
 
     if (connector.fetchStream) {
-      return this.syncOrchestrator.runStream(connector.metadata, connector.fetchStream({ dryRun }), options);
+      return this.syncOrchestrator.runStream(
+        connector.metadata,
+        connector.fetchStream({ dryRun, checkpoint: options.checkpoint, reportProgress: options.onSweepProgress }),
+        options,
+      );
     }
 
     const batch = await connector.fetch({ dryRun });

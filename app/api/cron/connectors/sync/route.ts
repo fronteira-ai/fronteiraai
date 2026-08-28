@@ -9,8 +9,9 @@ import {
   onSyncOutcome,
   classifyHealth,
   type SyncOutcome,
+  type SweepState,
 } from "@/src/domains/connectors/scheduler/AdaptiveSyncEngine";
-
+import type { ConnectorProgress } from "@/src/domains/connectors/types/connector.types";
 // Realtime Commerce Sync V1 — a rota continua sendo o cron diário disparado
 // por vercel.json ("0 6 * * *"), mas agora EVOLUI para o Adaptive Sync Engine:
 //   - SELECT due: connectors cujo sync_state.next_sync_at <= now (ou, sem
@@ -90,9 +91,19 @@ export async function GET(request: NextRequest) {
         });
         await connectorRepo.updateSyncState(persisted.id, leaseState);
 
-        const outcome = await manualSyncTrigger.trigger(connector, { dryRun: false, verbose: false });
+        // ── Catalog Convergence (Part B): retoma o FULL SWEEP do checkpoint
+        // persistido em sync_state.sweep; reportProgress acumula progresso
+        // deste wake p/ persistir o novo cursor no próximo estado.
+        const sweepCheckpoint = ((persisted.syncState?.sweep ?? {}) ?? {}) as SweepState;
+        const progressHolder: { value: ConnectorProgress | null } = { value: null };
+        const outcome = await manualSyncTrigger.trigger(connector, {
+          dryRun: false,
+          verbose: false,
+          checkpoint: { categoriesDone: typeof sweepCheckpoint.category_offset === "number" ? sweepCheckpoint.category_offset : 0 },
+          onSweepProgress: (p) => { progressHolder.value = p; },
+        });
 
-        // Estado final: reflete o resultado real da execução.
+        // estado final: reflete o resultado real da execução + progresso do sweep.
         const syncOutcome: SyncOutcome = outcome.success ? "success" : (outcome.errors?.length ?? 0) > 0 ? "partial" : "failed";
         const nextState = onSyncOutcome({
           state: leaseState,
@@ -100,6 +111,21 @@ export async function GET(request: NextRequest) {
           now: new Date(),
           configSyncFrequencyHours: effectiveFreqHours(cfg),
         });
+        // Persiste o cursor avançado (continuation): categoria_offset avança.
+        const latestProgress = progressHolder.value;
+        if (latestProgress) {
+          nextState.sweep = {
+            ...sweepCheckpoint,
+            category_offset: (sweepCheckpoint.category_offset ?? 0) + latestProgress.unitsCompleted,
+            processed_categories: (sweepCheckpoint.processed_categories ?? 0) + latestProgress.unitsCompleted,
+            discovered: (sweepCheckpoint.discovered ?? 0) + (latestProgress.discovered ?? 0),
+            processed: (sweepCheckpoint.processed ?? 0) + (latestProgress.processed ?? 0),
+            valid: (sweepCheckpoint.valid ?? 0) + (latestProgress.valid ?? 0),
+            invalid: (sweepCheckpoint.invalid ?? 0) + (latestProgress.invalid ?? 0),
+            errors: (sweepCheckpoint.errors ?? 0) + (latestProgress.errors ?? 0),
+            updated_at: new Date().toISOString(),
+          };
+        }
         await connectorRepo.updateSyncState(persisted.id, nextState);
         results.push({
           connectorKey: persisted.connectorKey,

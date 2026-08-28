@@ -4,7 +4,7 @@ import type { PipelineContext, PipelineError, PipelineResult } from "../types/pi
 import type { ICatalogRepository } from "../repositories/ICatalogRepository";
 import type { IConnectorRepository } from "../repositories/IConnectorRepository";
 import type { ISyncRunRepository } from "../repositories/ISyncRunRepository";
-import type { ConnectorMetadata } from "../types/connector.types";
+import type { ConnectorMetadata, ConnectorCheckpoint, ConnectorProgress } from "../types/connector.types";
 import { SyncRunStatus } from "../types/enums";
 import { initMetrics, printReport } from "./metrics";
 import { ValidationStage } from "./stages/ValidationStage";
@@ -62,6 +62,13 @@ export interface SyncRunOptions {
    * Only meaningful for runStream(); run() derives its own value (the whole
    * input array as a single batch) so its behavior stays unchanged. */
   batchSize?: number;
+  /** Catalog Convergence (Part B): cursor persistido do sweep anterior para
+   * o conector retomar do ponto exato (não reiniciar do zero). Threaded para
+   * `fetchStream`; conectores que não o implementam ignoram. */
+  checkpoint?: ConnectorCheckpoint;
+  /** Chamado pelo conector ao concluir cada batch/categoria para persistir o
+   * progresso do sweep (opcional; conectores existentes não chamam). */
+  onSweepProgress?: (progress: ConnectorProgress) => void;
 }
 
 export interface SyncRunOutcome extends PipelineResult {

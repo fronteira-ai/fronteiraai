@@ -50,13 +50,22 @@ export class NewZoneConnector implements IConnector {
       console.warn(`[NewZone] category auto-discovery failed (fallback): ${(e as Error).message.slice(0, 60)}`);
     }
 
+    // ── Catalog Convergence (Part B): retoma do ponto exato do sweep anterior.
+    const resumeFrom = Math.max(0, options.checkpoint?.categoriesDone ?? 0);
+    const total = categoryIds.length;
+    let produced = 0;
+    let discovered = 0;
+    let unitsCompleted = 0;
+
     let first = true;
-    for (const catId of categoryIds) {
+    for (let ci = resumeFrom; ci < total; ci++) {
+      const catId = categoryIds[ci];
       if (!first) await delay(CFG.requestDelayMs); // politeness entre categorias
       first = false;
       const families = await fetchFamiliesByCategory(catId);
+      discovered += families.length;
       if (options.dryRun) {
-        console.log(`[NewZone] category ${catId}: ${families.length} families`);
+        console.log(`[NewZone] category ${catId}: ${families.length} families (cat ${ci + 1}/${total})`);
       }
       for (const fam of families) {
         const offer = familyToOffer(fam);
@@ -65,7 +74,18 @@ export class NewZoneConnector implements IConnector {
           await delay(CFG.requestDelayMs);
         }
         yield offer;
+        produced++;
       }
+      unitsCompleted++;
+      // Progresso por categoria — o orquestrador persiste o cursor por wake.
+      options.reportProgress?.({
+        unitsCompleted,
+        discovered,
+        processed: produced,
+        valid: produced,
+        invalid: 0,
+        errors: 0,
+      });
     }
   }
 

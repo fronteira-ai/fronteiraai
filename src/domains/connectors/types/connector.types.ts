@@ -14,6 +14,15 @@ export interface ConnectorMetadata {
   capabilities: ConnectorCapabilities;
 }
 
+export interface ConnectorCheckpoint {
+  /** 0-based cursor do próximo item/batch a processar (resume). */
+  offset?: number;
+  /** Cursor específico do conector (ex.: índice de categoria). */
+  categoriesDone?: number;
+  /** Cursor de paginação/fase, opcional por conector. */
+  phase?: string;
+}
+
 export interface ConnectorFetchOptions {
   /** Wave 6 (Program B — Wave 2) — threaded from `SyncRunOptions.dryRun` so a
    * connector with its own side effects (e.g. the Delta Import Engine's
@@ -21,6 +30,25 @@ export interface ConnectorFetchOptions {
    * without needing dryRun-awareness baked into every implementation —
    * optional and ignorable, existing connectors need no change. */
   dryRun?: boolean;
+  /** Catálogo Convergence (Part B): cursor persistido do sweep anterior. O
+   * conector retoma do ponto exato em vez de reiniciar do zero. Opcional;
+   * conectores existentes ignoram. */
+  checkpoint?: ConnectorCheckpoint;
+  /** Chamado pelo conector ao concluir cada batch/categoria, p/ o orquestrador
+   * (cron route) persistir o progresso do sweep após o wake. Seguro chamar a
+   * qualquer momento; opcional. */
+  reportProgress?: (progress: ConnectorProgress) => void;
+}
+
+export interface ConnectorProgress {
+  /** Quantas categorias/batches concluídos neste wake. */
+  unitsCompleted: number;
+  /** Metadados acumulados observados nesse wake (opcional). */
+  discovered?: number;
+  processed?: number;
+  valid?: number;
+  invalid?: number;
+  errors?: number;
 }
 
 export interface IConnector {

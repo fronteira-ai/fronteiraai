@@ -368,7 +368,12 @@ export class SupabaseCatalogRepository implements ICatalogRepository {
           price_brl: input.priceBRL,
           old_price: input.oldPriceUSD,
           in_stock: input.inStock,
-          available: input.inStock,
+          // available é SEMÂNTICA de arquivo (ADR-008): o pipeline do conector
+          // NÃO emite sinal de "arquivada". `available` NÃO deve derivar de
+          // in_stock — out-of-stock é `in_stock=false` com `available=true`
+          // (esgotada, visível "Sem estoque", histórico intacto). Derivar
+          // available de inStock escondia ofertas válidas do /product/[slug].
+          available: true,
           stock_quantity: input.stockQuantity,
           condition: input.condition,
           warranty: input.warranty,

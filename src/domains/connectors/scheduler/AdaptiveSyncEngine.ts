@@ -29,6 +29,30 @@ export interface ConnectorSyncState {
   health_status?: HealthStatus | null;
   /** base de backoff em minutos (dobra a cada falha até o teto). */
   backoff_minute?: number;
+  /** Checkpoint persistente de FULL SWEEP (Part B — Catalog Convergence). Um
+   * sweep grande não cabe num único request de 60s; cada wake executa um
+   * batch bounded e grava aqui o cursor p/ o próximo wake retomar do ponto
+   * exato. Armazenado no mesmo JSONB connectors.sync_state (sem nova tabela). */
+  sweep?: SweepState;
+}
+
+/** Estado persistente de um full sweep em andamento (continuation). */
+export interface SweepState {
+  sweep_id?: string;
+  /** Índice (0-based) da próxima categoria a processar (resume). */
+  category_offset?: number;
+  /** Total de categorias do sweep (para calcular PROGRESS). */
+  total_categories?: number;
+  /** Quantas categorias já foram varridas até agora (para PROGRESS). */
+  processed_categories?: number;
+  started_at?: string;
+  updated_at?: string;
+  completed_at?: string | null;
+  discovered?: number;
+  processed?: number;
+  valid?: number;
+  invalid?: number;
+  errors?: number;
 }
 
 /** Tier defaults (custos realistas; NÃO copiado cegamente — ajustável). */
@@ -167,4 +191,71 @@ export function onSyncOutcome(input: OnSyncOutcomeInput): ConnectorSyncState {
   if (input.outcome === "failed") next.backoff_minute = backoffMinute(consecutiveFailures);
   else next.backoff_minute = 0;
   return next;
+}
+
+/* ────────────────────────────────────────────────────────────────────────
+ * Full Sweep continuation helpers (Part B — Catalog Convergence).
+ * Puros e determinísticos (sem I/O), depois da persistência no cron route.
+ * ──────────────────────────────────────────────────────────────────────── */
+
+/** Inicia um sweep do zero produzindo o estado-cursor inicial. */
+export function startSweep(opts: {
+  sweepId: string;
+  totalCategories: number;
+  now: Date;
+  resumeFrom?: SweepState | null;
+}): SweepState {
+  return {
+    sweep_id: opts.sweepId,
+    category_offset: opts.resumeFrom?.sweep_id === opts.sweepId ? opts.resumeFrom.category_offset ?? 0 : 0,
+    total_categories: Math.max(opts.totalCategories, opts.resumeFrom?.total_categories ?? 0),
+    processed_categories: opts.resumeFrom?.sweep_id === opts.sweepId ? opts.resumeFrom.processed_categories ?? 0 : 0,
+    started_at: opts.resumeFrom?.sweep_id === opts.sweepId && opts.resumeFrom.started_at ? opts.resumeFrom.started_at : opts.now.toISOString(),
+    updated_at: opts.now.toISOString(),
+    discovered: opts.resumeFrom?.sweep_id === opts.sweepId ? opts.resumeFrom.discovered ?? 0 : 0,
+    processed: opts.resumeFrom?.sweep_id === opts.sweepId ? opts.resumeFrom.processed ?? 0 : 0,
+    valid: opts.resumeFrom?.sweep_id === opts.sweepId ? opts.resumeFrom.valid ?? 0 : 0,
+    invalid: opts.resumeFrom?.sweep_id === opts.sweepId ? opts.resumeFrom.invalid ?? 0 : 0,
+    errors: opts.resumeFrom?.sweep_id === opts.sweepId ? opts.resumeFrom.errors ?? 0 : 0,
+  };
+}
+
+/** Marca um batch/categoria como processado e avança o cursor. */
+export function advanceSweep(sweep: SweepState, opts: {
+  categoriesProcessed: number;
+  now: Date;
+  discovered?: number;
+  processed?: number;
+  valid?: number;
+  invalid?: number;
+  errors?: number;
+}): SweepState {
+  const processedCategories = (sweep.processed_categories ?? 0) + opts.categoriesProcessed;
+  const total = sweep.total_categories ?? 0;
+  const completed = processedCategories >= total;
+  return {
+    ...sweep,
+    processed_categories: processedCategories,
+    // cursor avança (número); a completion é sinalizada por completed_at.
+    category_offset: completed ? total : (sweep.category_offset ?? 0) + opts.categoriesProcessed,
+    updated_at: opts.now.toISOString(),
+    completed_at: completed ? opts.now.toISOString() : sweep.completed_at ?? null,
+    discovered: (sweep.discovered ?? 0) + (opts.discovered ?? 0),
+    processed: (sweep.processed ?? 0) + (opts.processed ?? 0),
+    valid: (sweep.valid ?? 0) + (opts.valid ?? 0),
+    invalid: (sweep.invalid ?? 0) + (opts.invalid ?? 0),
+    errors: (sweep.errors ?? 0) + (opts.errors ?? 0),
+  };
+}
+
+/** PROGRESS percentual (0-100), arredondado, ou null se não determinável. */
+export function sweepProgressPercent(sweep: SweepState | null | undefined): number | null {
+  if (!sweep || !sweep.total_categories) return null;
+  return Math.min(100, Math.round(((sweep.processed_categories ?? 0) / sweep.total_categories) * 100));
+}
+
+/** Um sweep está COMPLETO quando todas as categorias foram processadas. */
+export function isSweepComplete(sweep: SweepState | null | undefined): boolean {
+  if (!sweep) return false;
+  return !!sweep.completed_at || (sweep.processed_categories ?? 0) >= (sweep.total_categories ?? 0);
 }
