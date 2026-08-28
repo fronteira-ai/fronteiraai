@@ -8,6 +8,8 @@ import ProductGallery from "@/components/product/ProductGallery";
 import ProductHeader from "@/components/product/ProductHeader";
 import ProductSpecifications from "@/components/product/ProductSpecifications";
 import ProductOffers from "@/components/product/ProductOffers";
+import PriceIntelligenceCard from "@/components/product/PriceIntelligenceCard";
+import { getProductPriceIntelligence } from "@/services/price-intelligence.service";
 import RelatedProducts from "@/components/product/RelatedProducts";
 import FavoriteButton from "@/components/product/FavoriteButton";
 import ShareButton from "@/components/product/ShareButton";
@@ -35,6 +37,8 @@ export default async function ProductPage({ params }: { params: Params }) {
   if (!product) {
     notFound();
   }
+
+  const priceIntelligence = await getProductPriceIntelligence(product.id);
 
   const [offers, relatedProducts, intelligence] = await Promise.all([
     getCachedOffers(product.id),
@@ -104,6 +108,7 @@ export default async function ProductPage({ params }: { params: Params }) {
           <TrustCard trust={trust} />
           <ProductSpecifications entries={specificationEntries} />
           <ProductOffers offers={offers} />
+          <PriceIntelligenceCard data={priceIntelligence} />
           <RelatedProducts products={relatedProducts} />
         </div>
 
