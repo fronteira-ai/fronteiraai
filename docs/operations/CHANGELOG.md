@@ -2,6 +2,21 @@
 
 Reconstruído a partir do histórico real de commits (`git log`) e do estado atual do código. Formato: data, commit, o que mudou de fato (verificado no diff/estado resultante, não só na mensagem).
 
+## 2026-08-27 — SPRINT "STORE EXPANSION + CATALOG COVERAGE + SEARCH RECALL V1 + CONTINUOUS PRICE COLLECTION"
+
+**Search Recall** (causa raiz do incidente "iPhone 17 Pro"):
+- `search_products_global` RPC: recall sistêmico — além do match com espaços, aceita variantes continuadas (`replace(lower(name),' ','') ILIKE term sem espaços`). Corrige `iphone17pro` para TODA query; não é workaround p/ um produto. Aplicada no self-hosted. `GOLDEN_QUERY_PASS_RATE = 100%` (19 golden queries, 0 zero, 0 err).
+- `scripts/golden-search-report.ts` + npm `golden-search:report` + 2 regression tests no search.service.
+
+**Continuous Price Collection** (causa raiz de price_history sem série multi-dia):
+- `syncFrequencyHours: 24` adicionado aos 5 conectores reais (shoppingchina, megaeletronicos, romashopping, atacadoconnect, mobilezone). Isto habilita o sweep diário existente (`/api/cron/connectors/sync`, `vercel.json 0 6 * * *`), que ANTES pulara essas lojas (sem o campo). Agora o catálogo é observado diariamente → price_history acumula série multi-dia real. Sem novo infra (reuso do cron Vercel + interval scheduler). `DAILY_SYNC = ACTIVE`.
+
+**Hero copy (Quick Win)**: "Preços reais, lojas verificadas e **inteligência para comprar melhor**." (canonical em `components/home/Hero.tsx`; sem redesenho).
+
+**Store Expansion**: `docs/marketplace/STORE_DISCOVERY_MATRIX.md` — 13 candidatos auditados (Atacado/Mobile = já existentes, NÃO duplicar; **TopDek P0-feasible** via sitemap público; New Zone/Super Games P1; Madrid Center BLOCKED 403; evidência preservada). Sem conector novo nesta Sprint por disciplina (`QUALITY+RELEVANCE > RAW COUNT` + a missão exige fixtures/tests/respeito à fonte); TopDek fica como P0 do próximo Sprint de conectores.
+
+**Tests**: 1053/1053 (149 suítes, +2). Quality: lint 0, tsc 0, build PASS. **Produção**: deploy `93dee06` Ready; hero copy live; `search?q=iphone 17 pro` = 8 resultados reais; Home hotfix/logos preservados.
+
 ## 2026-08-27 — SPRINT "STORE DATA COMPLETION + PRICE INTELLIGENCE UI" (Parte A + Parte B)
 
 **Parte A — Store Data Completion**: auditoria das 7 lojas (logo/address/lat-lng). **Não fabrica dados**: endereços das lojas são vagos ("Centro") e coordenadas não são verificáveis de fonte oficial sem geocoding ambíguo → `STORE_GEODATA_COVERAGE` permanece **0/7** (documentado como dependência de dados, `ACCURACY > COVERAGE`); `STORE_LOGO_COVERAGE` **57%** (4/7; cellshop/nissei/mobile-zone sem logo oficial verificável — proveniência não comprova). Maps Phase 2 mantém origem **Ponte da Amizade** e prioriza lat/lng → endereço → nome+cidade (`buildGoogleMapsDirectionsUrl` já canônico). Nenhuma migration (schema já tem fields).

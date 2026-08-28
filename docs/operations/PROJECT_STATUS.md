@@ -4,6 +4,17 @@ Auditoria gerada por leitura completa do código-fonte. Substitui o conteúdo an
 
 ## Atualização factual — Product Rebaseline V2 (2026-08-26)
 
+### Sprint "Store Expansion + Search Recall + Continuous Price Collection" (2026-08-27)
+
+> Ver `docs/operations/CHANGELOG.md` (2026-08-27) e `docs/marketplace/STORE_DISCOVERY_MATRIX.md`.
+
+- **Search Recall**: `search_products_global` aceita variantes continuadas (`iphone17pro`) → incidente "iPhone 17 Pro" resolvido sistemicamente. `GOLDEN_QUERY_PASS_RATE = 100%` (19 queries). Produção `search?q=iphone 17 pro` = 8 resultados reais.
+- **Continuous Price Collection**: `syncFrequencyHours:24` nos 5 conectores → sweep diário do cron existente agora cobre as lojas (antes não) → price_history acumula série multi-dia a partir de agora. `DAILY_SYNC = ACTIVE`.
+- **Hero copy**: "…inteligência para comprar melhor." (live).
+- **Store Expansion**: 13 candidatos auditados (TopDek P0-feasible; Atacado/Mobile já existem — não duplicar). Sem conector novo nesta Sprint (disciplina de qualidade/fonte).
+- Deploy Production **Ready** (`93dee06`). Números atuais: products 52.589, offers 52.630, price_history 72.413 (cobertura ~1,9% — agora em crescimento via sync diário).
+
+
 ### Sprint "Autonomy Upgrade V1 + Store Experience" (2026-08-27) — PR-004/PR-005 VALIDATED_IN_PRODUCTION
 
 > Ver `docs/operations/CHANGELOG.md` (2026-08-27) e `docs/product/PRODUCT_REBASELINE_REQUIREMENTS.md`.
