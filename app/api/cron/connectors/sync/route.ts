@@ -76,12 +76,26 @@ export async function GET(request: NextRequest) {
           return;
         }
         const connector = connectorRegistry.get(persisted.connectorKey);
+
+        // ── LEASE (locking/anti-duplicação) ──────────────────────────────
+        // Antes de rodar, seta next_sync_at para futuro (agora + frequência)
+        // como lease: se uma concorrência despertar neste connector durante
+        // a execução, isDue() não o re-seleciona (evita duplicata). Depois
+        // da execução, onSyncOutcome recalcula o próximo agendamento real.
+        const leaseState = onSyncOutcome({
+          state: persisted.syncState ?? {},
+          outcome: "success", // lease conservador: agenda para o futuro
+          now: new Date(),
+          configSyncFrequencyHours: effectiveFreqHours(cfg),
+        });
+        await connectorRepo.updateSyncState(persisted.id, leaseState);
+
         const outcome = await manualSyncTrigger.trigger(connector, { dryRun: false, verbose: false });
 
-        // Adaptive state: classifica resultado e persiste next_sync_at/failures/health.
+        // Estado final: reflete o resultado real da execução.
         const syncOutcome: SyncOutcome = outcome.success ? "success" : (outcome.errors?.length ?? 0) > 0 ? "partial" : "failed";
         const nextState = onSyncOutcome({
-          state: persisted.syncState ?? {},
+          state: leaseState,
           outcome: syncOutcome,
           now: new Date(),
           configSyncFrequencyHours: effectiveFreqHours(cfg),
