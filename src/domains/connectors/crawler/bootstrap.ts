@@ -12,6 +12,7 @@ import "./megaeletronicos/index";
 import "./romashopping/index";
 import "./atacadoconnect/index";
 import "./mobilezone/index";
+import "./topdek/index";
 
 let bootstrapped = false;
 
