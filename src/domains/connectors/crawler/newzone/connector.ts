@@ -3,6 +3,7 @@ import type { ConnectorBatch, RawOffer, RawOfferStream } from "../../types/raw.t
 import { ConnectorType } from "../../types/enums";
 import { fetchFamiliesByCategory, familyToOffer } from "./family-mapper";
 import { enrichOffer } from "./detail-mapper";
+import { fetchAllCategories, isStrategicCategory } from "./category-mapper";
 import { NEW_ZONE_CONFIG as CFG } from "./config";
 
 // New Zone — varejista real de eletrônicos/Apple (Ciudad del Este), catálogo
@@ -37,8 +38,20 @@ export class NewZoneConnector implements IConnector {
   };
 
   async *fetchStream(options: ConnectorFetchOptions = {}): RawOfferStream {
+    // Auto-descoberta de categorias estratégicas (estrutura real da API),
+    // com fallback ao seed mínimo se a query de categorias falhar.
+    let categoryIds: number[] = [...CFG.STRATEGIC_CATEGORY_IDS];
+    try {
+      const cats = await fetchAllCategories();
+      const strategic = cats.filter((c) => isStrategicCategory(c.name)).map((c) => c.id_category);
+      if (strategic.length > 0) categoryIds = [...strategic];
+      if (options.dryRun) console.log(`[NewZone] auto-discovered ${strategic.length} strategic categories`);
+    } catch (e) {
+      console.warn(`[NewZone] category auto-discovery failed (fallback): ${(e as Error).message.slice(0, 60)}`);
+    }
+
     let first = true;
-    for (const catId of CFG.STRATEGIC_CATEGORY_IDS) {
+    for (const catId of categoryIds) {
       if (!first) await delay(CFG.requestDelayMs); // politeness entre categorias
       first = false;
       const families = await fetchFamiliesByCategory(catId);
