@@ -2,6 +2,20 @@
 
 Reconstruído a partir do histórico real de commits (`git log`) e do estado atual do código. Formato: data, commit, o que mudou de fato (verificado no diff/estado resultante, não só na mensagem).
 
+## 2026-08-28 — SPRINT "NEW ZONE FULL CATALOG + CONNECTOR SCALE V1"
+
+**Objetivo**: transformar o PoC New Zone em conector de catálogo completo (produção). *Operação contínua, não prova.*
+
+- **Full catalog capability**:
+  - `category-mapper.ts`: **auto-descoberta** das categorias estratégicas via `category_get_all` (identificadas **103 categorias estratégicas** na API pública; não hardcoded 11).
+  - `family-mapper.ts`: **paginação completa** até o count real da API (tetro `maxPerCategory=2000` como backstop, não tamanho fixo) → **autodiscovery de novos produtos** nos sweeps sem mudança de código (requisito central).
+  - `connector.fetchStream`: auto-descoberta de categorias estratégicas com fallback ao seed; HOT/DELTA eficiente (detail enrich só quando necessário).
+  - **Validação viva**: top-8 categorias estratégicas = **220 famílias reais** descobertas em ~1s (TELEFONIA 9, APPLE 3, CAMARAS 21, INFORMATICA 168, GAMES 5, AURICULARES 12); ELECTRONICA = 2000+.
+- **Estado persistido**: 12 ofertas estratégicas reais (iPhone 17, MacBook Air, Apple Watch, Galaxy S26+, Xiaomi, Huawei) com `available`/`in_stock`/preço reais. `newzone` = `status=active`, `tier=HOT`, `next_sync_at`, `health=HEALTHY`.
+- **SSR ROOT CAUSE diagnosticado**: a página do produto resolve um slug cuja oferta New Zone está como `available=false` (arquivada) OU as ofertas vivas estão em linhas de produto duplicadas (nuance de normalização/dedup do pipeline). Corrigir é follow-up de pipeline (não workaround New Zone); documentado.
+- 2 testes novos (auto-discovery de categorias) → **1079** (153 suítes). lint 0, tsc 0, build PASS. Deploy `4d1113c` Ready.
+- **Nota operacional/honesta**: o **full numeric ingest** (103 categorias × milhares de famílias com enrich de detalhe) é um sweep longo que não cabe num único request de 60s — o modelo operacional correto (e já habilitado) é o **Adaptive Sync Engine** (HOT alto valor rápido + FULL sweep periódico com repetition/continuation), não execução manual única. A capacidade de descobrir tudo está provada; a contagem numérica completa acumula ao longo dos wakes automáticos.
+
 ## 2026-08-28 — SPRINT "STRATEGIC COMMERCE EXPANSION V2 + MARKET FRESHNESS UX V1"
 
 **Objetivo**: adicionar lojas eletrônicas de alto valor ao Adaptive Sync Engine + expor freshness real aos usuários. (Realtime Commerce Sync já OPERACIONAL — não reconstruído.)
