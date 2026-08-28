@@ -3,6 +3,7 @@ import DashboardCardShell from "./dashboard/DashboardCardShell";
 import { getSupabaseServiceClient } from "@/lib/supabase/service";
 import { getFeaturedStores } from "@/lib/home-premium-service";
 import { lojaPath } from "@/constants/routes";
+import StoreLogo from "@/components/store/StoreLogo";
 
 const AVATAR_GRADIENTS = [
   "from-sky-500 to-blue-600",
@@ -44,11 +45,15 @@ export default async function StoreCarousel() {
             href={lojaPath(s.slug)}
             className="flex flex-col items-center rounded-2xl border border-white/10 bg-white/5 p-2.5 text-center transition-colors hover:bg-white/10"
           >
-            <span
-              className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br font-home-display text-[11px] font-bold text-white ${gradientFor(s.name)}`}
-            >
-              {initials(s.name)}
-            </span>
+            {s.logoUrl ? (
+              <StoreLogo logoUrl={s.logoUrl} name={s.name} size={32} radius={8} className="border-0 bg-white/5" />
+            ) : (
+              <span
+                className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br font-home-display text-[11px] font-bold text-white ${gradientFor(s.name)}`}
+              >
+                {initials(s.name)}
+              </span>
+            )}
             <p className="mt-1.5 line-clamp-1 text-[11px] font-semibold leading-tight text-white">{s.name}</p>
             {s.rating > 0 ? (
               <p className="mt-1.5 flex items-center justify-center gap-1 text-xs font-semibold text-amber">

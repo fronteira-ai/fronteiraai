@@ -330,6 +330,8 @@ export interface FeaturedStoreHighlight {
   slug: string;
   name: string;
   coverImage: string | null;
+  /** PR-004: logotipo oficial da loja (com fallback monograma na UI). */
+  logoUrl: string | null;
   isVerified: boolean;
   offerCount: number;
   qualityScore: number | null;
@@ -363,6 +365,7 @@ export async function getFeaturedStores(client: SupabaseClient): Promise<Feature
         slug: priority.storeSlug,
         name: priority.storeName,
         coverImage: store?.cover_image ?? null,
+        logoUrl: store?.logo_url ?? null,
         isVerified: store?.is_verified ?? false,
         offerCount: count ?? 0,
         qualityScore: connector?.healthScore ?? null,
