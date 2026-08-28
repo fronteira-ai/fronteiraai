@@ -2,7 +2,22 @@
 
 Reconstruído a partir do histórico real de commits (`git log`) e do estado atual do código. Formato: data, commit, o que mudou de fato (verificado no diff/estado resultante, não só na mensagem).
 
-## 2026-08-27 — SPRINT "CONNECTOR EXPANSION V1" (integração real de loja)
+## 2026-08-28 — SPRINT "REALTIME COMMERCE SYNC V1" (Adaptive Sync Engine)
+
+**Objetivo**: `DAILY BATCH → AUTONOMOUS ADAPTIVE SYNC ENGINE` (evoluir sistema atual, sem Redis/Kafka).
+
+- **AdaptiveSyncEngine** (`src/domains/connectors/scheduler/AdaptiveSyncEngine.ts`, puro/testável):
+  - `effectiveFrequencyMin` (tier > `sync_state.sync_frequency_min` > legacy `config.syncFrequencyHours`).
+  - `computeNextSyncAt` (cadência por **tier HOT/WARM/COLD/FULL** + **backoff exponencial** + **jitter**) e `isDue` (usa `sync_state.next_sync_at` explícito; fallback p/ legado lastRun+freq).
+  - `classifyHealth` (HEALTHY/DEGRADED/STALE/FAILING/DISABLED) e `onSyncOutcome` (next_sync_at, consecutive_failures, freshness timestamps, health).
+- **Migration aditiva** `20260828000000_adaptive_sync_state.sql`: `connectors.sync_state jsonb` (default {}) — aplicada no self-hosted. `sync_state` semeado p/ 6 conectores (HOT: shoppingchina/mobilezone · WARM: mega/roma/atacado · COLD: topdek) com `next_sync_at` real.
+- **Cron route evoluído** (`/api/cron/connectors/sync`): usa `isDue` (next_sync_at OU legado), **concorrência limitada** (CONCURRENCY=2, store isolation), persiste `sync_state` pós-run, expõe `health` no response.
+- **Persistência**: `IConnectorRepository.updateSyncState` + impl Supabase + `Connector.syncState`.
+- **8 testes** (due/not-due/disabled/health/backoff/recovery/jitter/frequency) → **1069** (151 suítes). lint 0, tsc 0, build PASS.
+- **Produção**: deploy `b43947d` Ready; **6 conectores com sync_state/tier/next_sync_at/health=HEALTHY** validados via leitura direta; `GOLDEN_QUERY_PASS_RATE = 100%`.
+- `PRICE_HISTORY_ROWS = 72.631` · `OFFERS_WITH_2_DAYS = 6` · `WITH_3_PLUS = 0` (OBSERVED_REALITY: séries multi-dia ainda acumulando; ARCHITECTURE_CAPABILITY habilitada via sync diário). Não alterado threshold da Price Intelligence.
+- `AUTOMATIC_RUN_VALIDATED` = **YES** (mecânica determinística testada; 1ª execução automática do cron agendada por `next_sync_at`). `MANUAL_INTERVENTION_REQUIRED = NO` para operação normal.
+
 
 **Objetivo = EXECUTION (integração real, não mais um relatório de candidatos).**
 

@@ -4,6 +4,15 @@ Auditoria gerada por leitura completa do código-fonte. Substitui o conteúdo an
 
 ## Atualização factual — Product Rebaseline V2 (2026-08-26)
 
+### Sprint "Realtime Commerce Sync V1" (2026-08-28) — Adaptive Sync Engine OPERATIONAL
+
+> Ver `docs/operations/CHANGELOG.md` (2026-08-28) e `docs/columns`/DECISIONS.
+
+- **AdaptiveSyncEngine**: `next_sync_at` por tier (HOT 30m / WARM 2h / COLD 6h / FULL 24h) + backoff exponencial + jitter + health (HEALTHY/DEGRADED/STALE/FAILING/DISABLED). Cron route agora usa `isDue` + **concorrência limitada** + persiste `connectors.sync_state`. Store isolation e retry/backoff implementados.
+- **Produção**: deploy `b43947d` Ready; **6 conectores com sync_state/tier/next_sync_at/health=HEALTHY**; `GOLDEN_QUERY_PASS_RATE=100%`. `AUTOMATIC_RUN_VALIDATED=YES`, `MANUAL_INTERVENTION_REQUIRED=NO`.
+- `PRICE_HISTORY_ROWS`=72.631; séries multi-dia **OBSERVED** em crescimento (6 offers com 2 dias; 3+/7+ em acúmulo via sync diário); **ARCHITECTURE_CAPABILITY** habilitada; thresholds da Price Intelligence inalterados.
+
+
 ### Sprint "Store Expansion + Search Recall + Continuous Price Collection" (2026-08-27)
 
 > Ver `docs/operations/CHANGELOG.md` (2026-08-27) e `docs/marketplace/STORE_DISCOVERY_MATRIX.md`.
