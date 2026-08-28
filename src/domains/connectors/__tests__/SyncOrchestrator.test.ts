@@ -52,6 +52,7 @@ function makeConnectorRepo(): IConnectorRepository {
     findById: jest.fn(),
     list: jest.fn(),
     updateStatus: jest.fn(),
+    updateSyncState: jest.fn(),
   };
 }
 

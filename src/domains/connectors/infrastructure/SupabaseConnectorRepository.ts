@@ -3,6 +3,7 @@ import type { IConnectorRepository } from "../repositories/IConnectorRepository"
 import type { Connector } from "../domain/Connector";
 import type { ConnectorMetadata } from "../types/connector.types";
 import { ConnectorStatus } from "../types/enums";
+import type { ConnectorSyncState } from "../scheduler/AdaptiveSyncEngine";
 
 function toConnector(row: Record<string, unknown>): Connector {
   return {
@@ -17,6 +18,7 @@ function toConnector(row: Record<string, unknown>): Connector {
     config: (row.config as Record<string, unknown>) ?? {},
     createdAt: row.created_at as string,
     updatedAt: row.updated_at as string,
+    syncState: (row.sync_state as Connector["syncState"]) ?? ({} as Connector["syncState"]),
   };
 }
 
@@ -91,6 +93,21 @@ export class SupabaseConnectorRepository implements IConnectorRepository {
 
     if (error) {
       console.error("[SupabaseConnectorRepository.updateStatus]", error.message);
+      return null;
+    }
+    return toConnector(data as Record<string, unknown>);
+  }
+
+  async updateSyncState(id: string, syncState: ConnectorSyncState): Promise<Connector | null> {
+    const { data, error } = await this.client
+      .from("connectors")
+      .update({ sync_state: syncState, updated_at: new Date().toISOString() })
+      .eq("id", id)
+      .select("*")
+      .single();
+
+    if (error) {
+      console.error("[SupabaseConnectorRepository.updateSyncState]", error.message);
       return null;
     }
     return toConnector(data as Record<string, unknown>);
