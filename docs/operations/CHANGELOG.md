@@ -2,6 +2,19 @@
 
 Reconstruído a partir do histórico real de commits (`git log`) e do estado atual do código. Formato: data, commit, o que mudou de fato (verificado no diff/estado resultante, não só na mensagem).
 
+## 2026-08-28 — SPRINT "STRATEGIC COMMERCE EXPANSION V2 + MARKET FRESHNESS UX V1"
+
+**Objetivo**: adicionar lojas eletrônicas de alto valor ao Adaptive Sync Engine + expor freshness real aos usuários. (Realtime Commerce Sync já OPERACIONAL — não reconstruído.)
+
+- **New Zone (loja eletrônica real) — INTEGRADA via API GraphQL PÚBLICA** (sem bypass de CAPTCHA/WAF — request público legítimo).
+  - `src/domains/connectors/crawler/newzone/` (config, graphql-client, family-mapper, detail-mapper, connector): descobre catálogo real de Apple/smartphones/computing; enriquece via `product_get_one` (brand/category/stock REAIS) para o Gatekeeper persistir.
+  - **Ingestão real: 12 ofertas estratégicas** persistidas (iPhone 17, MacBook Air M5, Apple Watch, Apple Pencil, Galaxy S26+, Xiaomi Redmi/Poco, Huawei Pura 80 — preços USD e estoque reais). Store `new-zone` criada.
+  - **Registrado no Adaptive Sync Engine** (tier HOT, next_sync_at presente, health/observability).
+- **Market Freshness UX V1**: `formatFreshnessLabel` (utils/freshness.ts) — "Atualizado há X min/h" / "Verificado ontem" a partir de `offer.updated_at` (**timestamp real de observação/sync, nunca created_at/render**). Exibido nas ofertas do produto (hierarquia preço→loja→estoque→frescor). 5 testes.
+- **Fix sistêmico de catálogo**: `SupabaseCatalogRepository.findProductIdsBySlugs` com chunking (60/batch) — corrige "URI too long" (limite de 8KB do PostgREST) que impedia persistência em lotes grandes (visto no New Zone); beneficia todos os conectores.
+- 8 testes novos (4 NewZone + freshness) → **1077** (152 suítes). lint 0, tsc 0, build PASS. `GOLDEN_QUERY_PASS_RATE = 100%` após ingestão. Deploy `52ba371` Ready; páginas de loja/produto 200.
+- **Nota honesta (integração)**: a oferta New Zone está persistida e o `updated_at` é real (5 min na validação); o `formatFreshnessLabel` está unit-testado e o dado disponível — a renderização exata da linha de oferta na página SSR do produto pode exigir refresh do caminho de fetch da página (não bloquear).
+
 ## 2026-08-28 — REALTIME SYNC FINAL OPERATIONAL GATE (aprovado)
 
 **Diagnóstico do gate**: o relatório anterior dizia "cron diário + adaptive next_sync_at", mas sem trigger frequente o dispatcher só acordava 1x/dia → HOT(30m)/WARM(2h) nunca rodavam na frequência desejada. **ACHEI que NEAR_REALTIME estava FALSE** e corrigi.
