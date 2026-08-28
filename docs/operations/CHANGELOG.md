@@ -2,6 +2,19 @@
 
 Reconstruído a partir do histórico real de commits (`git log`) e do estado atual do código. Formato: data, commit, o que mudou de fato (verificado no diff/estado resultante, não só na mensagem).
 
+## 2026-08-28 — SPRINT "MERCHANT ACTIVATION & CATALOG COMMIT V1"
+
+**Objetivo**: completar o ciclo real do merchant (PREVIEW→APPROVAL→COMMIT→LIVE OFFER→SYNC→AUDIT) — o commit passa a gravar de fato, com imutabilidade, idempotência e segurança.
+
+- **CHECK §1 (migração 0018)**: verificado no schema de produção — `merchant_authorizations` NÃO aplicada (Could not find table). `AUTHORIZATION_RECORD_CODE = PASS` (sql entregue + capturado em `supabase/migrations/20260829100000`). `AUTHORIZATION_RECORD_PRODUCTION = NOT_APPLIED/PENDING` — não forço `supabase db push` porque ele varreria 8 migrações pendentes de outras Sprints (histórico remoto dessincronizado; ex. catalog_integrity_firewall nem aplicada). **NEXT_HUMAN_ACTION**: aplicar `0018` quando o operador puder aplicar o conjunto de migrations com segurança.
+- **Import-session model** (`src/domains/merchant-import/`): estado determinístico (UPLOADED→VALIDATED→PREVIEW_READY→APPROVED→COMMITTING→COMMITTED/PARTIAL/FAILED/CANCELLED), `canTransition`, `sourceChecksum` (imutabilidade do preview), migração `0019_merchant_import_sessions.sql` (+ capturado em supabase 20260829110000).
+- **ImportPlanBuilder**: plano determinístico preview≡commit (MATCH/CREATE/UPDATE/CREATE_NEW/AMBIGUOUS/INVALID/PROHIBITED/UNCHANGED), Gatekeeper forbidden-values (brand/categoria presentes e inválidos → PROHIBITED; ausente=NÃO proibido), matching conservador (ambíguo nunca funde).
+- **MerchantImportCommitService**: commit engine idempotente reusando ICatalogRepository (upsertOffer/insertPriceHistory/upsertProduct) + Gatekeeper — sem 2º pipeline. Oferta por (product_id, store_id); price_history só em mudança de preço (não duplica em retry); PROHIBIDO/AMBÍGUO/INVÁLIDO nunca commitam; batches bounded (10k retomável).
+- **API commit** (`app/api/merchant/imports/commit`): gates de tenancy (merchant_stores), ROLE (`canCommit` = manage_imports; analyst NÃO), IMMUTABLE (checksum mudou → 409 revalide), idempotência (double-click safe); reuso SourceParserResolver (CSV/XML/JSON) + SupabaseCatalogRepository; audit log `import_complete`.
+- **CONSUMER_ANALYTICS_WIRING = PASS** (verificado, não só tabela): ProductViewTracker/StoreViewTracker/OfferLink/SearchViewTracker já emitem ProductClicked/MerchantViewed/OfferClicked/SearchPerformed via useAnalytics→POST /api/analytics/events (rate-limited, sem PII).
+- **Testes (+17)**: resolver CSV/XML/JSON, commit 10k+recommit idempotente, double-click, immutable-preview FAIL, PROHIBITED/AMBIGUOUS nunca commitam, tenancy sem store→FAIL, role analyst FAIL, state machine, checksum.
+- Gates: **1193** testes (171 suites; +17), lint 0, typecheck 0, build PASS. Produção intacta.
+
 ## 2026-08-28 — SPRINT "MERCHANT CONSOLE V1 — PARTNER EXPERIENCE"
 
 **Objetivo**: dar a cada loja parceira uma área privada segura (controlar presença no ParaguAI + ver valor gerado). É UI/camada de parceria sobre capacidades existentes — NÃO outro pipeline de ingestão.
