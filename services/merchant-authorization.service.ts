@@ -58,4 +58,21 @@ export class MerchantAuthorizationService {
     if (error) throw new Error(`merchant_authorizations upsert: ${error.message}`);
     return data as unknown as MerchantAuthorizationRow;
   }
+
+  /**
+   * True apenas se existir autorização ACTIVE para (merchant, store).
+   * FAIL-CLOSED: um erro de query (ou ausência de policy/linha) NUNCA vira
+   * autorização = true — retorna false em qualquer caminho de erro.
+   */
+  async hasActiveAuthorization(merchantId: string, storeId: string): Promise<boolean> {
+    const { data, error } = await this.supabase
+      .from("merchant_authorizations")
+      .select("id")
+      .eq("merchant_id", merchantId)
+      .eq("store_id", storeId)
+      .eq("status", "ACTIVE")
+      .maybeSingle();
+    if (error || !data) return false;
+    return true;
+  }
 }

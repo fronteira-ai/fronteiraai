@@ -3,7 +3,8 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { requireMerchantContext } from "@/lib/merchant-auth";
 import { MerchantImportCommitService } from "@/src/domains/merchant-import/MerchantImportCommitService";
 import { SourceParserResolver } from "@/src/domains/merchant-import/ImportSourceResolver";
-import { sourceChecksum, canCommit } from "@/src/domains/merchant-import/types";
+import { sourceChecksum, canCommitAuthorization } from "@/src/domains/merchant-import/types";
+import { MerchantAuthorizationService } from "@/services/merchant-authorization.service";
 import { SupabaseCatalogRepository } from "@/src/domains/connectors/infrastructure/SupabaseCatalogRepository";
 import type { ExistingProductForMatch } from "@/src/domains/merchant-import/ImportPlanBuilder";
 import { logAuditEvent } from "@/services/merchant.service";
@@ -19,25 +20,31 @@ export async function POST(request: NextRequest) {
   }
   const { merchant, userId, permissions, role, serviceClient } = ctx;
 
-  // ROLE: aprovar/commitar exige ManageImports (owner/administrador/gerente).
-  if (!canCommit(permissions)) {
-    return NextResponse.json({ error: "Sua função não permite confirmar importações" }, { status: 403 });
-  }
-
   const body = (await request.json()) as Record<string, unknown>;
   const storeId = String(body.store_id ?? "").trim();
   const content = String(body.content ?? "");
   if (!storeId) return NextResponse.json({ error: "store_id é obrigatório" }, { status: 400 });
   if (!content) return NextResponse.json({ error: "content vazio" }, { status: 400 });
 
-  // TENANCY: re-audit de posse.
+  // AUTHORIZATION (security model): re-audit completo server-side — membership
+  // merchant_stores + autorização merchant/store ACTIVE + role manage_imports.
+  // Fail-closed: store_id do client NUNCA é prova; qualquer erro DB => deny.
   const { data: link } = await serviceClient
     .from("merchant_stores")
     .select("store_id")
     .eq("merchant_id", merchant.id)
     .eq("store_id", storeId)
     .maybeSingle();
-  if (!link) return NextResponse.json({ error: "Loja não pertence à sua conta" }, { status: 403 });
+  const authzSvc = new MerchantAuthorizationService(serviceClient);
+  const authorizationActive = await authzSvc.hasActiveAuthorization(merchant.id, storeId);
+  if (!canCommitAuthorization({ isStoreMember: !!link, authorizationActive, permissions })) {
+    const reason = !link
+      ? "Loja não pertence à sua conta"
+      : !authorizationActive
+        ? "Autorização de catálogo ausente ou inativa para esta loja"
+        : "Sua função não permite confirmar importações";
+    return NextResponse.json({ error: reason }, { status: 403 });
+  }
 
   const sourceType = (String(body.source_type ?? "CSV").toUpperCase()) as "CSV" | "XML" | "JSON";
   const mapping = (body.mapping ?? {}) as Record<string, string>;

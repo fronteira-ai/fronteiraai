@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireMerchant, isMerchantAuthError } from "@/lib/merchant-auth";
 import { createConnectorsServices } from "@/lib/connectors-factory";
 import { logAuditEvent, merchantOwnsStoreSlug, checkImportEntitlement } from "@/services/merchant.service";
+import { MerchantAuthorizationService } from "@/services/merchant-authorization.service";
 import { connectorSyncSkippedEntitlementEvent } from "@/src/domains/connectors/events/connector.events";
 
 export async function POST(request: NextRequest) {
@@ -35,6 +36,24 @@ export async function POST(request: NextRequest) {
   if (!owns) {
     return NextResponse.json(
       { error: "Você não tem permissão para sincronizar esta loja" },
+      { status: 403 }
+    );
+  }
+
+  // AUTHORIZATION (security model): sincronizar catálogo também exige
+  // autorização merchant/store ACTIVE (fail-closed; erro DB => deny).
+  const { data: storeRow } = await serviceClient
+    .from("stores")
+    .select("id")
+    .eq("slug", connector.metadata.storeSlug)
+    .maybeSingle();
+  const authzSvc = new MerchantAuthorizationService(serviceClient);
+  const authorizationActive = storeRow
+    ? await authzSvc.hasActiveAuthorization(merchant.id, storeRow.id)
+    : false;
+  if (!authorizationActive) {
+    return NextResponse.json(
+      { error: "Autorização de catálogo ausente ou inativa para esta loja" },
       { status: 403 }
     );
   }

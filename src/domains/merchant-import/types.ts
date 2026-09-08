@@ -91,6 +91,27 @@ export function canCommit(permissions: readonly string[]): boolean {
   return permissions.includes("manage_imports");
 }
 
+/** Fatos de autorização de mutação de catálogo (todos re-auditados server-side). */
+export interface CommitAuthorizationFacts {
+  /** merchant_stores: a merchant é membro/possui a loja. */
+  isStoreMember: boolean;
+  /** merchant_authorizations: existe autorização ACTIVE para (merchant, store). */
+  authorizationActive: boolean;
+  /** Permissões da role (requireMerchantContext). */
+  permissions: readonly string[];
+}
+
+/**
+ * Regra de autorização de mutação de catálogo (security model):
+ * membership SOZINHA NÃO autoriza commit — exige também autorização
+ * merchant/store ACTIVE e role com `manage_imports`. Fail-closed.
+ */
+export function canCommitAuthorization(facts: CommitAuthorizationFacts): boolean {
+  if (!facts.isStoreMember) return false;
+  if (!facts.authorizationActive) return false;
+  return canCommit(facts.permissions);
+}
+
 /** Checksum determinístico da fonte (imutabilidade do preview, §5). */
 export function sourceChecksum(content: string): string {
   // FNV-1a 32-bit simples, determínísstico, sem depender de hash cripto cara no hot path.

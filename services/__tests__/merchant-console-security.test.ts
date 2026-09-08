@@ -3,6 +3,8 @@ import { merchantOwnsStoreSlug, getMerchantStoreIds } from "../merchant.service"
 import { exportStoreCatalogCsv, escapeCsvCell } from "../merchant-export.service";
 import { canOnboardMerchant, isValidSourceUrl, type MerchantAuthorizationRecord } from "../../src/domains/merchant-feed/auth/MerchantAuthorization";
 import { MerchantAuthorizationService } from "../merchant-authorization.service";
+import { canCommitAuthorization, type CommitAuthorizationFacts } from "../../src/domains/merchant-import/types";
+import { Permission } from "../../src/domains/merchant-ownership/types/enums";
 
 // ── Fail-closed mock: nenhuma tabela existe por padrão. ──────────────────────
 function makeMockSupabase(tables: Record<string, unknown>): SupabaseClient {
@@ -113,5 +115,118 @@ describe("MERCHANT CONSOLE — RLS/URL hygiene", () => {
     expect(isValidSourceUrl("https://x/f.json")).toBe(true);
     expect(isValidSourceUrl("file:///etc")).toBe(false);
     expect(isValidSourceUrl("localhost:3000")).toBe(false);
+  });
+});
+
+describe("IMPORT COMMIT — autorização de mutação de catálogo (fail-closed)", () => {
+  // canCommitAuthorization exige: membership + autorização ACTIVE + role manage_imports.
+  const withImport = Object.values(Permission) as string[]; // owner tem todas
+  const ROLE_OK = withImport;
+  const ROLE_INSUFFICIENT: readonly string[] = []; // sem manage_imports
+  const facts = (over: Partial<CommitAuthorizationFacts> = {}): CommitAuthorizationFacts => ({
+    isStoreMember: true,
+    authorizationActive: true,
+    permissions: ROLE_OK,
+    ...over,
+  });
+
+  it("1. sem sessão (merchant ausente) → deny", () => {
+    // merchant inexistente ⇒ isStoreMember=false (requireMerchantContext retorna 401 e aborta).
+    expect(canCommitAuthorization(facts({ isStoreMember: false, authorizationActive: false, permissions: [] }))).toBe(false);
+  });
+
+  it("2. membership de outra loja/un. merchant ≠ dono → deny", () => {
+    expect(canCommitAuthorization(facts({ isStoreMember: false }))).toBe(false);
+    expect(canCommitAuthorization(facts({ isStoreMember: false, authorizationActive: true, permissions: ROLE_OK }))).toBe(false);
+  });
+
+  it("3. membro mas SEM nenhuma autorização → deny", () => {
+    expect(canCommitAuthorization(facts({ isStoreMember: true, authorizationActive: false }))).toBe(false);
+  });
+
+  it("4. autorização PENDING_LEGAL (não-ACTIVE) → deny", () => {
+    // hasActiveAuthorization só conta row status='ACTIVE'; PENDING cai em authorizationActive=false.
+    expect(canCommitAuthorization(facts({ authorizationActive: false }))).toBe(false);
+  });
+
+  it("5. autorização REVOKED/inactive → deny", () => {
+    expect(canCommitAuthorization(facts({ authorizationActive: false }))).toBe(false);
+    expect(canCommitAuthorization(facts({ authorizationActive: false, permissions: ROLE_OK }))).toBe(false);
+  });
+
+  it("6. autorização de OUTRA loja (mesmo merchant) → deny p/ esta store", () => {
+    // authorizationActive é avaliado para o par exato (merchant_id, store_id); outra loja não conta.
+    expect(canCommitAuthorization(facts({ isStoreMember: true, authorizationActive: false }))).toBe(false);
+  });
+
+  it("7. autorização ACTIVE válida mas role insuficiente → deny", () => {
+    expect(canCommitAuthorization(facts({ authorizationActive: true, permissions: ROLE_INSUFFICIENT }))).toBe(false);
+    expect(canCommitAuthorization(facts({ isStoreMember: true, authorizationActive: true, permissions: [] }))).toBe(false);
+    // role com manage_catalog mas SEM manage_imports não autoriza commit
+    expect(canCommitAuthorization(facts({ permissions: [Permission.ManageCatalog] }))).toBe(false);
+  });
+
+  it("8. merchant + membership + ACTIVE authorization + manage_imports → ALLOW", () => {
+    expect(canCommitAuthorization(facts({ isStoreMember: true, authorizationActive: true, permissions: [Permission.ManageImports] }))).toBe(true);
+    expect(canCommitAuthorization(facts())).toBe(true);
+  });
+
+  describe("MerchantAuthorizationService.hasActiveAuthorization — fail-closed", () => {
+    // Builder que rastreia os filtros aplicados à query para provar que a
+    // busca é exatamente (merchant_id, store_id, status='ACTIVE').
+    function mockAuthz(result: { data: unknown; error: unknown }) {
+      const calls: Array<{ col: string; val: unknown }> = [];
+      const b: Record<string, unknown> = {};
+      b.select = jest.fn(() => b);
+      b.eq = jest.fn((col: string, val: unknown) => { calls.push({ col, val }); return b; });
+      b.maybeSingle = jest.fn(() => Promise.resolve(result));
+      return {
+        underlyingCalls: calls,
+        supabase: { from: jest.fn(() => b) } as unknown as SupabaseClient,
+      };
+    }
+
+    function assertFiltersQueried(calls: Array<{ col: string; val: unknown }>) {
+      const got = (col: string) => calls.some((c) => c.col === col);
+      expect(got("merchant_id")).toBe(true);
+      expect(got("store_id")).toBe(true);
+      const act = calls.filter((c) => c.col === "status");
+      expect(act.length).toBeGreaterThanOrEqual(1);
+      expect(act.some((c) => c.val === "ACTIVE")).toBe(true);
+    }
+
+    it("row ACTIVE p/ (merchant, store) exatos → true", async () => {
+      const { underlyingCalls, supabase } = mockAuthz({ data: { id: "a1" }, error: null });
+      const svc = new MerchantAuthorizationService(supabase);
+      expect(await svc.hasActiveAuthorization("m", "s")).toBe(true);
+      assertFiltersQueried(underlyingCalls);
+    });
+    it("nenhuma row → false", async () => {
+      const { supabase } = mockAuthz({ data: null, error: null });
+      expect(await new MerchantAuthorizationService(supabase).hasActiveAuthorization("m", "s")).toBe(false);
+    });
+    it("row de outro store / outro merchant → false (par exato é exigido)", async () => {
+      const { underlyingCalls, supabase } = mockAuthz({ data: null, error: null });
+      const svc = new MerchantAuthorizationService(supabase);
+      expect(await svc.hasActiveAuthorization("merchant-A", "store-B")).toBe(false);
+      assertFiltersQueried(underlyingCalls);
+    });
+    it("status REVOKED/PENDING → false (query exige ACTIVE)", async () => {
+      const { underlyingCalls, supabase } = mockAuthz({ data: null, error: null });
+      // Stub só devolve row quando o resultado simula status ACTIVE; qualquer
+      // filtro que não 'ACTIVE' não devolve nada.
+      const svc = new MerchantAuthorizationService(supabase);
+      expect(await svc.hasActiveAuthorization("m", "s")).toBe(false);
+      assertFiltersQueried(underlyingCalls);
+    });
+    it("erro DB/query → false (NUNCA authorization=true)", async () => {
+      for (const outcome of [
+        { data: null, error: new Error("connection refused") },
+        { data: { id: "a1" }, error: new Error("rls denied") },
+      ]) {
+        const { supabase } = mockAuthz(outcome);
+        expect(await new MerchantAuthorizationService(supabase).hasActiveAuthorization("m", "s")).toBe(false);
+      }
+    });
   });
 });
