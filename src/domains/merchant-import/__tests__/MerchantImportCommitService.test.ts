@@ -1,6 +1,7 @@
 import { MerchantImportCommitService, type CommitContext } from "../MerchantImportCommitService";
 import { ImportPlanBuilder, summarizePlan, type ExistingProductForMatch } from "../ImportPlanBuilder";
-import { sourceChecksum, canTransition, canCommit } from "../types";
+import { sourceChecksum, normalizedOffersChecksum, isRawSourceUnchanged, canTransition, canCommit } from "../types";
+import { SourceParserResolver } from "../ImportSourceResolver";
 import type { ICatalogRepository } from "../../connectors/repositories/ICatalogRepository";
 import type { RawOffer } from "../../connectors/types/raw.types";
 
@@ -68,7 +69,7 @@ describe("MerchantImportCommitService — commit engine", () => {
     const svc = new MerchantImportCommitService({ repository: repo, existingProducts: [] });
     const offers = [offer("1", "Produto Alfa", 50, "Marca", "Categoria"), offer("2", "Produto Beta", 30, "Marca", "Categoria")];
     const checksum = sourceChecksum(JSON.stringify(offers));
-    const ctx: CommitContext = { merchantId: "m1", userId: "u1", storeId: "s1", sourceChecksum: checksum, sessionId: "sess1" };
+    const ctx: CommitContext = { merchantId: "m1", userId: "u1", storeId: "s1", offersChecksum: checksum, sessionId: "sess1" };
     const r = await svc.commit(offers, ctx);
     expect(r.status).toBe("COMMITTED");
     expect(r.createdProducts).toBe(2);
@@ -85,7 +86,7 @@ describe("MerchantImportCommitService — commit engine", () => {
     const svc = new MerchantImportCommitService({ repository: repo, existingProducts: [] });
     const offers = [offer("1", "Produto Alfa", 50, "Marca", "Categoria")];
     const checksum = sourceChecksum(JSON.stringify(offers));
-    const ctx: CommitContext = { merchantId: "m1", userId: "u1", storeId: "s1", sourceChecksum: checksum, sessionId: "sess1" };
+    const ctx: CommitContext = { merchantId: "m1", userId: "u1", storeId: "s1", offersChecksum: checksum, sessionId: "sess1" };
     await svc.commit(offers, ctx);
     // Catálogo agora tem o produto criado → o 2º commit o reconcilia.
     existingProducts = [{ id: repo._products.get("Produto Alfa")!, brand: "Marca", name: "Produto Alfa", externalId: "1" }];
@@ -103,10 +104,10 @@ describe("MerchantImportCommitService — commit engine", () => {
     const svc = new MerchantImportCommitService({ repository: repo, existingProducts: [] });
     const first = [offer("1", "Produto Alfa", 50, "Marca", "Categoria")];
     const checksum1 = sourceChecksum(JSON.stringify(first));
-    await svc.commit(first, { merchantId: "m1", userId: "u1", storeId: "s1", sourceChecksum: checksum1, sessionId: "s1" });
+    await svc.commit(first, { merchantId: "m1", userId: "u1", storeId: "s1", offersChecksum: checksum1, sessionId: "s1" });
     const second = [offer("1", "Produto Alfa", 45, "Marca", "Categoria")]; // preço caiu
     const checksum2 = sourceChecksum(JSON.stringify(second));
-    const r = await svc.commit(second, { merchantId: "m1", userId: "u1", storeId: "s1", sourceChecksum: checksum2, sessionId: "s2" });
+    const r = await svc.commit(second, { merchantId: "m1", userId: "u1", storeId: "s1", offersChecksum: checksum2, sessionId: "s2" });
     expect(r.priceHistoryWrites).toBe(1);
     expect(repo._priceHistory.length).toBe(2); // 50 então 45
     expect(repo._offers.get("prod-1")?.priceUSD).toBe(45);
@@ -117,7 +118,7 @@ describe("MerchantImportCommitService — commit engine", () => {
     const svc = new MerchantImportCommitService({ repository: repo, existingProducts: [] });
     const offers = [offer("1", "Produto Alfa", 50, "Marca")];
     const wrongChecksum = sourceChecksum(JSON.stringify([])); // Preview de outro conteúdo
-    const r = await svc.commit(offers, { merchantId: "m1", userId: "u1", storeId: "s1", sourceChecksum: wrongChecksum, sessionId: "sess" });
+    const r = await svc.commit(offers, { merchantId: "m1", userId: "u1", storeId: "s1", offersChecksum: wrongChecksum, sessionId: "sess" });
     expect(r.status).toBe("FAILED");
     expect(r.errorSummary).toBe("SOURCE_CHANGED_SINCE_PREVIEW");
     expect(repo._priceHistory.length).toBe(0); // nada escrito
@@ -131,7 +132,7 @@ describe("MerchantImportCommitService — commit engine", () => {
     const svc2 = new MerchantImportCommitService({ repository: repo, existingProducts: [{ id: "P1", brand: "Apple", name: "iPhone 15 128GB" }, secondExisting] });
     const offers = [ambiguous, offer("Y", "CELULAR", 5, "Outros"), offer("Z", "Fone Pro X", 10, "Marca", "Categoria")];
     const checksum = sourceChecksum(JSON.stringify(offers));
-    const r = await svc2.commit(offers, { merchantId: "m1", userId: "u1", storeId: "s1", sourceChecksum: checksum, sessionId: "sess" });
+    const r = await svc2.commit(offers, { merchantId: "m1", userId: "u1", storeId: "s1", offersChecksum: checksum, sessionId: "sess" });
     expect(r.status).toBe("COMMITTED");
     // Z commitado (1 produto novo); X ambíguo e Y proibido NÃO
     expect(r.createdProducts).toBe(1);
@@ -143,7 +144,7 @@ describe("MerchantImportCommitService — commit engine", () => {
   it("TENANT: contexto sem store → FAIL", async () => {
     const repo = makeRepo();
     const svc = new MerchantImportCommitService({ repository: repo, existingProducts: [] });
-    const r = await svc.commit([offer("1", "X", 1, "M")], { merchantId: "m1", userId: "u1", storeId: "", sourceChecksum: "c", sessionId: "s" });
+    const r = await svc.commit([offer("1", "X", 1, "M")], { merchantId: "m1", userId: "u1", storeId: "", offersChecksum: "c", sessionId: "s" });
     expect(r.status).toBe("FAILED");
   });
 });
@@ -176,7 +177,7 @@ describe("CROSS-TENANT + role no commit (§44)", () => {
     const offers = [offer("1", "Produto Alfa", 50, "Marca")];
     // storeId pertence ao B; contexto de A (store errado) → engine usa storeId
     // apenas se passado server-side; aqui o caller não deve passar store não-owned.
-    const r = await svc.commit(offers, { merchantId: "merchant-A", userId: "u-A", storeId: "", sourceChecksum: "x", sessionId: "s" });
+    const r = await svc.commit(offers, { merchantId: "merchant-A", userId: "u-A", storeId: "", offersChecksum: "x", sessionId: "s" });
     expect(r.status).toBe("FAILED");
     expect(repo._priceHistory.length).toBe(0); // nada escrito
   });
@@ -187,7 +188,7 @@ describe("CROSS-TENANT + role no commit (§44)", () => {
     const svc = new MerchantImportCommitService({ repository: repo, existingProducts: [] });
     const offers = [offer("1", "Produto Alfa", 50, "Marca")];
     const checksum = sourceChecksum(JSON.stringify(offers));
-    const ctx: CommitContext = { merchantId: "m1", userId: "u1", storeId: "s1", sourceChecksum: checksum, sessionId: "SESS-1" };
+    const ctx: CommitContext = { merchantId: "m1", userId: "u1", storeId: "s1", offersChecksum: checksum, sessionId: "SESS-1" };
     await svc.commit(offers, ctx);
     existing = [{ id: repo._products.get("Produto Alfa")!, brand: "Marca", name: "Produto Alfa", externalId: "1" }];
     const svc2 = new MerchantImportCommitService({ repository: repo, existingProducts: existing });
@@ -206,7 +207,7 @@ describe("SCALE + CONTINUATION (§22/23/43)", () => {
       offers.push(offer(`SKU-${i}`, `Produto Real ${i}`, 100 + i, "Marca", "Categoria"));
     }
     const checksum = sourceChecksum(JSON.stringify(offers));
-    const ctx: CommitContext = { merchantId: "m1", userId: "u1", storeId: "s1", sourceChecksum: checksum, sessionId: "S10K" };
+    const ctx: CommitContext = { merchantId: "m1", userId: "u1", storeId: "s1", offersChecksum: checksum, sessionId: "S10K" };
     const svc = new MerchantImportCommitService({ repository: repo, existingProducts: [], batchSize: 500 });
     const r = await svc.commit(offers, ctx);
     expect(r.status).toBe("COMMITTED");
@@ -222,7 +223,7 @@ describe("SCALE + CONTINUATION (§22/23/43)", () => {
 });
 
 describe("summarizePlan", () => {
-  it("agrega décãções", () => {
+  it("agrega decisões", () => {
     const s = summarizePlan([
       { externalId: "1", name: "a", decision: "CREATE_NEW_OFFER" },
       { externalId: "2", name: "b", decision: "PROHIBITED" },
@@ -234,5 +235,55 @@ describe("summarizePlan", () => {
     expect(s.ambiguous).toBe(1);
     expect(s.unchanged).toBe(1);
     expect(s.total).toBe(4);
+  });
+});
+
+describe("CHECKSUM CONTRACT — raw source (route) vs normalized offers (service)", () => {
+  const CSV_OK = [
+    "codigo;title;marca;preco;estoque",
+    "QA-E2E-001;QA E2E Product 001;MarcaQA;100.00;10",
+    "QA-E2E-002;QA E2E Product 002;MarcaQA;50.00;0",
+    ";QA E2E Product sem-codigo;MarcaQA;9.00;1", // sem external_id => inválido (parser descarta)
+  ].join("\n");
+  const MAPPING = { codigo: "external_id", title: "title", marca: "brand", preco: "price", estoque: "stock" };
+
+  const parseLikeRoute = (content: string) => new SourceParserResolver().resolveOffers(content, "CSV", MAPPING, "products");
+
+  it("RAW SOURCE imutável: conteúdo inalterado aceito; alterado rejeitado (409 no route); ausente aceito", () => {
+    const expected = sourceChecksum(CSV_OK);
+    expect(isRawSourceUnchanged(expected, CSV_OK)).toBe(true);          // unchanged → route segue
+    expect(isRawSourceUnchanged("00000000", CSV_OK)).toBe(false);       // tampered → route 409
+    expect(isRawSourceUnchanged(undefined, CSV_OK)).toBe(true);         // primeiro envio sem preview
+  });
+
+  it("representações são DIFERENTES por contrato: raw content != normalized offers", () => {
+    const offers = parseLikeRoute(CSV_OK);
+    expect(offers.length).toBe(2); // linha sem codigo é INVALID (parser) — title NÃO é obrigatório
+    expect(sourceChecksum(CSV_OK)).not.toBe(normalizedOffersChecksum(offers));
+  });
+
+  it("REG. do bug: CommitService aceita o checksum NORMALIZADO (route corrigida) e rejeita o RAW (bug antigo)", async () => {
+    const offers = parseLikeRoute(CSV_OK);
+    const repo = makeRepo();
+    const svc = new MerchantImportCommitService({ repository: repo, existingProducts: [] });
+    // contrato correto: route passa normalizedOffersChecksum(offers)
+    const ok = await svc.commit(offers, { merchantId: "m1", userId: "u1", storeId: "s1", offersChecksum: normalizedOffersChecksum(offers), sessionId: "s-ok" });
+    expect(ok.status).toBe("COMMITTED");
+    // bug antigo: passar sourceChecksum(raw content) como offersChecksum => FAIL
+    const raw = sourceChecksum(CSV_OK);
+    const bad = await svc.commit(offers, { merchantId: "m1", userId: "u1", storeId: "s1", offersChecksum: raw, sessionId: "s-bad" });
+    expect(bad.status).toBe("FAILED");
+    expect(bad.errorSummary).toBe("SOURCE_CHANGED_SINCE_PREVIEW");
+  });
+
+  it("validade do parser: título vazio é aceito (name fallback); external_id ausente é INVALID", () => {
+    const csvNoTitle = [
+      "codigo;title;marca;preco;estoque",
+      "QA-E2E-006;;MarcaQA;9.00;1",
+    ].join("\n");
+    const withEmptyTitle = parseLikeRoute(csvNoTitle);
+    expect(withEmptyTitle.length).toBe(1); // title NÃO é obrigatório no parser
+    const withEmptyCode = parseLikeRoute("codigo;title;marca;preco;estoque\n;Produto sem codigo;MarcaQA;9.00;1");
+    expect(withEmptyCode.length).toBe(0); // external_id obrigatório → INVALID (preview invalid++)
   });
 });

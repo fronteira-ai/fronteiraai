@@ -22,14 +22,19 @@ import { normalizeBrandName } from "../taxonomy";
 import { normalizeCategoryName } from "../connectors/normalization/CategoryNormalizer";
 import type { ICatalogRepository } from "../connectors/repositories/ICatalogRepository";
 import { ImportPlanBuilder, type PlanBuilderDeps, type ExistingProductForMatch } from "./ImportPlanBuilder";
-import { sourceChecksum } from "./types";
+import { normalizedOffersChecksum } from "./types";
 import type { RawOffer } from "../connectors/types/raw.types";
 
 export interface CommitContext {
   merchantId: string;
   userId: string;
   storeId: string; // resolvido por membership (server-side)
-  sourceChecksum: string; // do preview aprovado (imutabilidade)
+  /**
+   * Checksum da lista NORMALIZADA de ofertas (pós-parse) — o ÚNICO checksum
+   * que este serviço valida contra a lista recebida. NÃO é o checksum do raw
+   * content (arquivo CSV/XML/JSON); esse é verificado pela route (HTTP 409).
+   */
+  offersChecksum: string;
   sessionId: string;
 }
 
@@ -71,8 +76,8 @@ export class MerchantImportCommitService {
   async commit(offers: RawOffer[], ctx: CommitContext): Promise<CommitResult> {
     const fail = (reason: string): CommitResult => ({ sessionId: ctx.sessionId, status: "FAILED", createdProducts: 0, matchedProducts: 0, createdOffers: 0, updatedOffers: 0, unchangedOffers: 0, rejected: offers.length, ambiguous: 0, priceHistoryWrites: 0, stockChanges: 0, imageChanges: 0, itemsProcessed: 0, checkpointIndex: 0, errorSummary: reason });
 
-    const checksum = this.deps.checksum ?? ((o) => sourceChecksum(JSON.stringify(o)));
-    if (checksum(offers) !== ctx.sourceChecksum) return fail("SOURCE_CHANGED_SINCE_PREVIEW");
+    const checksum = this.deps.checksum ?? normalizedOffersChecksum;
+    if (checksum(offers) !== ctx.offersChecksum) return fail("SOURCE_CHANGED_SINCE_PREVIEW");
     if (!ctx.storeId || !ctx.merchantId) return fail("TENANT_CONTEXT_MISSING");
 
     const summaryTarget: PlanBuilderDeps = { existingProducts: this.deps.existingProducts, existingOffersByExternalId: new Map(), storeId: ctx.storeId };

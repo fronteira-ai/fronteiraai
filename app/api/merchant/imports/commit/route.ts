@@ -3,7 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { requireMerchantContext } from "@/lib/merchant-auth";
 import { MerchantImportCommitService } from "@/src/domains/merchant-import/MerchantImportCommitService";
 import { SourceParserResolver } from "@/src/domains/merchant-import/ImportSourceResolver";
-import { sourceChecksum, canCommitAuthorization } from "@/src/domains/merchant-import/types";
+import { isRawSourceUnchanged, normalizedOffersChecksum, canCommitAuthorization } from "@/src/domains/merchant-import/types";
 import { MerchantAuthorizationService } from "@/services/merchant-authorization.service";
 import { SupabaseCatalogRepository } from "@/src/domains/connectors/infrastructure/SupabaseCatalogRepository";
 import type { ExistingProductForMatch } from "@/src/domains/merchant-import/ImportPlanBuilder";
@@ -48,11 +48,13 @@ export async function POST(request: NextRequest) {
 
   const sourceType = (String(body.source_type ?? "CSV").toUpperCase()) as "CSV" | "XML" | "JSON";
   const mapping = (body.mapping ?? {}) as Record<string, string>;
-  const expectedChecksum = String(body.source_checksum ?? "").trim();
+  const expectedRawChecksum = String(body.source_checksum ?? "").trim();
 
-  // IMMUTABLE PREVIEW: o checksum aprovado no preview deve continuar válido.
-  const currentChecksum = sourceChecksum(content);
-  if (expectedChecksum && expectedChecksum !== currentChecksum) {
+  // CONTRATO DE CHECKSUM — 1ª camada (RAW SOURCE, imutabilidade do arquivo):
+  // o checksum aprovado no preview deve continuar idêntico ao conteúdo bruto
+  // enviado agora. Divergência => HTTP 409. (NUNCA compare aqui contra a
+  // lista parseada — isso é a 2ª camada, no CommitService.)
+  if (!isRawSourceUnchanged(expectedRawChecksum, content)) {
     return NextResponse.json({ error: "O arquivo/feed mudou desde a prévia. Revalide antes de confirmar." }, { status: 409 });
   }
 
@@ -71,12 +73,16 @@ export async function POST(request: NextRequest) {
   // Produtos canônicos existentes da loja (para matching conservador) — reuso.
   const existingProducts = await loadStoreExistingProducts(serviceClient, storeId);
 
+  // CONTRATO DE CHECKSUM — 2ª camada (NORMALIZED OFFERS): checksum da lista
+  // pós-parse. É o ÚNICO valor aceito pelo CommitService como `offersChecksum`.
+  const normalizedChecksum = normalizedOffersChecksum(offers);
+
   // Commit engine (idempotente, plan determinístico, nunca commita
   // PROHIBIDO/AMBÍGUO/INVÁLIDO) — reuso SupabaseCatalogRepository.
   const repo = new SupabaseCatalogRepository(serviceClient);
   const svc = new MerchantImportCommitService({ repository: repo, existingProducts, batchSize: 500 });
   const sessionId = String(body.session_id ?? `imp-${Date.now()}`);
-  const commit = await svc.commit(offers, { merchantId: merchant.id, userId, storeId, sourceChecksum: currentChecksum, sessionId });
+  const commit = await svc.commit(offers, { merchantId: merchant.id, userId, storeId, offersChecksum: normalizedChecksum, sessionId });
 
   await logAuditEvent(merchant.id, userId, "import_complete", {
     session: sessionId, store_id: storeId, source_type: sourceType, status: commit.status,

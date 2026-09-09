@@ -1,3 +1,5 @@
+import type { RawOffer } from "../connectors/types/raw.types";
+
 /**
  * Merchant Import — import session + immutable preview (deterministic plan).
  *
@@ -121,4 +123,27 @@ export function sourceChecksum(content: string): string {
     h = Math.imul(h, 0x01000193);
   }
   return (h >>> 0).toString(16).padStart(8, "0");
+}
+
+/**
+ * CONTRATO DE CHECKSUM — RAW SOURCE (route).
+ * Imutabilidade do ARQUIVO/CONTEÚDO BRUTO exatamente como enviado no preview.
+ * `expectedRawChecksum` é o checksum aprovado no preview; sem ele (undefined)
+ * não há verificação (primeiro envio). Usado pela route ANTES do parse:
+ * divergência => HTTP 409. NÃO usar para a lista normalizada de ofertas.
+ */
+export function isRawSourceUnchanged(expectedRawChecksum: string | undefined, rawContent: string): boolean {
+  if (!expectedRawChecksum) return true;
+  return sourceChecksum(rawContent) === expectedRawChecksum;
+}
+
+/**
+ * CONTRATO DE CHECKSUM — NORMALIZED OFFERS (CommitService).
+ * Checksum da lista de ofertas APÓS parse/normalização (pós-parse).
+ * É o ÚNICO valor que o MerchantImportCommitService compara com a lista que
+ * recebe. NUNCA use o checksum do raw content aqui — as duas representações
+ * são necessariamente diferentes e isso quebra o commit (SOURCE_CHANGED).
+ */
+export function normalizedOffersChecksum(offers: readonly RawOffer[]): string {
+  return sourceChecksum(JSON.stringify(offers));
 }
