@@ -15,6 +15,7 @@ function makeRepo() {
   const brands: Array<{ id: string; name: string }> = [];
   const cats: Array<{ id: string; name: string }> = [];
   let seq = 0;
+  const productInputs: Array<{ name: string; brandId?: string | null; categoryId?: string | null }> = [];
   const repoBase = {
     async findOfferByProductAndStore(productId: string): Promise<FakeOffer | null> {
       return offers.get(productId) ?? null;
@@ -31,12 +32,13 @@ function makeRepo() {
     async findCategoryByNormalizedName(t: string) { return cats.find((c) => c.name === t) ?? null; },
     async upsertBrand(name: string) { const e = { id: `brand-${name}`, name }; brands.push(e); return e.id; },
     async upsertCategory(name: string) { const e = { id: `cat-${name}`, name }; cats.push(e); return e.id; },
-    async upsertProduct(input: { name: string }): Promise<string> {
+    async upsertProduct(input: { name: string; brandId?: string | null; categoryId?: string | null }): Promise<string> {
+      productInputs.push({ name: input.name, brandId: input.brandId, categoryId: input.categoryId });
       if (!products.has(input.name)) products.set(input.name, `prod-${products.size + 1}`);
       return products.get(input.name)!;
     },
   } as unknown as ICatalogRepository;
-  return { ...repoBase, _offers: offers, _priceHistory: priceHistory, _products: products } as ICatalogRepository & { _offers: Map<string, FakeOffer>; _priceHistory: string[]; _products: Map<string, string>; };
+  return { ...repoBase, _offers: offers, _priceHistory: priceHistory, _products: products, _productInputs: productInputs } as ICatalogRepository & { _offers: Map<string, FakeOffer>; _priceHistory: string[]; _products: Map<string, string>; _productInputs: Array<{ name: string; brandId?: string | null; categoryId?: string | null }>; };
 }
 
 function offer(id: string, name: string, price: number, brand?: string, category?: string, stock?: number): RawOffer {
@@ -285,5 +287,44 @@ describe("CHECKSUM CONTRACT — raw source (route) vs normalized offers (service
     expect(withEmptyTitle.length).toBe(1); // title NÃO é obrigatório no parser
     const withEmptyCode = parseLikeRoute("codigo;title;marca;preco;estoque\n;Produto sem codigo;MarcaQA;9.00;1");
     expect(withEmptyCode.length).toBe(0); // external_id obrigatório → INVALID (preview invalid++)
+  });
+});
+
+describe("INCIDENTE PROD 500 — brand/category ausentes NUNCA viram string vazia (UUID '' )", () => {
+  // Produção: `product upsert: invalid input syntax for type uuid: ""`
+  // (products.brand_id/category_id são UUID NULLABLE; "" é inválido).
+  it("SEM categoria (fixture QA: marca MarcaQA, sem categoria) → categoryId = null (nunca \"\")", async () => {
+    const repo = makeRepo();
+    const svc = new MerchantImportCommitService({ repository: repo, existingProducts: [] });
+    const offers = [offer("QA-E2E-001", "QA E2E Product 001", 100, "MarcaQA")]; // sem categoria
+    const r = await svc.commit(offers, { merchantId: "m1", userId: "u1", storeId: "s1", offersChecksum: normalizedOffersChecksum(offers), sessionId: "s-qa" });
+    expect(r.status).toBe("COMMITTED");
+    expect(r.createdProducts).toBe(1);
+    const input = repo._productInputs[0];
+    expect(input.categoryId).toBeNull();
+    expect(input.categoryId).not.toBe("");
+    expect(typeof input.brandId).toBe("string"); // MarcaQA resolvida
+  });
+
+  it("SEM marca e SEM categoria → brandId = null e categoryId = null (jamais \"\")", async () => {
+    const repo = makeRepo();
+    const svc = new MerchantImportCommitService({ repository: repo, existingProducts: [] });
+    const offers = [offer("QA-E2E-002", "QA E2E Product 002", 50)];
+    await svc.commit(offers, { merchantId: "m1", userId: "u1", storeId: "s1", offersChecksum: normalizedOffersChecksum(offers), sessionId: "s-qa2" });
+    const input = repo._productInputs[0];
+    expect(input.brandId).toBeNull();
+    expect(input.categoryId).toBeNull();
+    expect(input.brandId).not.toBe("");
+    expect(input.categoryId).not.toBe("");
+  });
+
+  it("COM marca e categoria → UUIDs resolvidos preservados (não regride o caminho feliz)", async () => {
+    const repo = makeRepo();
+    const svc = new MerchantImportCommitService({ repository: repo, existingProducts: [] });
+    const offers = [offer("QA-E2E-003", "QA E2E Product 003", 75, "MarcaQA", "CategoriaQA")];
+    await svc.commit(offers, { merchantId: "m1", userId: "u1", storeId: "s1", offersChecksum: normalizedOffersChecksum(offers), sessionId: "s-qa3" });
+    const input = repo._productInputs[0];
+    expect(input.brandId).toBe("brand-MarcaQA");
+    expect(input.categoryId).toBe("cat-CategoriaQA");
   });
 });

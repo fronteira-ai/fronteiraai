@@ -16,8 +16,8 @@ export interface UpsertProductInput {
   name: string;
   slug: string;
   description: string;
-  brandId: string;
-  categoryId: string;
+  brandId: string | null;
+  categoryId: string | null;
   imageUrl: string | null;
   specifications: Record<string, string> | null;
 }

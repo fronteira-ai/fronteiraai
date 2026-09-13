@@ -160,8 +160,8 @@ export class MerchantImportCommitService {
       name: offer.product.name,
       slug: slugify(offer.product.name) || `prod-${offer.product.externalId ?? Date.now()}`,
       description: offer.product.description ?? "",
-      brandId: brandId ?? "",
-      categoryId: categoryId ?? "",
+      brandId: brandId ?? null,
+      categoryId: categoryId ?? null,
       imageUrl: offer.product.imageUrl ?? null,
       specifications: offer.product.specifications ?? null,
     });
