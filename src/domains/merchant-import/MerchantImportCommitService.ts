@@ -124,11 +124,15 @@ export class MerchantImportCommitService {
       productId, storeId: ctx.storeId, currency: offer.currency ?? "USD", priceUSD: price, priceBRL: null, oldPriceUSD: offer.oldPriceUSD ?? null,
       inStock, stockQuantity: stockQty, condition: offer.condition ?? null, warranty: offer.warranty ?? null, cashback: offer.cashback ?? null, productUrl: offer.productUrl ?? null,
     });
-    result.createdOffers++;
-
+    // CONTADORES MUTUAMENTE COERENTES (incidente FAIL 13): uma oferta só é
+    // "created" quando NÃO existia oferta prévia no par (product_id, store_id).
+    // Reimport idêntico => unchangedOffers; reimport com mudança => updatedOffers.
+    // (A idempotência real do upsert permanece intacta — só a semântica dos
+    // contadores mudou, para não reportar 5 "created" num reimport de 5 ofertas.)
     const wasUnchanged = !!prev && Math.abs(prev.priceUSD - price) < 0.001 && prev.inStock === inStock;
-    if (wasUnchanged) result.unchangedOffers++;
-    else if (prev) result.updatedOffers++;
+    if (!prev) result.createdOffers++;
+    else if (wasUnchanged) result.unchangedOffers++;
+    else result.updatedOffers++;
 
     // price_history apenas na mudança de preço (não duplica em retry idêntico).
     if (!prev || Math.abs(prev.priceUSD - price) > 0.001) {

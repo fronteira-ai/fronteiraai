@@ -328,3 +328,77 @@ describe("INCIDENTE PROD 500 — brand/category ausentes NUNCA viram string vazi
     expect(input.categoryId).toBe("cat-CategoriaQA");
   });
 });
+
+describe("CONTADORES created/updated/unchanged (incidente FAIL 13)", () => {
+  // Produção: reimport idêntico devolvia createdOffers=5 (offers no banco: 5).
+  // Causa: `result.createdOffers++` incondicional em writeItem().
+  const mkExisting = (repo: ReturnType<typeof makeRepo>, names: string[]) =>
+    names.map((n, i) => ({ id: repo._products.get(n)!, brand: "Marca", name: n, externalId: String(i + 1) }));
+
+  it("1) 1ª importação: createdOffers = nº de ofertas escritas (createdProducts = nº de produtos)", async () => {
+    const repo = makeRepo();
+    const svc = new MerchantImportCommitService({ repository: repo, existingProducts: [] });
+    const offers = Array.from({ length: 5 }, (_, i) => offer(`QA-${i + 1}`, `Produto QA ${i + 1}`, 100 + i, "Marca", "Categoria"));
+    const r = await svc.commit(offers, { merchantId: "m1", userId: "u1", storeId: "s1", offersChecksum: normalizedOffersChecksum(offers), sessionId: "c1" });
+    expect(r.status).toBe("COMMITTED");
+    expect(r.createdOffers).toBe(5);
+    expect(r.createdProducts).toBe(5);
+    expect(r.updatedOffers).toBe(0);
+    expect(r.unchangedOffers).toBe(0);
+    expect(repo._offers.size).toBe(5);
+  });
+
+  it("2) reimport IDÊNTICO: createdOffers = 0, unchangedOffers = 5, sem duplicação, sem price_history novo", async () => {
+    const repo = makeRepo();
+    const offers = Array.from({ length: 5 }, (_, i) => offer(`QA-${i + 1}`, `Produto QA ${i + 1}`, 100 + i, "Marca", "Categoria"));
+    const checksum = normalizedOffersChecksum(offers);
+    const svc = new MerchantImportCommitService({ repository: repo, existingProducts: [] });
+    await svc.commit(offers, { merchantId: "m1", userId: "u1", storeId: "s1", offersChecksum: checksum, sessionId: "c2a" });
+    const phAfterFirst = repo._priceHistory.length;
+
+    const names = offers.map((o) => o.product.name);
+    const svc2 = new MerchantImportCommitService({ repository: repo, existingProducts: mkExisting(repo, names) });
+    const r2 = await svc2.commit(offers, { merchantId: "m1", userId: "u1", storeId: "s1", offersChecksum: checksum, sessionId: "c2b" });
+    expect(r2.status).toBe("COMMITTED");
+    expect(r2.createdOffers).toBe(0);
+    expect(r2.createdProducts).toBe(0);      // produtos reconciliados, não recriados
+    expect(r2.matchedProducts).toBe(5);
+    expect(r2.unchangedOffers).toBe(5);
+    expect(r2.updatedOffers).toBe(0);
+    expect(repo._offers.size).toBe(5);                              // sem duplicação
+    expect(repo._priceHistory.length).toBe(phAfterFirst);           // sem price_history novo
+    expect(r2.priceHistoryWrites).toBe(0);
+  });
+
+  it("3) reimport com MUDANÇA de preço: createdOffers = 0, updatedOffers = 1, price_history só pela mudança", async () => {
+    const repo = makeRepo();
+    const first = [offer("QA-1", "Produto QA 1", 100, "Marca", "Categoria")];
+    const svc = new MerchantImportCommitService({ repository: repo, existingProducts: [] });
+    await svc.commit(first, { merchantId: "m1", userId: "u1", storeId: "s1", offersChecksum: normalizedOffersChecksum(first), sessionId: "c3a" });
+    const phAfterFirst = repo._priceHistory.length;
+
+    const changed = [offer("QA-1", "Produto QA 1", 120, "Marca", "Categoria")]; // preço 100 → 120
+    const svc2 = new MerchantImportCommitService({ repository: repo, existingProducts: mkExisting(repo, ["Produto QA 1"]) });
+    const r = await svc2.commit(changed, { merchantId: "m1", userId: "u1", storeId: "s1", offersChecksum: normalizedOffersChecksum(changed), sessionId: "c3b" });
+    expect(r.status).toBe("COMMITTED");
+    expect(r.createdOffers).toBe(0);
+    expect(r.updatedOffers).toBe(1);
+    expect(r.unchangedOffers).toBe(0);
+    expect(r.priceHistoryWrites).toBe(1);
+    expect(repo._priceHistory.length).toBe(phAfterFirst + 1);
+    expect(repo._offers.size).toBe(1);
+  });
+
+  it("3b) reimport com mudança APENAS de estoque: updatedOffers = 1 e priceHistoryWrites = 0", async () => {
+    const repo = makeRepo();
+    const first = [offer("QA-1", "Produto QA 1", 100, "Marca", "Categoria", 10)];
+    const svc = new MerchantImportCommitService({ repository: repo, existingProducts: [] });
+    await svc.commit(first, { merchantId: "m1", userId: "u1", storeId: "s1", offersChecksum: normalizedOffersChecksum(first), sessionId: "c3c" });
+    const restocked = [offer("QA-1", "Produto QA 1", 100, "Marca", "Categoria", 0)]; // preço igual, estoque muda
+    const svc2 = new MerchantImportCommitService({ repository: repo, existingProducts: mkExisting(repo, ["Produto QA 1"]) });
+    const r = await svc2.commit(restocked, { merchantId: "m1", userId: "u1", storeId: "s1", offersChecksum: normalizedOffersChecksum(restocked), sessionId: "c3d" });
+    expect(r.createdOffers).toBe(0);
+    expect(r.updatedOffers).toBe(1);
+    expect(r.priceHistoryWrites).toBe(0); // preço não mudou ⇒ sem evento de histórico
+  });
+});
