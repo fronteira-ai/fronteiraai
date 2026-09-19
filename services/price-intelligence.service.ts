@@ -24,10 +24,28 @@ export interface ProductPriceIntelligence {
 }
 
 export async function getProductPriceIntelligence(productId: string): Promise<ProductPriceIntelligence> {
+  // P2 Public Catalog Visibility. Este card é consumer (/product/[slug]) e
+  // agrega estado HISTÓRICO — mas o histórico de uma loja que hoje não é
+  // pública não pode formar inteligência de preço do consumidor, mesmo que a
+  // oferta atual já esteja oculta em outras superfícies.
+  //
+  // `stores!inner(active)` + `.eq("offers.stores.active", true)` resolvem isso
+  // ESTRUTURALMENTE no banco: o caminho do filtro espelha a cadeia de embeds
+  // (`price_history` -> `offers` -> `stores`) e o `!inner` faz o filtro valer
+  // para a linha de `price_history` (não apenas para o embed). Nada é filtrado
+  // em JavaScript depois da agregação.
+  //
+  // SEMÂNTICA DE `available` (preservada de propósito): o card NÃO exige
+  // `offers.available = true`. `available=false` é oferta ARQUIVADA e não
+  // forma preço ATUAL (ADR-008), mas o gráfico é o registro de preços
+  // OBSERVADOS — inclusive de uma oferta que hoje está arquivada ou esgotada
+  // numa loja que continua ativa. A exigência deste incidente é sobre loja não
+  // pública; mudar também `available` aqui inventaria uma regra nova.
   const { data, error } = await supabase
     .from("price_history")
-    .select("price_usd, recorded_at, offers!inner(product_id)")
+    .select("price_usd, recorded_at, offers!inner(product_id, stores!inner(active))")
     .eq("offers.product_id", productId)
+    .eq("offers.stores.active", true)
     .order("recorded_at", { ascending: true })
     .limit(MAX_HISTORY_ROWS);
 

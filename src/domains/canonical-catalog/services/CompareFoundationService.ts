@@ -55,7 +55,7 @@ export class CompareFoundationService {
     // O filtro fica no serviço, não no repositório: aquele é compartilhado
     // com market-insights e buyer-intelligence, e filtrar lá mudaria a
     // semântica de preço/economia desses domínios (P2-2/P2-4).
-    const offers = allOffers.filter((offer) => offer.available);
+    const offers = allOffers.filter((offer) => offer.available && offer.storeActive !== false);
 
     const rankInputs: OfferRankInput[] = await Promise.all(
       offers.map(async (offer) => ({ offer, isVerifiedStore: await resolveIsVerified(offer.storeId) }))

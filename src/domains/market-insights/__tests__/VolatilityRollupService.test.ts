@@ -56,9 +56,13 @@ describe("VolatilityRollupService", () => {
       const catalogRepo = makeCatalogRepo({
         findOffersByCanonicalProductIds: jest.fn().mockResolvedValue(new Map()),
         findOffersByCanonicalProductId: jest.fn().mockResolvedValue({
+          // Espelha o que `SupabaseCanonicalCatalogRepository.mapOfferRow`
+          // sempre produz: `available` e `storeActive` fazem parte do
+          // transporte de `CanonicalOfferView` (um embed `stores(slug, active)`
+          // ausente vira `storeActive: true`, e `available` ausente vira true).
           items: [
-            { offerId: "o1", productId: "p1", storeId: "s1", storeSlug: "s1", priceUSD: 1, inStock: true, stockQuantity: null, updatedAt: "", condition: null, warranty: null, productUrl: null },
-            { offerId: "o2", productId: "p2", storeId: "s2", storeSlug: "s2", priceUSD: 1, inStock: true, stockQuantity: null, updatedAt: "", condition: null, warranty: null, productUrl: null },
+            { offerId: "o1", productId: "p1", storeId: "s1", storeSlug: "s1", priceUSD: 1, inStock: true, available: true, storeActive: true, stockQuantity: null, updatedAt: "", condition: null, warranty: null, productUrl: null },
+            { offerId: "o2", productId: "p2", storeId: "s2", storeSlug: "s2", priceUSD: 1, inStock: true, available: true, storeActive: true, stockQuantity: null, updatedAt: "", condition: null, warranty: null, productUrl: null },
           ],
           total: 2,
         }),
@@ -82,7 +86,7 @@ describe("VolatilityRollupService", () => {
       const catalogRepo = makeCatalogRepo({
         findOffersByCanonicalProductIds: jest.fn().mockResolvedValue(new Map()),
         findOffersByCanonicalProductId: jest.fn().mockResolvedValue({
-          items: [{ offerId: "o1", productId: "p1", storeId: "s1", storeSlug: "s1", priceUSD: 1, inStock: true, stockQuantity: null, updatedAt: "", condition: null, warranty: null, productUrl: null }],
+          items: [{ offerId: "o1", productId: "p1", storeId: "s1", storeSlug: "s1", priceUSD: 1, inStock: true, available: true, storeActive: true, stockQuantity: null, updatedAt: "", condition: null, warranty: null, productUrl: null }],
           total: 1,
         }),
       });
@@ -155,7 +159,7 @@ describe("VolatilityRollupService", () => {
       const findOffersByCanonicalProductId = jest.fn().mockImplementation((canonicalProductId: string) => {
         const productId = canonicalProductId === "c1" ? "p1" : "p2";
         return Promise.resolve({
-          items: [{ offerId: "o", productId, storeId: "s", storeSlug: "s", priceUSD: 1, inStock: true, stockQuantity: null, updatedAt: "", condition: null, warranty: null, productUrl: null }],
+          items: [{ offerId: "o", productId, storeId: "s", storeSlug: "s", priceUSD: 1, inStock: true, available: true, storeActive: true, stockQuantity: null, updatedAt: "", condition: null, warranty: null, productUrl: null }],
           total: 1,
         });
       });

@@ -5,6 +5,7 @@ export async function getStores(): Promise<Store[]> {
   const { data, error } = await supabase
     .from("stores")
     .select("*")
+    .eq("active", true)
     .order("rating", { ascending: false });
 
   if (error) {
@@ -30,6 +31,7 @@ export async function getStoreBySlug(slug: string): Promise<Store | null> {
     .from("stores")
     .select("*")
     .eq("slug", slug)
+    .eq("active", true)
     .single();
 
   if (error) {
@@ -47,6 +49,7 @@ export async function getRelatedStores(
   const { data, error } = await supabase
     .from("stores")
     .select("*")
+    .eq("active", true)
     .neq("id", excludeStoreId)
     .order("rating", { ascending: false })
     .limit(limit);

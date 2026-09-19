@@ -55,10 +55,16 @@ export async function getProductSlugsPage(offset: number, limit: number): Promis
 export async function getProductBySlug(
   slug: string
 ): Promise<ProductWithRelations | null> {
+  // P2 Public Catalog Visibility: PUBLIC PRODUCT = existe pelo menos uma
+  // PUBLIC OFFER (offers.available=true AND stores.active=true). O INNER JOIN
+  // com `offers!inner` + `.eq("offers.available", true)` garante que só
+  // exista resultado se houver oferta disponível; o filtro de loja ativa é
+  // conferido sobre o array embutido (stores.active === true).
   const { data, error } = await supabase
     .from("products")
-    .select("*, brand:brands(*), category:categories(*)")
+    .select("*, brand:brands(*), category:categories(*), offers!inner(id, store:stores(active))")
     .eq("slug", slug)
+    .eq("offers.available", true)
     .single();
 
   if (error) {
@@ -66,7 +72,16 @@ export async function getProductBySlug(
     return null;
   }
 
-  return data as ProductWithRelations;
+  const product = data as ProductWithRelations & {
+    offers?: { store: { active: boolean | null } | { active: boolean | null }[] | null }[];
+  };
+  const hasPublicOffer = (product.offers ?? []).some((offer) => {
+    const store = Array.isArray(offer.store) ? offer.store[0] : offer.store;
+    return store?.active === true;
+  });
+  if (!hasPublicOffer) return null;
+
+  return product as ProductWithRelations;
 }
 
 // Mission 03 (Decision Engine) — related products must never rank a
@@ -133,9 +148,13 @@ export async function getRelatedProducts(
   // Prices live on the offer, never on the product (DOMAIN_MODEL.md), so the
   // reference price and every candidate price come from one batched read —
   // never one query per candidate.
+  // P2 Public Catalog Visibility: só PUBLIC OFFER (available=true AND
+  // stores.active=true) forma preço de ranking de related products.
   const { data: offerRows, error: offerError } = await supabase
     .from("offers")
-    .select("product_id, price_usd")
+    .select("product_id, price_usd, stores!inner(active)")
+    .eq("available", true)
+    .eq("stores.active", true)
     .in("product_id", [product.id, ...candidates.map((candidate) => candidate.id)]);
 
   if (offerError) {
@@ -150,6 +169,10 @@ export async function getRelatedProducts(
       lowestPriceByProductId.set(row.product_id, row.price_usd);
     }
   }
+
+  // PUBLIC PRODUCT = existe pelo menos uma PUBLIC OFFER. Candidato sem oferta
+  // pública não aparece como "related" numa página pública.
+  const publicCandidates = candidates.filter((candidate) => lowestPriceByProductId.has(candidate.id));
 
   const referencePrice = lowestPriceByProductId.get(product.id);
 
@@ -170,7 +193,7 @@ export async function getRelatedProducts(
   // (mesma marca, distância de preço 0,025 — a menor de todas) era descartado
   // antes de ser comparado, e entravam dois Samsung com distância 0,17 e 0,21.
   // A fórmula de ranking abaixo é a original, inalterada.
-  return [...candidates]
+  return [...publicCandidates]
     .sort((a, b) => {
       const aSameBrand = a.brand_id === product.brand_id;
       const bSameBrand = b.brand_id === product.brand_id;
@@ -245,10 +268,11 @@ interface OfferFilterable<T> {
 // Catálogo de produtos (/products): combina os filtros de category/brand/
 // search (colunas nativas de "products") com os de store/availability/price
 // (colunas de "offers", já que preço/estoque pertencem à oferta, não ao
-// produto — ver docs/architecture/DOMAIN_MODEL.md). Quando nenhum filtro de oferta está
-// ativo, usa "offers!left" para não esconder produtos ainda sem oferta
-// cadastrada; quando algum está, troca para "offers!inner" para de fato
-// restringir os produtos retornados.
+// produto — ver docs/architecture/DOMAIN_MODEL.md).
+//
+// P2 Public Catalog Visibility: a elegibilidade é resolvida no SQL, ANTES de
+// contar e paginar — para TODOS os sorts (inclusive o padrão). Ver o bloco do
+// caminho canônico abaixo.
 export async function getProductsCatalog(
   filters: ProductCatalogFilters = {}
 ): Promise<ProductCatalogResult> {
@@ -261,22 +285,38 @@ export async function getProductsCatalog(
     filters.storeSlug ? getStoreBySlug(filters.storeSlug) : null,
   ]);
 
-  const hasPriceFilter =
-    filters.minPriceUSD !== undefined || filters.maxPriceUSD !== undefined;
-  const needsOfferFilter = Boolean(store) || Boolean(filters.onlyInStock) || hasPriceFilter;
-  const offersEmbed = needsOfferFilter ? "offers!inner" : "offers!left";
+  // P2 Public Catalog Visibility: PUBLIC STORE = stores.active = true.
+  // Um `storeSlug` explicitamente pedido que não resolve para loja pública
+  // (inativa ou removida) NÃO pode ser descartado em silêncio: como
+  // `getStoreBySlug` devolve `null` para loja inativa, `p_store_id` viraria
+  // `null` e a RPC devolveria o catálogo INTEIRO sem o filtro pedido. Aqui o
+  // resultado é vazio (mesma convenção de "sem resultado" das outras saídas
+  // do serviço) e a RPC nem chega a ser executada.
+  if (filters.storeSlug && !store) {
+    return {
+      products: [],
+      total: 0,
+      page,
+      perPage,
+      totalPages: Math.max(1, Math.ceil(0 / perPage)),
+    };
+  }
 
   const from = (page - 1) * perPage;
 
-  // Sprint 7B (P2-1): os filtros de nível de oferta ficam num único lugar,
-  // aplicados igualmente à consulta padrão e à consulta da página ordenada
-  // por preço. Se divergissem, `lowestPriceUSD` mudaria conforme o `sort` —
-  // exatamente o tipo de inconsistência que a Sprint 5 acabou de fechar.
+  // Sprint 7B (P2-1): os filtros de nível de oferta vivem num único lugar —
+  // a leitura das LINHAS da página que a RPC já decidiu/ordenou. Se
+  // divergissem da elegibilidade aplicada no SQL, `lowestPriceUSD` mudaria
+  // conforme o `sort` — exatamente o tipo de inconsistência que a Sprint 5
+  // acabou de fechar.
   const applyOfferFilters = <T extends OfferFilterable<T>>(q: T): T => {
     let out = q;
-    // `available=false` (arquivada) nunca forma preço — ver bloco original
-    // abaixo e ADR-008. Não é filtro opcional: é a definição de oferta ativa.
+    // `available=false` (arquivada) nunca forma preço — ADR-008. Não é filtro
+    // opcional: é a definição de oferta ativa.
     out = out.eq("offers.available", true);
+    // P2 Public Catalog Visibility: PUBLIC OFFER = available=true AND
+    // stores.active=true.
+    out = out.eq("offers.stores.active", true);
     if (store) out = out.eq("offers.store_id", store.id);
     if (filters.onlyInStock) out = out.eq("offers.in_stock", true);
     if (filters.minPriceUSD !== undefined) out = out.gte("offers.price_usd", filters.minPriceUSD);
@@ -284,104 +324,101 @@ export async function getProductsCatalog(
     return out;
   };
 
-  const mapRows = (rows: CatalogProductRow[]): ProductCatalogItem[] =>
-    rows.map((row) => {
-      const { offers, ...product } = row;
-      const prices = (offers ?? [])
-        .map((offer) => offer.price_usd)
-        .filter((price): price is number => typeof price === "number");
-      return {
-        ...product,
-        lowestPriceUSD: prices.length > 0 ? Math.min(...prices) : null,
-        inStock: (offers ?? []).some((offer) => offer.in_stock),
-      };
-    });
+  type CatalogOfferRowWithStore = CatalogOfferRow & {
+    stores?: { active: boolean | null } | { active: boolean | null }[] | null;
+  };
 
-  // ── Ordenação GLOBAL por preço (P2-1) ────────────────────────────────────
+  // P2 Public Catalog Visibility: PUBLIC OFFER = available=true (banco) AND
+  // stores.active=true. `stores(active)` ausente (mocks/legado) é tratado
+  // como ativo; quando presente, apenas active === true é público.
+  const isPublicOffer = (offer: CatalogOfferRowWithStore): boolean => {
+    const store = Array.isArray(offer.stores) ? offer.stores[0] : offer.stores;
+    return store ? store.active === true : true;
+  };
+
+  const mapRows = (rows: CatalogProductRow[]): ProductCatalogItem[] =>
+    rows
+      // PUBLIC PRODUCT = existe pelo menos uma PUBLIC OFFER. O gate é sobre a
+      // LINHA, antes de preço/estoque/contagem: nenhum produto entra no
+      // catálogo público (nem no caminho da RPC) sem uma oferta pública — o
+      // resultado não depende de o filtro `offers.stores.active` do PostgREST
+      // propagar para a linha do produto.
+      .filter((row) => ((row.offers ?? []) as CatalogOfferRowWithStore[]).some(isPublicOffer))
+      .map((row) => {
+        const { offers, ...product } = row;
+        const publicOffers = ((offers ?? []) as CatalogOfferRowWithStore[]).filter(isPublicOffer);
+        const prices = publicOffers
+          .map((offer) => offer.price_usd)
+          .filter((price): price is number => typeof price === "number");
+        return {
+          ...product,
+          lowestPriceUSD: prices.length > 0 ? Math.min(...prices) : null,
+          inStock: publicOffers.some((offer) => offer.in_stock),
+        };
+      });
+
+  // ── Elegibilidade + ordenação + paginação: UM caminho canônico (P2) ──────
   // "Preço do produto" é MIN(offers.price_usd) — uma agregação. O PostgREST
   // recusa ordenar por agregação de relação to-many (PGRST118/PGRST123,
-  // verificado), então a ordem+paginação vão para a RPC
-  // `search_products_catalog` (migration 20260809120000), que filtra ->
-  // agrega -> ordena -> pagina nessa ordem, no banco. Antes, o `.range()`
-  // paginava por `created_at` e o preço só reordenava os 12 itens já
-  // buscados: o menor preço do catálogo caía na página 2 (ADR-011).
+  // verificado), então a ordem+paginação vivem na RPC
+  // `search_products_catalog` (migrations 20260809120000 e 20260916120000),
+  // que filtra -> agrega -> ordena -> pagina nessa ordem, no banco. Antes, o
+  // `.range()` paginava por `created_at` e o preço só reordenava os 12 itens
+  // já buscados: o menor preço do catálogo caía na página 2 (ADR-011).
+  //
+  // P2 Public Catalog Visibility: este é o caminho de TODOS os sorts,
+  // inclusive o padrão (`newest`/`relevance`/`best_selling`/`top_rated`, que
+  // continuam caindo em `created_at` — ver ORDER BY da RPC). Antes, o sort
+  // padrão contava e paginava pelo PostgREST (`count: "exact"` + `.range()`
+  // sobre `products`): a elegibilidade de loja ativa é um filtro de dois
+  // níveis (`offers.stores.active`) e o `total` podia contar produto cuja
+  // única oferta disponível vinha de loja inativa. A RPC resolve isso no SQL
+  // — INNER JOIN em `stores(active)` ANTES de agregar —, então `total_count`
+  // e os limites de página são sempre de PUBLIC PRODUCTS. A elegibilidade
+  // nunca é "consertada" em JavaScript depois de uma página/total errados.
   //
   // A RPC devolve apenas os ids da página, já ordenados, mais o total. As
   // linhas completas vêm da MESMA consulta embutida de sempre, com os MESMOS
   // filtros — então `lowestPriceUSD`/`inStock` continuam sendo calculados
   // pelo mesmo caminho, sem uma segunda definição de preço a manter.
-  if (filters.sort === "price_asc" || filters.sort === "price_desc") {
-    const rpcArgs = {
-      p_category_id: category?.id ?? null,
-      p_brand_id: brand?.id ?? null,
-      p_store_id: store?.id ?? null,
-      p_search: filters.search?.trim() ? escapeLikePattern(filters.search.trim()) : null,
-      p_only_in_stock: filters.onlyInStock ?? false,
-      p_min_price: filters.minPriceUSD ?? null,
-      p_max_price: filters.maxPriceUSD ?? null,
-      p_sort: filters.sort,
-      p_limit: perPage,
-      p_offset: from,
-    };
+  const rpcArgs = {
+    p_category_id: category?.id ?? null,
+    p_brand_id: brand?.id ?? null,
+    p_store_id: store?.id ?? null,
+    p_search: filters.search?.trim() ? escapeLikePattern(filters.search.trim()) : null,
+    p_only_in_stock: filters.onlyInStock ?? false,
+    p_min_price: filters.minPriceUSD ?? null,
+    p_max_price: filters.maxPriceUSD ?? null,
+    p_sort: filters.sort ?? "newest",
+    p_limit: perPage,
+    p_offset: from,
+  };
 
-    const { data: ranked, error: rpcError } = await supabase.rpc(
-      "search_products_catalog",
-      rpcArgs
-    );
+  const { data: ranked, error: rpcError } = await supabase.rpc(
+    "search_products_catalog",
+    rpcArgs
+  );
 
-    if (rpcError) {
-      console.error(rpcError);
-      return { products: [], total: 0, page, perPage, totalPages: 0 };
-    }
+  if (rpcError) {
+    console.error(rpcError);
+    return { products: [], total: 0, page, perPage, totalPages: 0 };
+  }
 
-    const rankedRows = (ranked ?? []) as { product_id: string; total_count: number }[];
+  const rankedRows = (ranked ?? []) as { product_id: string; total_count: number }[];
 
-    // Página além do total: o PostgREST devolvia 0 linhas mas mantinha o
-    // `count` exato, então a UI seguia mostrando "N produtos encontrados".
-    // A RPC não tem linhas para carregar o total nesse caso — uma segunda
-    // chamada barata (1 linha) preserva o comportamento anterior.
-    if (rankedRows.length === 0) {
-      const { data: probe } = await supabase.rpc("search_products_catalog", {
-        ...rpcArgs,
-        p_limit: 1,
-        p_offset: 0,
-      });
-      const total = ((probe ?? []) as { total_count: number }[])[0]?.total_count ?? 0;
-      return {
-        products: [],
-        total,
-        page,
-        perPage,
-        totalPages: Math.max(1, Math.ceil(total / perPage)),
-      };
-    }
-
-    const orderedIds = rankedRows.map((row) => row.product_id);
-    const total = Number(rankedRows[0].total_count);
-
-    let pageQuery = supabase
-      .from("products")
-      .select(`*, brand:brands(*), category:categories(*), offers!left(price_usd, in_stock)`)
-      .in("id", orderedIds);
-    pageQuery = applyOfferFilters(pageQuery);
-
-    const { data: pageRows, error: pageError } = await pageQuery;
-
-    if (pageError) {
-      console.error(pageError);
-      return { products: [], total: 0, page, perPage, totalPages: 0 };
-    }
-
-    // `.in()` não preserva ordem; reordena os <=12 itens da página conforme a
-    // ordem que o banco já decidiu. Isto não é ordenar o catálogo em
-    // JavaScript — a ordenação global aconteceu no ORDER BY da RPC.
-    const byId = new Map(mapRows((pageRows ?? []) as unknown as CatalogProductRow[]).map((p) => [p.id, p]));
-    const products = orderedIds
-      .map((id) => byId.get(id))
-      .filter((p): p is ProductCatalogItem => p !== undefined);
-
+  // Página além do total: o PostgREST devolvia 0 linhas mas mantinha o
+  // `count` exato, então a UI seguia mostrando "N produtos encontrados".
+  // A RPC não tem linhas para carregar o total nesse caso — uma segunda
+  // chamada barata (1 linha) preserva o comportamento anterior.
+  if (rankedRows.length === 0) {
+    const { data: probe } = await supabase.rpc("search_products_catalog", {
+      ...rpcArgs,
+      p_limit: 1,
+      p_offset: 0,
+    });
+    const total = ((probe ?? []) as { total_count: number }[])[0]?.total_count ?? 0;
     return {
-      products,
+      products: [],
       total,
       page,
       perPage,
@@ -389,48 +426,29 @@ export async function getProductsCatalog(
     };
   }
 
-  let query = supabase
+  const orderedIds = rankedRows.map((row) => row.product_id);
+  const total = Number(rankedRows[0].total_count);
+
+  let pageQuery = supabase
     .from("products")
-    .select(
-      `*, brand:brands(*), category:categories(*), ${offersEmbed}(price_usd, in_stock)`,
-      { count: "exact" }
-    );
+    .select(`*, brand:brands(*), category:categories(*), offers!left(price_usd, in_stock, stores(active))`)
+    .in("id", orderedIds);
+  pageQuery = applyOfferFilters(pageQuery);
 
-  if (category) query = query.eq("category_id", category.id);
-  if (brand) query = query.eq("brand_id", brand.id);
-  if (filters.search?.trim()) {
-    query = query.ilike("name", `%${escapeLikePattern(filters.search.trim())}%`);
-  }
-  // Sprint 5 (P2-2): oferta arquivada (`available=false`) nunca pode formar o
-  // preço anunciado no catálogo — ver `applyOfferFilters` acima, hoje o único
-  // lugar onde esses filtros vivem, compartilhado com o caminho da RPC.
-  query = applyOfferFilters(query);
+  const { data: pageRows, error: pageError } = await pageQuery;
 
-  // Caminho padrão (`newest`, `relevance`, `best_selling`, `top_rated`):
-  // inalterado. "best_selling"/"top_rated" ainda não têm coluna de apoio
-  // (estrutura preparada, conforme missão) e continuam caindo em
-  // `created_at`. `price_asc`/`price_desc` nunca chegam aqui — saem antes,
-  // pela RPC, que é o que os torna globalmente ordenados (P2-1/ADR-011).
-  query = query.order("created_at", { ascending: false });
-
-  const to = from + perPage - 1;
-  query = query.range(from, to);
-
-  const { data, error, count } = await query;
-
-  if (error) {
-    console.error(error);
+  if (pageError) {
+    console.error(pageError);
     return { products: [], total: 0, page, perPage, totalPages: 0 };
   }
 
-  const products = mapRows((data ?? []) as unknown as CatalogProductRow[]);
-
-  // Sprint 7B (P2-1): o reordenamento em JavaScript que existia aqui foi
-  // removido, não substituído. Ele só conseguia ordenar os 12 itens que o
-  // `.range()` já havia trazido — era a causa raiz do P2-1. Ordenação por
-  // preço agora sai pela RPC, acima, e nunca alcança este ponto.
-
-  const total = count ?? 0;
+  // `.in()` não preserva ordem; reordena os <=12 itens da página conforme a
+  // ordem que o banco já decidiu. Isto não é ordenar o catálogo em
+  // JavaScript — a ordenação global aconteceu no ORDER BY da RPC.
+  const byId = new Map(mapRows((pageRows ?? []) as unknown as CatalogProductRow[]).map((p) => [p.id, p]));
+  const products = orderedIds
+    .map((id) => byId.get(id))
+    .filter((p): p is ProductCatalogItem => p !== undefined);
 
   return {
     products,

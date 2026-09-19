@@ -167,7 +167,7 @@ export class OpportunityEngine {
     // `available=false` ≠ `inStock=false`: a esgotada continua ativa e segue
     // participando normalmente — é o gate de estoque logo abaixo que decide
     // o que fazer com ela.
-    const activeOffers = offers.filter((o) => o.available);
+    const activeOffers = offers.filter((o) => o.available && o.storeActive !== false);
 
     const savings = computeSavingsOpportunity(
       product.id,

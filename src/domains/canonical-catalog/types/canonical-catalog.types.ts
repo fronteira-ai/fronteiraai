@@ -22,6 +22,12 @@ export interface CanonicalOfferView {
    * que hoje dependem do conjunto completo. Quem decide o que é comparável é
    * o CompareFoundationService. */
   available: boolean;
+  /** P2 Public Catalog Visibility. `stores.active` — PUBLIC OFFER exige
+   * `stores.active = true`. O repositório apenas TRANSPORTA este campo (o
+   * mesmo tratamento do `available`): quem decide o que é comparável é o
+   * consumidor público (CompareFoundationService, ComparisonIntelligenceComposer,
+   * OpportunityEngine, PriceIntelligenceService). */
+  storeActive?: boolean;
   stockQuantity: number | null;
   updatedAt: string;
   condition: string | null;

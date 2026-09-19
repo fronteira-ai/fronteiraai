@@ -36,7 +36,11 @@ export async function getOffersByProduct(
     return [];
   }
 
-  return data as OfferWithStore[];
+  // P2 Public Catalog Visibility: PUBLIC OFFER = available=true (filtrado no
+  // banco) AND stores.active=true. O filtro de loja ativa é aplicado ANTES de
+  // devolver as ofertas; a ordem `in_stock desc, price asc` já veio do banco
+  // e é preservada ao filtrar um subconjunto.
+  return ((data ?? []) as OfferWithStore[]).filter((offer) => offer.store?.active === true);
 }
 
 export async function getOffersByStore(
@@ -46,7 +50,7 @@ export async function getOffersByStore(
   // getOffersByProduct above.
   const { data, error } = await supabase
     .from("offers")
-    .select("*, product:products(*)")
+    .select("*, product:products(*), stores(active)")
     .eq("store_id", storeId)
     .eq("available", true)
     .order("in_stock", { ascending: false })
@@ -57,7 +61,17 @@ export async function getOffersByStore(
     return [];
   }
 
-  return data as OfferWithProduct[];
+  // P2 Public Catalog Visibility: mesmo filtro de loja ativa do
+  // getOffersByProduct — impede que uma chamada direta com uma loja inativa
+  // devolva ofertas públicas.
+  type RowWithStore = OfferWithProduct & {
+    stores: { active: boolean | null } | { active: boolean | null }[] | null;
+  };
+  const isActiveStore = (row: RowWithStore): boolean => {
+    const store = Array.isArray(row.stores) ? row.stores[0] : row.stores;
+    return store?.active === true;
+  };
+  return ((data ?? []) as unknown as RowWithStore[]).filter(isActiveStore) as unknown as OfferWithProduct[];
 }
 
 // Único caminho de escrita para preço de oferta (ADR-013/ADR-017) — Admin

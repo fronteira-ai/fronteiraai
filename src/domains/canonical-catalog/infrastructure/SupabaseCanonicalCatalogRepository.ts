@@ -212,10 +212,10 @@ export class SupabaseCanonicalCatalogRepository implements ICanonicalCatalogRepo
   // Filtrar aqui mudaria a semântica de preço/economia desses domínios e
   // reabriria P2-2/P2-4. Quem decide o que é comparável é o consumidor.
   private static readonly OFFER_COLUMNS =
-    "id, product_id, store_id, price_usd, in_stock, available, stock_quantity, updated_at, condition, warranty, product_url, stores(slug)";
+    "id, product_id, store_id, price_usd, in_stock, available, stock_quantity, updated_at, condition, warranty, product_url, stores(slug, active)";
 
   private static mapOfferRow(row: Record<string, unknown>): CanonicalOfferView {
-    const storeRelation = row.stores as { slug: string } | { slug: string }[] | null;
+    const storeRelation = row.stores as { slug: string; active: boolean | null } | { slug: string; active: boolean | null }[] | null;
     const store = Array.isArray(storeRelation) ? storeRelation[0] : storeRelation;
     return {
       offerId: row.id as string,
@@ -228,6 +228,10 @@ export class SupabaseCanonicalCatalogRepository implements ICanonicalCatalogRepo
       // coluna (mock antigo, select parcial); no schema real `available` é
       // NOT NULL DEFAULT true, então nunca vem ausente do banco.
       available: (row.available as boolean | null) ?? true,
+      // P2 Public Catalog Visibility. Na ausência do embed (mock antigo) o
+      // default `true` preserva os testes legados; quando `stores(active)`
+      // está presente, `active === true` é a única condição pública.
+      storeActive: store ? store.active === true : true,
       stockQuantity: (row.stock_quantity as number | null) ?? null,
       updatedAt: row.updated_at as string,
       condition: (row.condition as string | null) ?? null,

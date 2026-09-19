@@ -49,7 +49,7 @@ export class ComparisonIntelligenceComposer {
     // XPS 14 e o JBL Charge 6 gastavam 2 consultas de frescor para um bundle
     // de 1 oferta. Alinhar este conjunto ao conjunto rankeado é só remover
     // trabalho desperdiçado — nenhuma entrada que era consultada desaparece.
-    const offers = allOffers.filter((offer) => offer.available);
+    const offers = allOffers.filter((offer) => offer.available && offer.storeActive !== false);
 
     const isVerifiedByStoreId = await this.resolveVerification(offers);
     const resolveIsVerified = (storeId: string) => isVerifiedByStoreId.get(storeId) ?? false;

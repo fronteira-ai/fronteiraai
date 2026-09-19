@@ -52,7 +52,7 @@ function productRow(id: string): Record<string, unknown> {
 
 function buildProduct(
   id: string,
-  offers: Array<{ price_usd: number; in_stock: boolean }>
+  offers: Array<{ price_usd: number | null; in_stock: boolean }>
 ): Record<string, unknown> {
   return {
     ...productRow(id),
@@ -140,9 +140,13 @@ describe("searchEverything — ordenação global por disponibilidade + preço (
 
   // ── EDGE CASES
   it("coloca preço null no fim do seu grupo (sem inventar preço)", async () => {
-    // sem oferta com preço → has_stock false, lowestPriceUSD null
+    // P2 Public Catalog Visibility: PUBLIC PRODUCT = >=1 PUBLIC OFFER. Um
+    // produto SEM oferta nenhuma não é mais público (antes aparecia com preço
+    // null). O caso que este teste protege — não inventar preço — continua
+    // existindo para oferta pública sem preço: ela mantém o produto visível e
+    // o coloca no fim do seu grupo, com `lowestPriceUSD` null.
     const rows = [
-      buildProduct("oosNoPrice", []),
+      buildProduct("oosNoPrice", [{ price_usd: null, in_stock: false }]),
       buildProduct("av100", [{ price_usd: 100, in_stock: true }]),
     ];
     arrangeFallbackPath(rows);

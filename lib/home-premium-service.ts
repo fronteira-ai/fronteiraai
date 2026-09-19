@@ -26,13 +26,49 @@ export interface HomeStats {
   categories: number;
 }
 
+/** P2 Public Catalog Visibility: ids das lojas PÚBLICAS (stores.active=true).
+ * O gate é resolvido no consumidor público — MarketPulseService e
+ * MarketplaceMetricsService são compartilhados com dashboards internos, que
+ * precisam continuar enxergando loja inativa. */
+async function getActiveStoreIds(client: SupabaseClient): Promise<Set<string>> {
+  const { data } = await client.from("stores").select("id").eq("active", true);
+  return new Set(((data ?? []) as { id: string }[]).map((row) => row.id));
+}
+
+/** P2 Public Catalog Visibility: os números do Hero são contagens PÚBLICAS —
+ * PUBLIC STORE (stores.active=true), PUBLIC OFFER (offers.available=true AND
+ * stores.active=true) e PUBLIC PRODUCT (>=1 PUBLIC OFFER) — nunca totais de
+ * banco. `categories` continua sendo o tamanho da taxonomia. */
+async function getPublicCatalogCounts(client: SupabaseClient): Promise<{ stores: number; products: number; offers: number }> {
+  const { data: activeStores } = await client.from("stores").select("id").eq("active", true);
+  const storeIds = ((activeStores ?? []) as { id: string }[]).map((row) => row.id);
+
+  if (storeIds.length === 0) return { stores: 0, products: 0, offers: 0 };
+
+  const { data: offerRows } = await client
+    .from("offers")
+    .select("product_id")
+    .eq("available", true)
+    .in("store_id", storeIds);
+
+  const rows = (offerRows ?? []) as { product_id: string | null }[];
+  const publicProductIds = new Set(
+    rows.map((row) => row.product_id).filter((id): id is string => Boolean(id))
+  );
+
+  return { stores: storeIds.length, products: publicProductIds.size, offers: rows.length };
+}
+
 export async function getHomeStats(client: SupabaseClient): Promise<HomeStats> {
   const { metricsService } = createMarketplaceOperationsServices(client);
-  const snapshot = await metricsService.snapshot();
+  const [snapshot, publicCounts] = await Promise.all([
+    metricsService.snapshot(),
+    getPublicCatalogCounts(client),
+  ]);
   return {
-    stores: snapshot.stores,
-    products: snapshot.products,
-    offers: snapshot.offers,
+    stores: publicCounts.stores,
+    products: publicCounts.products,
+    offers: publicCounts.offers,
     categories: snapshot.categories,
   };
 }
@@ -113,12 +149,18 @@ export async function getMarketPulseHighlights(client: SupabaseClient): Promise<
   const from = new Date(to.getTime() - MARKET_PULSE_WINDOW_DAYS * 24 * 60 * 60 * 1000);
   const todayStart = new Date(to.getTime() - 24 * 60 * 60 * 1000);
 
-  const [movers, snapshot, todaySnapshot, dailyChangeSeries] = await Promise.all([
+  const [rawMovers, snapshot, todaySnapshot, dailyChangeSeries, activeStoreIds] = await Promise.all([
     marketPulseService.getTopMovers(from, to, 30),
     marketPulseService.computeForRange(from, to),
     marketPulseService.computeForRange(todayStart, to),
     getDailyChangeSeries(changeRepo),
+    getActiveStoreIds(client),
   ]);
+
+  // P2 Public Catalog Visibility: uma mudança cuja loja não é mais pública
+  // (stores.active <> true) nunca é nomeada na Home. O gate acontece ANTES
+  // de qualquer ranking/exibição — nunca removendo depois de ordenar.
+  const movers = rawMovers.filter((m) => m.storeId === null || activeStoreIds.has(m.storeId));
 
   const toHighlight = (m: (typeof movers)[number]): MarketMoverHighlight => ({
     productName: m.productName,
@@ -313,7 +355,15 @@ export async function getLiveMarketplaceFeed(client: SupabaseClient): Promise<Li
   const to = new Date();
   const from = new Date(to.getTime() - 24 * 60 * 60 * 1000);
 
-  const movers = await marketPulseService.getTopMovers(from, to, LIVE_FEED_LIMIT);
+  const [rawMovers, activeStoreIds] = await Promise.all([
+    marketPulseService.getTopMovers(from, to, LIVE_FEED_LIMIT),
+    getActiveStoreIds(client),
+  ]);
+
+  // P2 Public Catalog Visibility: o ticker é público — uma mudança de loja
+  // não-pública (stores.active <> true) não é exibida, filtrada ANTES do sort.
+  const movers = rawMovers.filter((m) => m.storeId === null || activeStoreIds.has(m.storeId));
+
   return movers
     .sort((a, b) => b.detectedAt.localeCompare(a.detectedAt))
     .map((m) => ({
@@ -354,10 +404,15 @@ export async function getFeaturedStores(client: SupabaseClient): Promise<Feature
   const results = await Promise.all(
     top.map(async (priority) => {
       const store = await getStoreBySlug(priority.storeSlug);
+      // P2 Public Catalog Visibility: PUBLIC STORE = stores.active=true.
+      // getStoreBySlug já filtra, mas o null também pode significar loja
+      // removida — nunca vira card público.
+      if (!store || store.active !== true) return null;
       const { count } = await client
         .from("offers")
         .select("id", { count: "exact", head: true })
-        .eq("store_id", priority.storeId);
+        .eq("store_id", priority.storeId)
+        .eq("available", true);
 
       const connector = connectorByStoreSlug.get(priority.storeSlug);
 
@@ -378,7 +433,7 @@ export async function getFeaturedStores(client: SupabaseClient): Promise<Feature
     })
   );
 
-  return results;
+  return results.filter((r): r is NonNullable<typeof r> => r !== null);
 }
 
 // ── Categorias ────────────────────────────────────────────────────────────
@@ -398,29 +453,50 @@ export interface CategoryWithCount {
  * Wave brief asks for by name ("Quantidade de produtos. Quantidade de
  * ofertas."), computed here with one grouped read rather than a second
  * per-category round trip. */
-async function getOfferCountsByCategory(client: SupabaseClient): Promise<Map<string, number>> {
-  const { data } = await client.from("offers").select("products(category_id)");
-  const counts = new Map<string, number>();
+async function getPublicCategoryMetrics(
+  client: SupabaseClient
+): Promise<{ offerCounts: Map<string, number>; productCounts: Map<string, number> }> {
+  // P2 Public Catalog Visibility: só PUBLIC OFFER (available=true AND
+  // stores.active=true) conta na Home/Categorias — e PUBLIC PRODUCT é o
+  // produto que possui >=1 PUBLIC OFFER. Uma única leitura alimenta as duas
+  // contagens (o produto de cada oferta é uma coluna da própria oferta).
+  const { data } = await client
+    .from("offers")
+    .select("product_id, products(category_id), stores(active)")
+    .eq("available", true);
+
+  const offerCounts = new Map<string, number>();
+  const productIdsByCategory = new Map<string, Set<string>>();
 
   for (const row of data ?? []) {
+    const storeRelation = row.stores as { active: boolean | null } | { active: boolean | null }[] | null;
+    const store = Array.isArray(storeRelation) ? storeRelation[0] : storeRelation;
+    if (store?.active !== true) continue;
+
     const productRelation = row.products as { category_id: string | null } | { category_id: string | null }[] | null;
     const product = Array.isArray(productRelation) ? productRelation[0] : productRelation;
     if (!product?.category_id) continue;
-    counts.set(product.category_id, (counts.get(product.category_id) ?? 0) + 1);
+
+    offerCounts.set(product.category_id, (offerCounts.get(product.category_id) ?? 0) + 1);
+
+    const productId = row.product_id as string | null;
+    if (!productId) continue;
+    const productIds = productIdsByCategory.get(product.category_id) ?? new Set<string>();
+    productIds.add(productId);
+    productIdsByCategory.set(product.category_id, productIds);
   }
 
-  return counts;
+  return {
+    offerCounts,
+    productCounts: new Map(Array.from(productIdsByCategory, ([id, productIds]) => [id, productIds.size])),
+  };
 }
 
 async function getCategoriesWithCounts(client: SupabaseClient): Promise<CategoryWithCount[]> {
-  const { coverageService } = createMarketplaceOperationsServices(client);
-  const [coverage, categories, offerCounts] = await Promise.all([
-    coverageService.compute(),
+  const [categories, publicMetrics] = await Promise.all([
     getCategories(),
-    getOfferCountsByCategory(client),
+    getPublicCategoryMetrics(client),
   ]);
-
-  const productCountById = new Map(coverage.byCategory.map((c) => [c.id, c.productCount]));
 
   return categories
     .map((category) => ({
@@ -428,8 +504,10 @@ async function getCategoriesWithCounts(client: SupabaseClient): Promise<Category
       name: category.name,
       slug: category.slug,
       icon: category.icon,
-      productCount: productCountById.get(category.id) ?? 0,
-      offerCount: offerCounts.get(category.id) ?? 0,
+      // P2: contagem pública, nunca o total de banco (produto sem PUBLIC
+      // OFFER não entra; produto só ofertado por loja inativa também não).
+      productCount: publicMetrics.productCounts.get(category.id) ?? 0,
+      offerCount: publicMetrics.offerCounts.get(category.id) ?? 0,
     }))
     .sort((a, b) => b.productCount - a.productCount);
 }

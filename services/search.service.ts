@@ -20,10 +20,17 @@ import { escapeLikePattern } from "@/utils/search";
 // quebrar. Assim o /search nunca fica vazio — só não é global até a
 // migration rodar.
 //
-// Same offers!left join pattern used by getProductsCatalog
-// (services/product.service.ts) — offers!left so a product without any
-// offer yet still appears (never hidden), just without a price badge.
-type SearchProductRow = ProductWithRelations & { offers: { price_usd: number; in_stock: boolean; store_id: string }[] };
+// P2 Public Catalog Visibility: `stores(active)` entra no embed de offers,
+// junto do mesmo padrão `offers!left`/`offers!inner` usado por
+// getProductsCatalog (services/product.service.ts).
+type SearchProductRow = ProductWithRelations & {
+  offers: {
+    price_usd: number;
+    in_stock: boolean;
+    store_id: string;
+    stores?: { active: boolean | null } | { active: boolean | null }[] | null;
+  }[];
+};
 
 type SearchRankedId = { product_id: string; has_stock: boolean };
 
@@ -54,12 +61,30 @@ function rootlessRank(a: ProductCatalogItem, b: ProductCatalogItem): number {
   return a.lowestPriceUSD - b.lowestPriceUSD;
 }
 
+// P2 Public Catalog Visibility: PUBLIC OFFER = available=true (já filtrado na
+// query) AND stores.active=true. A elegibilidade é resolvida sobre a LINHA,
+// antes de qualquer preço/estoque/ranking — nunca depois deles.
+function publicOffersOf(offers: SearchProductRow["offers"] | undefined) {
+  return (offers ?? []).filter((offer) => {
+    const store = Array.isArray(offer.stores) ? offer.stores[0] : offer.stores;
+    // `stores(active)` ausente (mocks/legado) é tratado como ativo;
+    // quando presente, apenas active === true é público.
+    return store ? store.active === true : true;
+  });
+}
+
+// PUBLIC PRODUCT = existe pelo menos uma PUBLIC OFFER. Uma linha cujas
+// ofertas vêm todas de loja inativa (ou indisponíveis) nunca chega a formar
+// preço, disponibilidade, contagem ou ordem de busca.
+function filterPublicProductRows(rows: SearchProductRow[]): SearchProductRow[] {
+  return rows.filter((row) => publicOffersOf(row.offers).length > 0);
+}
+
 function mapProductRows(rows: SearchProductRow[]): ProductCatalogItem[] {
   return rows.map((row) => {
     const { offers, ...product } = row;
-    // A query já exclui ofertas arquivadas via `.eq("offers.available", true)`
-    // (ADR-008) — preço/variável de estoque aqui só sobre ofertas ativas.
-    const validOffers = (offers ?? []).filter((offer) => typeof offer.price_usd === "number");
+    const publicOffers = publicOffersOf(offers);
+    const validOffers = publicOffers.filter((offer) => typeof offer.price_usd === "number");
     const lowestOffer = validOffers.reduce<(typeof validOffers)[number] | null>(
       (lowest, offer) => (!lowest || offer.price_usd < lowest.price_usd ? offer : lowest),
       null
@@ -67,7 +92,7 @@ function mapProductRows(rows: SearchProductRow[]): ProductCatalogItem[] {
     return {
       ...product,
       lowestPriceUSD: lowestOffer?.price_usd ?? null,
-      inStock: (offers ?? []).some((offer) => offer.in_stock),
+      inStock: publicOffers.some((offer) => offer.in_stock),
       // Release 2.0 — Wave 4 (Trust Experience) — the store behind the
       // displayed price, for TrustComposer.composeCompactForStores.
       lowestPriceStoreId: lowestOffer?.store_id ?? null,
@@ -92,13 +117,20 @@ async function fetchOrderedProducts(pattern: string, escapedTerm: string): Promi
     const ids = ranked.map((r: SearchRankedId) => r.product_id);
     const { data, error } = await supabase
       .from("products")
-      .select("*, brand:brands(*), category:categories(*), offers!left(price_usd, in_stock, store_id)")
+      .select("*, brand:brands(*), category:categories(*), offers!left(price_usd, in_stock, store_id, stores(active))")
       .eq("offers.available", true)
+      .eq("offers.stores.active", true)
       .in("id", ids);
 
     if (!error && data) {
       // `.in()` não preserva ordem: reordena conforme a RPC já decidiu.
-      const byId = new Map(mapProductRows(data as unknown as SearchProductRow[]).map((p) => [p.id, p]));
+      // P2 Public Catalog Visibility: a RPC já só devolve produto com PUBLIC
+      // OFFER, mas a elegibilidade é reaplicada sobre as LINHAS — a mesma
+      // fonte de preço/estoque usada abaixo — para que nenhum produto possa
+      // sobreviver por divergência entre as duas leituras.
+      const byId = new Map(
+        mapProductRows(filterPublicProductRows(data as unknown as SearchProductRow[])).map((p) => [p.id, p])
+      );
       const products = ids
         .map((id) => byId.get(id))
         .filter((p): p is ProductCatalogItem => p !== undefined);
@@ -117,10 +149,13 @@ async function fetchOrderedProducts(pattern: string, escapedTerm: string): Promi
 
   // ── Caminho legado (fallback): mesmo contrato de antes, porém o sort usa a
   // regra canônica determinística sobre as linhas buscadas.
+  // P2 Public Catalog Visibility: `offers!inner` + filtros de elegibilidade
+  // para que só produtos com pelo menos uma PUBLIC OFFER entrem no resultado.
   const { data, error } = await supabase
     .from("products")
-    .select("*, brand:brands(*), category:categories(*), offers!left(price_usd, in_stock, store_id)")
+    .select("*, brand:brands(*), category:categories(*), offers!inner(price_usd, in_stock, store_id, stores(active))")
     .eq("offers.available", true)
+    .eq("offers.stores.active", true)
     .ilike("name", pattern)
     .limit(RESULTS_PER_SECTION);
 
@@ -128,7 +163,8 @@ async function fetchOrderedProducts(pattern: string, escapedTerm: string): Promi
     if (error) console.error(error);
     return [];
   }
-  return [...mapProductRows(data as unknown as SearchProductRow[])].sort((a, b) => rootlessRank(a, b) || (a.slug < b.slug ? -1 : a.slug === b.slug ? 0 : 1));
+  const publicProducts = mapProductRows(filterPublicProductRows(data as unknown as SearchProductRow[]));
+  return [...publicProducts].sort((a, b) => rootlessRank(a, b) || (a.slug < b.slug ? -1 : a.slug === b.slug ? 0 : 1));
 }
 
 export async function searchEverything(search: string): Promise<SearchResponse> {
@@ -146,6 +182,7 @@ export async function searchEverything(search: string): Promise<SearchResponse> 
     supabase
       .from("stores")
       .select("*")
+      .eq("active", true)
       .ilike("name", pattern)
       .limit(RESULTS_PER_SECTION),
     supabase

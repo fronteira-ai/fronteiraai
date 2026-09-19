@@ -22,10 +22,12 @@ export async function getStorePublic(slug: string): Promise<StorePublicData | nu
   const sc = getSupabaseServiceClient();
 
   // Use anon client for stores — public read policy is confirmed working (ADR-019)
+  // P2 Public Catalog Visibility: PUBLIC STORE = stores.active = true.
   const { data: storeData, error } = await supabase
     .from("stores")
     .select("*")
     .eq("slug", slug)
+    .eq("active", true)
     .single();
 
   if (error || !storeData) return null;
@@ -39,12 +41,15 @@ export async function getStorePublic(slug: string): Promise<StorePublicData | nu
       .limit(1)
       .maybeSingle(),
     // Offers are publicly readable via anon key (ADR-019)
+    // P2 Public Catalog Visibility: PUBLIC OFFER = available=true.
     supabase.from("offers")
       .select("id", { count: "exact", head: true })
-      .eq("store_id", store.id),
+      .eq("store_id", store.id)
+      .eq("available", true),
     supabase.from("offers")
       .select("product_id")
-      .eq("store_id", store.id),
+      .eq("store_id", store.id)
+      .eq("available", true),
   ]);
 
   type MerchantFields = { merchant_score: number; verified_level: string };
@@ -79,9 +84,11 @@ export async function getStoresRanking(limit = 30): Promise<StorePublicData[]> {
   const sc = getSupabaseServiceClient();
 
   // Use anon client for stores — public read is confirmed working (ADR-019)
+  // P2 Public Catalog Visibility: PUBLIC STORE = stores.active = true.
   const { data: storeData, error: storeError } = await supabase
     .from("stores")
     .select("*")
+    .eq("active", true)
     .order("rating", { ascending: false })
     .limit(limit);
 
@@ -96,8 +103,11 @@ export async function getStoresRanking(limit = 30): Promise<StorePublicData[]> {
       .select("store_id, merchant_id, merchants!inner(merchant_score, verified_level)")
       .in("store_id", storeIds),
     // Anon: offers are publicly readable (ADR-019)
+    // P2 Public Catalog Visibility: only available offers count for the
+    // public ranking (stores are already active via the query above).
     supabase.from("offers")
       .select("store_id")
+      .eq("available", true)
       .in("store_id", storeIds),
   ]);
 

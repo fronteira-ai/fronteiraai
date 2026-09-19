@@ -7,10 +7,10 @@
 // repete aqui.
 //
 // O que só um teste unitário garante é o CONTRATO que liga as duas pontas —
-// e que quebraria em silêncio numa refatoração futura: que o caminho de preço
-// realmente delega ao banco em vez de reordenar em memória, que a ordem
-// devolvida pelo banco sobrevive ao `.in()` (que não preserva ordem), e que o
-// sort padrão continua sem tocar na RPC.
+// e que quebraria em silêncio numa refatoração futura: que TODO sort (inclusive
+// o padrão) delega elegibilidade + contagem + paginação ao banco em vez de
+// contar produtos no PostgREST ou reordenar em memória, e que a ordem devolvida
+// pelo banco sobrevive ao `.in()` (que não preserva ordem).
 const mockFrom = jest.fn();
 const mockRpc = jest.fn();
 
@@ -141,15 +141,65 @@ describe("getProductsCatalog — ordenação global por preço (P2-1)", () => {
     expect(mockFrom).not.toHaveBeenCalled(); // nada a buscar
   });
 
-  it("não usa a RPC no sort padrão — aquele caminho segue inalterado", async () => {
+  it("o sort padrão também delega à RPC (p_sort=newest) e nunca conta pelo PostgREST", async () => {
+    // P2 Public Catalog Visibility: o sort padrão de /products (newest,
+    // relevance, best_selling, top_rated) passou a usar o MESMO caminho
+    // canônico de elegibilidade + contagem + paginação. Antes, ele contava com
+    // `count: "exact"` do PostgREST — que podia incluir produto cuja única
+    // oferta disponível vinha de loja inativa.
+    mockRpc.mockResolvedValue({ data: [{ product_id: "p1", lowest_price_usd: 10, total_count: 1 }] });
     mockFrom.mockImplementation(() =>
       makeChain({ data: [productRow("p1", [{ price_usd: 10, in_stock: true }])], count: 1 })
     );
 
     const result = await getProductsCatalog({ sort: "newest" });
 
-    expect(mockRpc).not.toHaveBeenCalled();
+    expect(mockRpc).toHaveBeenCalledWith(
+      "search_products_catalog",
+      expect.objectContaining({ p_sort: "newest", p_limit: 12, p_offset: 0 })
+    );
     expect(result.products.map((p) => p.id)).toEqual(["p1"]);
+    expect(result.total).toBe(1);
+  });
+
+  it("o `total` vem do SQL da RPC, nunca do count do PostgREST", async () => {
+    // Regressão do gap de total_count: o PostgREST devolveria 99 (produtos com
+    // oferta disponível, incluindo os de loja inativa); a RPC — que aplica a
+    // elegibilidade ANTES de agregar — devolve 5 PUBLIC PRODUCTS. O número
+    // exibido/paginado tem de ser o da RPC.
+    mockRpc.mockResolvedValue({ data: [{ product_id: "p1", lowest_price_usd: 10, total_count: 5 }] });
+    mockFrom.mockImplementation(() =>
+      makeChain({ data: [productRow("p1", [{ price_usd: 10, in_stock: true }])], count: 99 })
+    );
+
+    const result = await getProductsCatalog({ sort: "newest" });
+
+    expect(result.total).toBe(5);
+    expect(result.totalPages).toBe(1); // ceil(5 / 12)
+  });
+
+  it("paginação do sort padrão é derivada dos PUBLIC PRODUCTS da RPC", async () => {
+    // 25 PUBLIC PRODUCTS, perPage 12: página 3 traz 1 item — se o total
+    // viesse do PostgREST (com produtos de loja inativa), a última página
+    // ficaria curta/vazia com o total anunciando produtos invisíveis.
+    mockRpc.mockResolvedValue({
+      data: [
+        { product_id: "p25", lowest_price_usd: 10, total_count: 25 },
+      ],
+    });
+    mockFrom.mockImplementation(() =>
+      makeChain({ data: [productRow("p25", [{ price_usd: 10, in_stock: true }])] })
+    );
+
+    const result = await getProductsCatalog({ sort: "newest", page: 3, perPage: 12 });
+
+    expect(result.total).toBe(25);
+    expect(result.totalPages).toBe(3);
+    expect(result.products.map((p) => p.id)).toEqual(["p25"]);
+    expect(mockRpc).toHaveBeenCalledWith(
+      "search_products_catalog",
+      expect.objectContaining({ p_sort: "newest", p_offset: 24 })
+    );
   });
 
   it("devolve resultado vazio, sem quebrar, quando a RPC falha", async () => {

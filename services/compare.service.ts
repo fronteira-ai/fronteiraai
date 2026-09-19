@@ -85,7 +85,10 @@ async function batchPriceMetrics(offers: { id: string; price_usd: number }[]): P
 
 async function resolveStores(storeIds: string[]): Promise<Map<string, Store>> {
   if (storeIds.length === 0) return new Map();
-  const { data, error } = await supabase.from("stores").select("*").in("id", storeIds);
+  // P2 Public Catalog Visibility: o /compare público nunca resolve loja
+  // inativa — mesmo que uma oferta inativa chegue aqui por engano, ela fica
+  // sem card de loja e sem nome.
+  const { data, error } = await supabase.from("stores").select("*").eq("active", true).in("id", storeIds);
   if (error) {
     console.error(error);
     return new Map();

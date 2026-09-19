@@ -49,7 +49,26 @@ export class VolatilityRollupService {
       limit: OFFER_FETCH_LIMIT,
       offset: 0,
     });
-    const productIds = [...new Set(items.map((o) => o.productId))];
+
+    // P2 Public Catalog Visibility: PUBLIC OFFER = available=true AND
+    // stores.active=true. O resultado desta função alimenta inteligência
+    // CONSUMER ("Vale comprar agora?" em /product/[slug] e /compare, via
+    // PurchaseTimingComposer), então a elegibilidade é aplicada AQUI, na
+    // fronteira consumer mais próxima da fonte — antes de montar o conjunto de
+    // produtos que serão pontuados. Sem este filtro, um produto cujas ofertas
+    // vêm só de loja inativa entrava na média de volatilidade como se fosse
+    // público, e a pontuação era calculada sobre ele.
+    //
+    // `storeActive !== false` (e não `=== true`) é a convenção já usada pelos
+    // outros consumidores do campo (CompareFoundationService,
+    // ComparisonIntelligenceComposer, OpportunityEngine,
+    // PriceIntelligenceService). O repositório é o ÚNICO produtor de
+    // CanonicalOfferView e sempre preenche `storeActive` — `stores(slug,
+    // active)` faz parte de OFFER_COLUMNS nos dois métodos de leitura —, então
+    // no caminho real a condição é equivalente a `stores.active === true`;
+    // `undefined` só existe em objetos construídos à mão (testes).
+    const publicOffers = items.filter((offer) => offer.available && offer.storeActive !== false);
+    const productIds = [...new Set(publicOffers.map((o) => o.productId))];
     if (productIds.length === 0) return null;
 
     const scores = await Promise.all(productIds.map((id) => this.volatilityService.computeForProduct(id, windowDays)));
