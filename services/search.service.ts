@@ -113,11 +113,15 @@ async function fetchOrderedProducts(pattern: string, escapedTerm: string): Promi
     p_offset: 0,
   });
 
-  if (!rpcError && Array.isArray(ranked) && ranked.length > 0) {
+  if (!rpcError && Array.isArray(ranked)) {
+    // RPC executada com sucesso: zero linhas e um resultado valido e definitivo.
+    // O fallback legado existe somente para indisponibilidade/erro da RPC.
+    if (ranked.length === 0) return [];
+
     const ids = ranked.map((r: SearchRankedId) => r.product_id);
     const { data, error } = await supabase
       .from("products")
-      .select("*, brand:brands(*), category:categories(*), offers!left(price_usd, in_stock, store_id, stores(active))")
+      .select("*, brand:brands(*), category:categories(*), offers!left(price_usd, in_stock, store_id, stores!inner(active))")
       .eq("offers.available", true)
       .eq("offers.stores.active", true)
       .in("id", ids);
@@ -153,7 +157,7 @@ async function fetchOrderedProducts(pattern: string, escapedTerm: string): Promi
   // para que só produtos com pelo menos uma PUBLIC OFFER entrem no resultado.
   const { data, error } = await supabase
     .from("products")
-    .select("*, brand:brands(*), category:categories(*), offers!inner(price_usd, in_stock, store_id, stores(active))")
+    .select("*, brand:brands(*), category:categories(*), offers!inner(price_usd, in_stock, store_id, stores!inner(active))")
     .eq("offers.available", true)
     .eq("offers.stores.active", true)
     .ilike("name", pattern)

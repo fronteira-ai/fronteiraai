@@ -218,21 +218,46 @@ describe("searchEverything — ordenação global por disponibilidade + preço (
     expect(result.products.map((p) => p.id)).toEqual(["aprod", "bprod"]);
   });
 
-  it("quando a RPC responde sem linhas, cai para o caminho legado (não devolve vazio indevidamente)", async () => {
-    const rows = [buildProduct("av100", [{ price_usd: 100, in_stock: true }])];
-    // RPC OK mas vazia → deve seguir para o fallback em vez de esvaziar.
+  it("fallback exige loja ativa estruturalmente no embed de offers", async () => {
+    mockRpc.mockResolvedValue({ data: null, error: { message: "Could not find the function" } });
+
+    let productsChain: ReturnType<typeof makeChain> | undefined;
+
+    mockFrom.mockImplementation((table: string) => {
+      if (table === "stores") return makeChain({ data: [] });
+      if (table === "brands") return makeChain({ data: [] });
+      if (table === "categories") return makeChain({ data: [] });
+
+      if (table === "products") {
+        productsChain = makeChain({ data: [] });
+        return productsChain;
+      }
+
+      return makeChain({ data: [] });
+    });
+
+    await searchEverything("produto");
+
+    expect(productsChain).toBeDefined();
+    expect(productsChain!.select).toHaveBeenCalledWith(
+      expect.stringContaining("offers!inner(price_usd, in_stock, store_id, stores!inner(active))")
+    );
+  });
+
+  it("quando a RPC responde sem linhas, retorna vazio sem executar o fallback de produtos", async () => {
     mockRpc.mockResolvedValue({ data: [], error: null });
     mockFrom.mockImplementation((table: string) => {
       if (table === "stores") return makeChain({ data: [] });
       if (table === "brands") return makeChain({ data: [] });
       if (table === "categories") return makeChain({ data: [] });
-      if (table === "products") return makeChain({ data: rows });
+      if (table === "products") return makeChain({ data: [] });
       return makeChain({ data: [] });
     });
 
     const result = await searchEverything("produto");
 
-    expect(result.products.map((p) => p.id)).toEqual(["av100"]);
+    expect(result.products).toEqual([]);
+    expect(mockFrom).not.toHaveBeenCalledWith("products");
   });
 
   // GOLDEN QUERY SUITE (Search Recall V1): o serviço deve encaminhar o termo
