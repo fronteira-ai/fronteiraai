@@ -117,15 +117,14 @@ export class PriceIntelligenceService {
     //
     // `available=false` ≠ `inStock=false`: a esgotada segue fora do preço
     // aqui, exatamente como antes — este filtro não mexe nessa regra.
-    // P2 Public Catalog Visibility: PUBLIC OFFER exige `stores.active = true`.
-    // O repositório é o ÚNICO produtor de `CanonicalOfferView` e sempre
-    // preenche `storeActive` (o embed `stores(slug, active)` é parte do
-    // select), então `!== false` é a mesma regra de `=== true` no caminho
-    // real — e mantém o mesmo tratamento de "desconhecido" já usado pelos
-    // outros três consumidores do campo (CompareFoundationService,
-    // ComparisonIntelligenceComposer, OpportunityEngine).
+    // P2 Public Catalog Visibility + P2.2: PUBLIC OFFER exige
+    // `stores.active = true` como EVIDÊNCIA POSITIVA. `storeActive` é
+    // `boolean` obrigatório em `CanonicalOfferView` e o único produtor
+    // (`SupabaseCanonicalCatalogRepository.mapOfferRow`) só emite `true` quando
+    // `stores.active === true` — logo `=== true` é a regra exata e `undefined`
+    // é impossível de construir (fail-closed por tipo).
     return items
-      .filter((o) => o.available && o.inStock && o.storeActive !== false)
+      .filter((o) => o.available && o.inStock && o.storeActive === true)
       .map((o) => ({ storeId: o.storeId, storeSlug: o.storeSlug, priceUSD: o.priceUSD }));
   }
 }

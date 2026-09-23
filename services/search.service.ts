@@ -64,12 +64,19 @@ function rootlessRank(a: ProductCatalogItem, b: ProductCatalogItem): number {
 // P2 Public Catalog Visibility: PUBLIC OFFER = available=true (já filtrado na
 // query) AND stores.active=true. A elegibilidade é resolvida sobre a LINHA,
 // antes de qualquer preço/estoque/ranking — nunca depois deles.
+//
+// P2.1 — FAIL-CLOSED: exigir EVIDÊNCIA POSITIVA de loja ativa. Relacionamento
+// ausente (`undefined`), `null`, array vazio ou malformed **não** é público.
+// Ausência de evidência nunca concede visibilidade pública (o default antigo
+// `: true` era fail-open e foi exatamente o que deixou a oferta de loja
+// inativa sobreviver quando o embed `stores(active)` voltava vazio/anulado
+// pelo filtro de dois níveis do PostgREST).
 function publicOffersOf(offers: SearchProductRow["offers"] | undefined) {
   return (offers ?? []).filter((offer) => {
+    // to-one (`{active}`) ou to-many (`[{active}]`): o primeiro elemento é a
+    // relação resolvida; `[]`, `null` e `undefined` caem em `undefined`.
     const store = Array.isArray(offer.stores) ? offer.stores[0] : offer.stores;
-    // `stores(active)` ausente (mocks/legado) é tratado como ativo;
-    // quando presente, apenas active === true é público.
-    return store ? store.active === true : true;
+    return store?.active === true;
   });
 }
 

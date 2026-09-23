@@ -37,6 +37,8 @@ function makeOffer(overrides: Partial<CanonicalOfferView> = {}): CanonicalOfferV
     priceUSD: 100,
     inStock: true,
     available: true,
+    // P2.2 — oferta pública válida: evidência POSITIVA (loja ativa) explícita.
+    storeActive: true,
     stockQuantity: 5,
     updatedAt: new Date().toISOString(),
     condition: "new",
@@ -517,6 +519,25 @@ describe("OpportunityEngine", () => {
     // Antes, a arquivada servia de "loja mais cara/barata" e produzia uma
     // economia fantasma. Com uma única oferta ativa não há economia entre
     // lojas para anunciar.
+    expect(await engine.getTopOpportunities(5)).toEqual([]);
+  });
+
+  it("P2.2 — oferta de loja não pública (storeActive=false) não serve nem como ponta da economia", async () => {
+    const product = makeCanonicalProduct();
+    const engine = buildEngine({
+      products: [product],
+      offersByProductId: {
+        "canonical-1": [
+          makeOffer({ offerId: "publica", productId: "p-pub", storeId: "s-pub", storeSlug: "s-pub", priceUSD: 80 }),
+          // Loja não pública: não pode ser a "loja mais cara" de uma economia
+          // anunciada (fail-closed exige `storeActive === true`).
+          makeOffer({ offerId: "nao-publica", productId: "p-np", storeId: "s-np", storeSlug: "s-np", priceUSD: 120, storeActive: false }),
+        ],
+      },
+      savingsByProductId: {},
+    });
+
+    // Sobra uma única oferta elegível ⇒ não há comparação real entre lojas.
     expect(await engine.getTopOpportunities(5)).toEqual([]);
   });
 

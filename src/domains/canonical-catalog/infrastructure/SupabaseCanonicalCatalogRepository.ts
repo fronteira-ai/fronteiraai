@@ -228,10 +228,13 @@ export class SupabaseCanonicalCatalogRepository implements ICanonicalCatalogRepo
       // coluna (mock antigo, select parcial); no schema real `available` é
       // NOT NULL DEFAULT true, então nunca vem ausente do banco.
       available: (row.available as boolean | null) ?? true,
-      // P2 Public Catalog Visibility. Na ausência do embed (mock antigo) o
-      // default `true` preserva os testes legados; quando `stores(active)`
-      // está presente, `active === true` é a única condição pública.
-      storeActive: store ? store.active === true : true,
+      // P2 Public Catalog Visibility + P2.1 — FAIL-CLOSED. `storeActive` é
+      // EVIDÊNCIA POSITIVA de loja pública: só `stores.active === true`
+      // concede. Embed ausente, `null`, array vazio ou malformed ⇒ `false`
+      // (ausência de evidência nunca vira visibilidade). Este é o ÚNICO
+      // produtor de `CanonicalOfferView`, e o valor alimenta decisões
+      // consumer de ranking/preço/economia/volatilidade.
+      storeActive: store?.active === true,
       stockQuantity: (row.stock_quantity as number | null) ?? null,
       updatedAt: row.updated_at as string,
       condition: (row.condition as string | null) ?? null,

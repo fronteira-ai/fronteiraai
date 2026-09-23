@@ -56,7 +56,13 @@ function buildProduct(
 ): Record<string, unknown> {
   return {
     ...productRow(id),
-    offers,
+    // P2.1 — a partir do hardening fail-closed, `stores` ausente ⇒ oferta NÃO
+    // pública. Estas fixtures representam ofertas PÚBLICAS válidas (os testes
+    // cobrem ordenação de preço/estoque do conjunto público), então a loja
+    // ativa é declarada explicitamente — exatamente como o embed
+    // `stores(active)` que o PostgREST devolve. Casos negativos (loja ausente/
+    // inativa) vivem em `public-catalog-visibility.test.ts`.
+    offers: offers.map((offer) => ({ ...offer, stores: { active: true } })),
   };
 }
 

@@ -1065,3 +1065,179 @@ describe("P2 — FIX 3: histórico de preço consumer exige loja ativa (no SQL)"
     expect(result.series).toEqual([]);
   });
 });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// P2.1 — FAIL-CLOSED: ausência de evidência de loja ativa NÃO é público
+// ─────────────────────────────────────────────────────────────────────────────
+//
+// Contrato: PUBLIC OFFER exige evidência POSITIVA (`stores.active === true`).
+// Relacionamento ausente, `undefined`, `null`, array vazio ou malformado nunca
+// concede visibilidade pública. Antes do P2.1 os helpers faziam
+// `store ? store.active === true : true` (fail-open) — foi esse default que
+// deixou a oferta de loja inativa sobreviver quando o embed `stores(active)`
+// voltava vazio/anulado pelo filtro de dois níveis do PostgREST.
+describe("P2.1 — fail-closed: loja ausente/nula/vazia/malformed nunca é pública", () => {
+  type StoreShape = "absent" | "explicit-undefined" | "null" | "empty-array" | "active-null" | "malformed";
+
+  /** Oferta com o relacionamento `stores` em cada forma observável. */
+  function offerWithStoreShape(shape: StoreShape): Record<string, unknown> {
+    const base: Record<string, unknown> = { price_usd: 100, in_stock: true };
+    switch (shape) {
+      case "absent":
+        return base; // chave ausente
+      case "explicit-undefined":
+        return { ...base, stores: undefined };
+      case "null":
+        return { ...base, stores: null };
+      case "empty-array":
+        return { ...base, stores: [] };
+      case "active-null":
+        return { ...base, stores: { active: null } };
+      case "malformed":
+        return { ...base, stores: "broken-relationship" };
+    }
+  }
+
+  const NON_PUBLIC_SHAPES: StoreShape[] = [
+    "absent",
+    "explicit-undefined",
+    "null",
+    "empty-array",
+    "active-null",
+    "malformed",
+  ];
+
+  // ── /search (caminho legado, que é onde o vazamento de loja inativa ocorreu)
+  it.each(NON_PUBLIC_SHAPES)("busca: oferta com `stores` %s não é pública", async (shape) => {
+    mockRpc.mockResolvedValue({ data: null, error: { message: "Could not find the function" } });
+    routeFrom({
+      products: { data: [searchProductRow("p1", [offerWithStoreShape(shape)])] },
+    });
+
+    const result = await searchEverything("produto");
+
+    expect(result.products).toEqual([]);
+  });
+
+  it("busca: evidência positiva (loja ativa) continua pública — objeto e array", async () => {
+    mockRpc.mockResolvedValue({ data: null, error: { message: "Could not find the function" } });
+    routeFrom({
+      products: {
+        data: [
+          searchProductRow("p-object", [{ price_usd: 100, in_stock: true, stores: { active: true } }]),
+          searchProductRow("p-array", [{ price_usd: 200, in_stock: true, stores: [{ active: true }] }]),
+        ],
+      },
+    });
+
+    const result = await searchEverything("produto");
+
+    expect(result.products.map((p) => p.id)).toEqual(["p-object", "p-array"]);
+  });
+
+  it("busca: array com loja NÃO ativa não é público (array não é evidência por si)", async () => {
+    mockRpc.mockResolvedValue({ data: null, error: { message: "Could not find the function" } });
+    routeFrom({
+      products: {
+        data: [
+          searchProductRow("p1", [{ price_usd: 100, in_stock: true, stores: [{ active: false }] }]),
+        ],
+      },
+    });
+
+    const result = await searchEverything("produto");
+
+    expect(result.products).toEqual([]);
+  });
+
+  // ── /products (linhas da página devolvidas pelo PostgREST)
+  it.each(NON_PUBLIC_SHAPES)("catálogo: linha com oferta de `stores` %s é descartada", async (shape) => {
+    mockRpc.mockResolvedValue({
+      data: [
+        { product_id: "p-public", lowest_price_usd: 100, has_stock: true, total_count: 1 },
+        { product_id: "p-missing-store", lowest_price_usd: 50, has_stock: true, total_count: 1 },
+      ],
+    });
+    routeFrom({
+      products: {
+        data: [
+          searchProductRow("p-public", [{ price_usd: 100, in_stock: true, stores: { active: true } }]),
+          searchProductRow("p-missing-store", [offerWithStoreShape(shape)]),
+        ],
+        count: 2,
+      },
+    });
+
+    const result = await getProductsCatalog({ sort: "newest" });
+
+    expect(result.products.map((p) => p.id)).toEqual(["p-public"]);
+  });
+
+  it("catálogo: evidência positiva continua pública e forma preço/estoque", async () => {
+    mockRpc.mockResolvedValue({
+      data: [{ product_id: "p1", lowest_price_usd: 90, has_stock: true, total_count: 1 }],
+    });
+    routeFrom({
+      products: {
+        data: [searchProductRow("p1", [{ price_usd: 90, in_stock: true, stores: { active: true } }])],
+        count: 1,
+      },
+    });
+
+    const result = await getProductsCatalog({ sort: "newest" });
+
+    expect(result.products.map((p) => p.id)).toEqual(["p1"]);
+    expect(result.products[0].lowestPriceUSD).toBe(90);
+    expect(result.products[0].inStock).toBe(true);
+  });
+
+  // ── Produtor do Canonical Catalog (`storeActive` = evidência positiva)
+  it.each(NON_PUBLIC_SHAPES)("canonical: linha com `stores` %s produz storeActive=false", async (shape) => {
+    const client = {
+      from: () =>
+        makeChain({
+          data: [{ id: "o1", product_id: "p1", store_id: "s1", price_usd: 10, in_stock: true, available: true, stock_quantity: null, updated_at: "x", condition: null, warranty: null, product_url: null, ...offerWithStoreShape(shape) }],
+          count: 1,
+        }),
+    };
+
+    const { items } = await new SupabaseCanonicalCatalogRepository(client as never).findOffersByCanonicalProductId(
+      "cp1",
+      { limit: 10, offset: 0 }
+    );
+
+    expect(items.map((item) => item.storeActive)).toEqual([false]);
+  });
+
+  it("canonical: `stores.active=true` produz storeActive=true (e false produz false)", async () => {
+    const row = (active: boolean | null) => ({
+      id: `o-${String(active)}`,
+      product_id: "p1",
+      store_id: "s1",
+      price_usd: 10,
+      in_stock: true,
+      available: true,
+      stock_quantity: null,
+      updated_at: "x",
+      condition: null,
+      warranty: null,
+      product_url: null,
+      stores: { slug: "s", active },
+    });
+    const client = { from: () => makeChain({ data: [row(true), row(false), row(null)], count: 3 }) };
+
+    const { items } = await new SupabaseCanonicalCatalogRepository(client as never).findOffersByCanonicalProductId(
+      "cp1",
+      { limit: 10, offset: 0 }
+    );
+
+    expect(items.map((item) => item.storeActive)).toEqual([true, false, false]);
+  });
+
+  // ── Detail page de oferta (já fail-closed antes do P2.1 — regressão travada)
+  it("detalhe: oferta com `store: null` não é pública", async () => {
+    routeFrom({ offers: { data: [offer({ id: "o-null-store", store: null })] } });
+
+    expect(await getOffersByProduct("product-1")).toEqual([]);
+  });
+});

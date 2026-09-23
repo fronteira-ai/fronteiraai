@@ -50,7 +50,10 @@ function productRow(id: string, offers: Array<{ price_usd: number; in_stock: boo
     created_at: "2026-08-01T00:00:00Z",
     brand: null,
     category: null,
-    offers,
+    // P2.1 — `stores` ausente ⇒ oferta NÃO pública (fail-closed). Estas linhas
+    // representam a PÁGINA pública do catálogo, então cada oferta declara a
+    // loja ativa explicitamente (equivalente ao embed `stores(active)`).
+    offers: offers.map((offer) => ({ ...offer, stores: { active: true } })),
   };
 }
 

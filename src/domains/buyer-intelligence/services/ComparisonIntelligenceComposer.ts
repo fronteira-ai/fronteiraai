@@ -49,7 +49,12 @@ export class ComparisonIntelligenceComposer {
     // XPS 14 e o JBL Charge 6 gastavam 2 consultas de frescor para um bundle
     // de 1 oferta. Alinhar este conjunto ao conjunto rankeado é só remover
     // trabalho desperdiçado — nenhuma entrada que era consultada desaparece.
-    const offers = allOffers.filter((offer) => offer.available && offer.storeActive !== false);
+    // P2 Public Catalog Visibility + P2.2 — `storeActive === true` é EVIDÊNCIA
+    // POSITIVA (fail-closed). `false` e `undefined` não são elegíveis; o tipo
+    // `CanonicalOfferView.storeActive: boolean` torna `undefined` impossível
+    // de construir, e o produtor (mapOfferRow) só emite `true` quando
+    // `stores.active === true`.
+    const offers = allOffers.filter((offer) => offer.available && offer.storeActive === true);
 
     const isVerifiedByStoreId = await this.resolveVerification(offers);
     const resolveIsVerified = (storeId: string) => isVerifiedByStoreId.get(storeId) ?? false;

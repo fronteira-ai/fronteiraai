@@ -30,6 +30,8 @@ function makeRanked(): RankedOfferIntelligence {
       priceUSD: 90,
       inStock: true,
       available: true,
+      // P2.2 — oferta pública válida: evidência POSITIVA (loja ativa) explícita.
+      storeActive: true,
       stockQuantity: 5,
       updatedAt: new Date().toISOString(),
       condition: "new",

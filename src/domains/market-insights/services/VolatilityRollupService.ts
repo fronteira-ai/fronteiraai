@@ -59,15 +59,11 @@ export class VolatilityRollupService {
     // vêm só de loja inativa entrava na média de volatilidade como se fosse
     // público, e a pontuação era calculada sobre ele.
     //
-    // `storeActive !== false` (e não `=== true`) é a convenção já usada pelos
-    // outros consumidores do campo (CompareFoundationService,
-    // ComparisonIntelligenceComposer, OpportunityEngine,
-    // PriceIntelligenceService). O repositório é o ÚNICO produtor de
-    // CanonicalOfferView e sempre preenche `storeActive` — `stores(slug,
-    // active)` faz parte de OFFER_COLUMNS nos dois métodos de leitura —, então
-    // no caminho real a condição é equivalente a `stores.active === true`;
-    // `undefined` só existe em objetos construídos à mão (testes).
-    const publicOffers = items.filter((offer) => offer.available && offer.storeActive !== false);
+    // P2.2 — `storeActive === true` é EVIDÊNCIA POSITIVA (fail-closed): o
+    // campo é `boolean` obrigatório em `CanonicalOfferView`, o único produtor
+    // (`mapOfferRow`) emite `true` apenas quando `stores.active === true`, e
+    // `undefined` não é construível — não há semântica de "desconhecido".
+    const publicOffers = items.filter((offer) => offer.available && offer.storeActive === true);
     const productIds = [...new Set(publicOffers.map((o) => o.productId))];
     if (productIds.length === 0) return null;
 

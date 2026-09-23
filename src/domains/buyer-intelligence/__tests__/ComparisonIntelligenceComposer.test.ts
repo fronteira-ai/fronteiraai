@@ -38,6 +38,8 @@ function makeOffer(overrides: Partial<CanonicalOfferView> = {}): CanonicalOfferV
     priceUSD: 100,
     inStock: true,
     available: true,
+    // P2.2 - oferta publica valida: evidencia POSITIVA (loja ativa) explicita.
+    storeActive: true,
     stockQuantity: 5,
     updatedAt: new Date().toISOString(),
     condition: "new",
@@ -230,6 +232,46 @@ describe("ComparisonIntelligenceComposer", () => {
     expect(result!.savingsOpportunity).not.toBeNull();
     expect(result!.savingsOpportunity!.maxSavingsUSD).toBe(20);
     expect(result!.errors).toEqual({});
+  });
+
+  it("P2.2 - oferta de loja nao publica (storeActive=false) nao entra no bundle, nem no preco/economia", async () => {
+    const canonicalProduct = makeCanonicalProduct();
+    const offers = [
+      // Mais barata de todas, mas de loja NAO publica: nao pode formar preco,
+      // estatistica nem economia (fail-closed exige `storeActive === true`).
+      makeOffer({ offerId: "nao-publica", storeId: "store-x", priceUSD: 50, storeActive: false }),
+      makeOffer({ offerId: "a", storeId: "store-1", priceUSD: 100 }),
+      makeOffer({ offerId: "b", storeId: "store-2", priceUSD: 80 }),
+    ];
+    const catalogRepo = makeCatalogRepo({
+      findBySlug: jest.fn().mockResolvedValue(canonicalProduct),
+      findOffersByCanonicalProductIds: jest.fn().mockResolvedValue(new Map()),
+      findOffersByCanonicalProductId: jest.fn().mockResolvedValue({ items: offers, total: offers.length }),
+    });
+
+    const composer = new ComparisonIntelligenceComposer(
+      new CompareFoundationService(
+        new CanonicalProductService(catalogRepo),
+        catalogRepo,
+        new OfferRankingService(),
+        new CanonicalPriceHistoryService(makePriceHistoryRepo())
+      ),
+      catalogRepo,
+      new PriceIntelligenceService(catalogRepo),
+      new FreshnessService(makeChangeRepo()),
+      makeStoreLinkRepo(),
+      new BadgeService(makeBadgeRepo(), makeTrustRepo(), makeTrustEventRepo())
+    );
+
+    const result = await composer.composeForSlug("iphone-15-pro");
+
+    expect(result).not.toBeNull();
+    expect(result!.offers).toHaveLength(2);
+    expect(result!.offers.map((o) => o.offer.storeId)).not.toContain("store-x");
+    expect(result!.totalOffers).toBe(2);
+    // $50 (nao publica) nao pode ser o menor preco nem inflar a economia.
+    expect(result!.priceStatistics!.lowestPriceUSD).toBe(80);
+    expect(result!.savingsOpportunity!.maxSavingsUSD).toBe(20);
   });
 
   it("isolates a failing sub-call instead of failing the whole bundle", async () => {

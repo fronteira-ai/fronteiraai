@@ -10,6 +10,8 @@ function makeOffer(overrides: Partial<CanonicalOfferView> = {}): CanonicalOfferV
     priceUSD: 100,
     inStock: true,
     available: true,
+    // P2.2 — oferta pública válida: evidência POSITIVA (loja ativa) explícita.
+    storeActive: true,
     stockQuantity: 10,
     updatedAt: new Date().toISOString(),
     condition: "new",

@@ -329,11 +329,15 @@ export async function getProductsCatalog(
   };
 
   // P2 Public Catalog Visibility: PUBLIC OFFER = available=true (banco) AND
-  // stores.active=true. `stores(active)` ausente (mocks/legado) é tratado
-  // como ativo; quando presente, apenas active === true é público.
+  // stores.active=true.
+  //
+  // P2.1 — FAIL-CLOSED: `stores(active)` ausente/`null`/`[]`/malformed ⇒ NÃO
+  // público. Só `active === true` (evidência positiva) concede visibilidade;
+  // o default antigo (`: true`) tratava ausência de evidência como
+  // autorização para publicar.
   const isPublicOffer = (offer: CatalogOfferRowWithStore): boolean => {
     const store = Array.isArray(offer.stores) ? offer.stores[0] : offer.stores;
-    return store ? store.active === true : true;
+    return store?.active === true;
   };
 
   const mapRows = (rows: CatalogProductRow[]): ProductCatalogItem[] =>
