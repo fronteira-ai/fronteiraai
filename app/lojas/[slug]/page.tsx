@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
-import { SITE_URL, productsPath } from "@/constants/routes";
+import { SITE_URL, productsPath, lojaUrl } from "@/constants/routes";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import Breadcrumb from "@/components/ui/Breadcrumb";
@@ -13,12 +13,13 @@ import StoreViewTracker from "@/components/store/StoreViewTracker";
 import StoreContactLinks from "@/components/store/StoreContactLinks";
 import StoreDirectionsButton from "@/components/store/StoreDirectionsButton";
 import StoreLogo from "@/components/store/StoreLogo";
+import ShareButton from "@/components/product/ShareButton";
 import { getCachedStorePublic } from "./_cache";
 import { getOffersByStore } from "@/services/offer.service";
 import { getRelatedStores } from "@/services/store.service";
 import {
   Shield, Star, Package, MapPin,
-  Clock, TrendingUp, CheckCircle2, Share2
+  Clock, TrendingUp, CheckCircle2
 } from "lucide-react";
 
 type Params = Promise<{ slug: string }>;
@@ -140,15 +141,16 @@ export default async function LojaPublicaPage({ params }: { params: Params }) {
             )}
           </div>
 
-          {/* Share */}
-          <button
-            onClick={undefined}
+          {/* Share -- Mission 03B (PHASE 5): era um controle morto
+              (`onClick={undefined}`). Agora usa o ShareButton canonico
+              (Web Share API + fallback de clipboard) com a URL canonica da
+              loja e as MESMAS classes de antes. */}
+          <ShareButton
+            slug={store.slug}
+            title={store.name}
+            url={lojaUrl(store.slug)}
             className="flex items-center gap-2 rounded-full border border-slate-700 px-4 py-2 text-sm text-slate-400 hover:text-white hover:border-slate-500 transition-colors"
-            aria-label="Compartilhar"
-          >
-            <Share2 size={14} />
-            Compartilhar
-          </button>
+          />
         </div>
 
         {/* Stats row */}

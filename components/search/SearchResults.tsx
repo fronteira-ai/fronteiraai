@@ -36,7 +36,10 @@ export default function SearchResults({
   trustBadges,
   zeroResultSuggestions = [],
 }: Props) {
-  const { query, products, stores, brands, categories, total, durationMs } = results;
+  // Mission 03B (PHASE 4) — `durationMs` continua no contrato de
+  // `SearchResponse` (observabilidade), mas não é mais desestruturado nem
+  // renderizado: latência interna não é valor para o comprador.
+  const { query, products, stores, brands, categories, total } = results;
 
   if (!query) {
     return (
@@ -68,7 +71,6 @@ export default function SearchResults({
     <div className="flex flex-col gap-10">
       <p className="text-sm text-slate-500">
         {total} {total === 1 ? "resultado" : "resultados"} para &ldquo;{query}&rdquo;
-        {durationMs > 0 ? ` · ${durationMs}ms` : ""}
       </p>
 
       {products.length > 0 ? (

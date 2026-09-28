@@ -378,7 +378,7 @@ export interface ExchangeSnapshot {
 const EXCHANGE_HISTORY_DAYS = 7;
 
 export async function getExchangeSnapshot(client: SupabaseClient): Promise<ExchangeSnapshot> {
-  const { rateService, historyService } = createExchangeServices(client);
+  const { rateService, historyService, currencyService } = createExchangeServices(client);
 
   const to = new Date();
   const from = new Date(to.getTime() - EXCHANGE_HISTORY_DAYS * 24 * 60 * 60 * 1000);
@@ -390,10 +390,32 @@ export async function getExchangeSnapshot(client: SupabaseClient): Promise<Excha
     historyService.getRange(CurrencyPair.UsdPyg, from, to),
   ]);
 
+  // Mission 03B (PHASE 2) — `usingFallback` deixa de ser o literal `false` e
+  // passa a vir do serviço CANÔNICO. `AutomaticCurrencyService.convert` aplica
+  // a regra já existente (`isStale(rate)` = captura mais velha que 3× a
+  // cadência do cron de câmbio) sobre a MESMA taxa USD→BRL que o CambioCard
+  // exibe, e devolve `usingFallback` no resultado. Nenhum limiar duplicado,
+  // nenhum cache novo, nenhuma mudança de contrato de domínio.
+  let usingFallback = false;
+  try {
+    if (usdBrl) {
+      const converted = await currencyService.convert({
+        amountOriginal: 1,
+        currencyOriginal: Currency.USD,
+        targetCurrency: Currency.BRL,
+      });
+      usingFallback = converted.usingFallback;
+    }
+  } catch {
+    // Havia uma taxa sendo exibida e não foi possível provar que ela está
+    // fresca — o estado honesto é "possivelmente degradada", nunca "fresca".
+    usingFallback = true;
+  }
+
   return {
     usdBrl: usdBrl ? { rate: usdBrl.rate, capturedAt: usdBrl.capturedAt } : null,
     usdPyg: usdPyg ? { rate: usdPyg.rate, capturedAt: usdPyg.capturedAt } : null,
-    usingFallback: false,
+    usingFallback,
     history: history.map((h) => ({ rate: h.rate, capturedAt: h.capturedAt })),
     usdPygHistory: usdPygHistory.map((h) => ({ rate: h.rate, capturedAt: h.capturedAt })),
   };
