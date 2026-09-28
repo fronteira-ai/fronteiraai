@@ -91,3 +91,78 @@ export function zeroResultsDecision(
   if (lastKey === key) return { emit: false, key: lastKey };
   return { emit: true, key };
 }
+
+// ── Submissão de busca (Mission 02A — Home Search Instrumentation) ───────────
+
+/**
+ * O evento canônico de SUBMISSÃO de busca. `SearchPerformed` NÃO é
+ * reutilizado: ele é o PAGE VIEW de /search (SearchViewTracker) e tem
+ * consumidores que contam por `event_type` (FunnelService passo "Busca
+ * realizada", agregação de sugestões, observabilidade). Submeter a busca (na
+ * Home) e VER a página de resultado (/search) são passos distintos do funil —
+ * por isso `SearchSubmitted` é aditivo, e o ponto de interação emite APENAS
+ * ele. Nunca há dupla contagem com o SearchViewTracker.
+ */
+export const SEARCH_SUBMITTED_EVENT = AnalyticsEventType.SearchSubmitted;
+
+/** Superfícies que SUBMETEM uma busca. Hoje só a Home emite: `/search` é a
+ * página de resultado (SearchPerformed), não um ponto de submissão. */
+export type SearchSubmitSource = "home";
+
+export const SEARCH_ACTION_SUBMIT = "search_submit";
+
+/** Payload do evento de submissão, já no formato que `track()` espera. */
+export interface SearchSubmitEvent {
+  event_type: typeof SEARCH_SUBMITTED_EVENT;
+  search_query?: string;
+  metadata: Record<string, unknown>;
+}
+
+export interface SearchSubmitDecision {
+  /** true ⟺ navegar para `/search?q=…`. Comportamento PRÉ-EXISTENTE
+   * (qualquer termo não vazio, após trim) — M02A não o altera. */
+  navigate: boolean;
+  /** Termo normalizado (trim) — o MESMO valor usado na navegação. */
+  query: string;
+  /** O evento a emitir — exatamente um por submissão. */
+  event: SearchSubmitEvent;
+}
+
+export function searchSubmitMetadata(
+  source: SearchSubmitSource,
+  hasQuery: boolean
+): Record<string, unknown> {
+  return { action: SEARCH_ACTION_SUBMIT, source, has_query: hasQuery };
+}
+
+/**
+ * Decisão pura de submissão de busca. Emite exatamente UM evento por
+ * submissão — inclusive quando o termo é vazio — para que o clique em
+ * "Encontrar a melhor compra" com o campo vazio deixe de ser uma interação
+ * invisível (Mission 02A, §4).
+ *
+ * - termo válido → `navigate: true`,  `has_query: true`,  `search_query` presente
+ * - termo vazio  → `navigate: false`, `has_query: false`, SEM `search_query`
+ *
+ * `has_query` é o discriminante do contrato: qualquer métrica de "buscas
+ * válidas" deve filtrar `has_query = true`. Uma submissão vazia nunca é
+ * contada como busca válida (nem naviga, nem carrega `search_query`), mas
+ * passa a ser medível — que é o objetivo de §4.
+ */
+export function searchSubmitDecision(
+  raw: string,
+  source: SearchSubmitSource = "home"
+): SearchSubmitDecision {
+  const query = raw.trim();
+  const hasQuery = query.length > 0;
+
+  return {
+    navigate: hasQuery,
+    query,
+    event: {
+      event_type: SEARCH_SUBMITTED_EVENT,
+      ...(hasQuery ? { search_query: query } : {}),
+      metadata: searchSubmitMetadata(source, hasQuery),
+    },
+  };
+}

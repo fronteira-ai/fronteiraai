@@ -8,6 +8,16 @@ export enum AnalyticsEventType {
   // ruim" e "falha de infraestrutura" são indistinguíveis em buyer_events,
   // porque SearchPerformed é emitido nos dois casos.
   SearchZeroResults     = "SearchZeroResults",
+  // Mission 02A — SUBMISSÃO de busca no PONTO DE INTERAÇÃO (ex.: SearchBar da
+  // Home). Aditivo e deliberadamente separado de `SearchPerformed`, que é o
+  // PAGE VIEW de /search (SearchViewTracker) e já é contado por event_type em
+  // FunnelService e agregado por services/search-suggestions.service.ts.
+  // Submeter uma busca e VER a página de resultado são dois passos distintos
+  // do funil; colapsá-los num só tipo tornaria os dois impossíveis de
+  // interpretar. A única fonte da decisão de emitir é
+  // utils/buyerEvents.ts (searchSubmitDecision). Nenhum consumidor existente
+  // é afetado.
+  SearchSubmitted       = "SearchSubmitted",
   // Products
   ProductImpression     = "ProductImpression",
   ProductClicked        = "ProductClicked",

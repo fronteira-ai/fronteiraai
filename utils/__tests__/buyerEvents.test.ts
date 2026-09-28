@@ -4,10 +4,14 @@ import {
   PRODUCT_ACTION_VIEW,
   PRODUCT_LIST_CLICK_EVENT,
   PRODUCT_VIEW_EVENT,
+  SEARCH_ACTION_SUBMIT,
+  SEARCH_SUBMITTED_EVENT,
   compareViewMetadata,
   outboundOfferItemId,
   productListClickMetadata,
   productViewMetadata,
+  searchSubmitDecision,
+  searchSubmitMetadata,
   zeroResultsDecision,
 } from "@/utils/buyerEvents";
 
@@ -96,5 +100,72 @@ describe("compare (C3)", () => {
     expect(outboundOfferItemId("iphone-16-pro")).toBe("iphone-16-pro");
     expect(outboundOfferItemId("  iphone-16-pro  ")).toBe("iphone-16-pro");
     expect(outboundOfferItemId("iphone-16-pro").length).toBeGreaterThan(0);
+  });
+});
+
+// Mission 02A — Home Search Instrumentation. Contrato de submissão de busca:
+// 1 evento por submissão, passo de funil distinto de SearchPerformed.
+describe("submissão de busca (M02A)", () => {
+  it("o evento é PRÓPRIO — nunca reutiliza SearchPerformed (passos distintos do funil)", () => {
+    expect(SEARCH_SUBMITTED_EVENT).toBe(AnalyticsEventType.SearchSubmitted);
+    expect(SEARCH_SUBMITTED_EVENT).not.toBe(AnalyticsEventType.SearchPerformed);
+    expect(SEARCH_SUBMITTED_EVENT).not.toBe(AnalyticsEventType.SearchZeroResults);
+  });
+
+  it("termo válido: navega, has_query=true, search_query presente e source=home", () => {
+    const d = searchSubmitDecision("Notebook Gamer", "home");
+    expect(d.navigate).toBe(true);
+    expect(d.query).toBe("Notebook Gamer");
+    expect(d.event.event_type).toBe(AnalyticsEventType.SearchSubmitted);
+    expect(d.event.search_query).toBe("Notebook Gamer");
+    expect(d.event.metadata).toEqual({
+      action: SEARCH_ACTION_SUBMIT,
+      source: "home",
+      has_query: true,
+    });
+  });
+
+  it("normaliza o termo (trim) e usa o MESMO valor na navegação e no evento", () => {
+    const d = searchSubmitDecision("   iphone 17 pro   ");
+    expect(d.query).toBe("iphone 17 pro");
+    expect(d.navigate).toBe(true);
+    expect(d.event.search_query).toBe("iphone 17 pro");
+  });
+
+  it("source default é home", () => {
+    expect(searchSubmitDecision("tv").event.metadata.source).toBe("home");
+    expect(searchSubmitMetadata("home", false)).toEqual({
+      action: "search_submit",
+      source: "home",
+      has_query: false,
+    });
+  });
+
+  it("termo vazio: NÃO navega, NÃO carrega search_query e NÃO é uma busca válida", () => {
+    for (const raw of ["", "   ", "\t\n"]) {
+      const d = searchSubmitDecision(raw, "home");
+      expect(d.navigate).toBe(false);
+      expect(d.query).toBe("");
+      expect(d.event.search_query).toBeUndefined();
+      expect(d.event.metadata.has_query).toBe(false);
+    }
+  });
+
+  it("emite exatamente um evento por submissão — vazia ou válida (sem duplicação)", () => {
+    // A decisão é pura: uma chamada ⇒ exatamente um evento. O "uma vez" é
+    // garantido pelo chamador (SearchBar.handleSubmit emite 1× por
+    // clique/Enter) e provado no teste de interação do componente.
+    const valid = searchSubmitDecision("tv 4k");
+    const empty = searchSubmitDecision("  ");
+    expect(valid.event.event_type).toBe(empty.event.event_type);
+    expect(valid.event.metadata.has_query).toBe(true);
+    expect(empty.event.metadata.has_query).toBe(false);
+  });
+
+  it("o payload só tem chaves primitivas aceitas por EventPlatformService.sanitizeMetadata", () => {
+    const d = searchSubmitDecision("ps5", "home");
+    for (const value of Object.values(d.event.metadata)) {
+      expect(["string", "number", "boolean"]).toContain(typeof value);
+    }
   });
 });
