@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { cache } from "react";
 import { createMarketplaceOperationsServices } from "./marketplace-operations-factory";
 import { createExchangeServices } from "./exchange-factory";
 import { createRealtimeCommerceServices } from "./realtime-commerce-factory";
@@ -29,19 +30,42 @@ export interface HomeStats {
 /** P2 Public Catalog Visibility: ids das lojas PÚBLICAS (stores.active=true).
  * O gate é resolvido no consumidor público — MarketPulseService e
  * MarketplaceMetricsService são compartilhados com dashboards internos, que
- * precisam continuar enxergando loja inativa. */
-async function getActiveStoreIds(client: SupabaseClient): Promise<Set<string>> {
+ * precisam continuar enxergando loja inativa.
+ *
+ * Mission 02B.1 (P0-2) — `cache()` do React: memo de ESCOPO DE REQUISIÇÃO
+ * (mesmo mecanismo já usado por app/product/[slug]/_cache.ts,
+ * app/search/_cache.ts, app/lojas/[slug]/_cache.ts). Não é TTL, não é cache
+ * persistente — a entrada morre com o render.
+ *
+ * Por que aqui, e não mecanicamente em tudo: esta é uma das poucas leituras
+ * da Home que realmente acontece MAIS DE UMA VEZ no mesmo render — é chamada
+ * por `getPublicCatalogCounts` (Hero), `getMarketPulseHighlights` e
+ * `getLiveMarketplaceFeed`. Antes: 3 execuções da MESMA query; depois: 1.
+ *
+ * A chave do memo é o `client`; em produção ele é o singleton do processo
+ * devolvido por `getSupabaseServiceClient()`, portanto os três consumidores
+ * compartilham a entrada.
+ *
+ * SEM efeito colateral de bootstrap: o corpo apenas lê `stores` — nenhum
+ * factory é instanciado aqui, então memoizar não altera a frequência de
+ * nenhum bootstrap. A REGRA CRÍTICA (bootstrap) é o motivo pelo qual
+ * `getHomeStats` e `getFeaturedStores` NÃO são memoizadas. */
+const getActiveStoreIds = cache(async (client: SupabaseClient): Promise<Set<string>> => {
   const { data } = await client.from("stores").select("id").eq("active", true);
   return new Set(((data ?? []) as { id: string }[]).map((row) => row.id));
-}
+});
 
 /** P2 Public Catalog Visibility: os números do Hero são contagens PÚBLICAS —
  * PUBLIC STORE (stores.active=true), PUBLIC OFFER (offers.available=true AND
  * stores.active=true) e PUBLIC PRODUCT (>=1 PUBLIC OFFER) — nunca totais de
- * banco. `categories` continua sendo o tamanho da taxonomia. */
+ * banco. `categories` continua sendo o tamanho da taxonomia.
+ *
+ * Mission 02B.1 (P0-2) — passa a consumir `getActiveStoreIds` em vez de
+ * repetir a própria consulta: MESMA query (`stores.id WHERE active=true`),
+ * MESMO filtro, MESMO resultado — apenas deixa de ser a 3ª cópia no mesmo
+ * render. O curto-circuito para lista vazia é preservado. */
 async function getPublicCatalogCounts(client: SupabaseClient): Promise<{ stores: number; products: number; offers: number }> {
-  const { data: activeStores } = await client.from("stores").select("id").eq("active", true);
-  const storeIds = ((activeStores ?? []) as { id: string }[]).map((row) => row.id);
+  const storeIds = [...(await getActiveStoreIds(client))];
 
   if (storeIds.length === 0) return { stores: 0, products: 0, offers: 0 };
 
@@ -231,17 +255,55 @@ export interface SavingsHighlight {
   savings: MoneySavingsPresentation;
 }
 
+/** "Economia do dia" shows this many opportunities; "Achado do Dia" shows the
+ * first of the SAME ranked list. Sendo o MAIOR dos dois, é também o `limit` da
+ * execução compartilhada do engine (Mission 02B.1, P0-1). */
+const FLASH_OFFERS_LIMIT = 6;
+
+/** Mission 02B.1 (P0-1) — a ÚNICA execução do pipeline caro do
+ * OpportunityEngine por render/requisição.
+ *
+ * `getTopOpportunities(limit)` roda TODO o pipeline — amostra de candidatos
+ * (`CANDIDATE_SAMPLE`), lote de ofertas (`SAVINGS_OFFER_FETCH_LIMIT`), gate
+ * de estoque/frescor/economia, gate de timing e ranking — e usa `limit`
+ * EXCLUSIVAMENTE no `ranked.slice(0, limit)` final. `limit` não participa da
+ * seleção inicial, dos gates, do cálculo de economia, do timing, da
+ * popularidade nem da ordenação.
+ *
+ * Logo `getTopOpportunities(1)` ≡ `getTopOpportunities(6).slice(0, 1)`, e é
+ * exatamente isso que "Achado do Dia" passa a consumir: o PRIMEIRO elemento
+ * da MESMA lista ordenada que "Economia do dia" já usa. Antes, os dois
+ * rodavam o pipeline inteiro (duas vezes por render) para a mesma resposta.
+ *
+ * `cache()` do React é o mesmo memo de ESCOPO DE REQUISIÇÃO dos outros
+ * _cache.ts do projeto — nunca `unstable_cache`, nunca TTL para ofertas: a
+ * entrada morre com o render e nada sobre preço/estoque é persistido.
+ *
+ * Chave = `client` (o singleton do processo em produção), então FlashOffers
+ * e AchadoDoDia compartilham a mesma execução. O `limit` compartilhado é
+ * `FLASH_OFFERS_LIMIT` — o maior dos dois; o menor é obtido por `slice`. */
+const getSharedOpportunities = cache(async (client: SupabaseClient) => {
+  const { opportunityEngine } = createBuyerIntelligenceServices(client);
+  return opportunityEngine.getTopOpportunities(FLASH_OFFERS_LIMIT);
+});
+
 /** Release 2.0 — Experience Iteration 6.5 (Opportunity Engine). Both
  * "Achado do Dia" (the single top pick) and "Economia do dia" (a ranked
  * list, dashboard strip) now read from the same OpportunityEngine —
  * see docs/product/OPPORTUNITY_ENGINE_ARCHITECTURE.md. This function only
  * resolves the human-readable extras (product slug, store name) the engine
  * deliberately leaves as raw-table lookups, same precedent as
- * app/product/[slug]/_cache.ts's getProductBestDeal for the store name. */
+ * app/product/[slug]/_cache.ts's getProductBestDeal for the store name.
+ *
+ * Mission 02B.1 (P0-1) — recebe a lista já ordenada da execução
+ * compartilhada (`getSharedOpportunities`) e aplica o `slice(0, limit)` do
+ * chamador. TODO o resto (resolução de nome de loja, slug do produto,
+ * PricePresentationService) permanece idêntico, e continua rodando apenas
+ * sobre as oportunidades efetivamente devolvidas — nunca sobre a lista
+ * inteira. */
 async function rankOpportunities(client: SupabaseClient, limit: number): Promise<SavingsHighlight[]> {
-  const { opportunityEngine } = createBuyerIntelligenceServices(client);
   const { presentationService } = createExchangeServices(client);
-  const opportunities = await opportunityEngine.getTopOpportunities(limit);
+  const opportunities = (await getSharedOpportunities(client)).slice(0, limit);
 
   const storeNamesByStoreSlug = new Map<string, string>();
   const productSlugByProductId = new Map<string, string | null>();
@@ -290,8 +352,6 @@ export async function getBestSavingsToday(client: SupabaseClient): Promise<Savin
   const [best] = await rankOpportunities(client, 1);
   return best ?? null;
 }
-
-const FLASH_OFFERS_LIMIT = 6;
 
 export async function getFlashOffers(client: SupabaseClient): Promise<SavingsHighlight[]> {
   return rankOpportunities(client, FLASH_OFFERS_LIMIT);
