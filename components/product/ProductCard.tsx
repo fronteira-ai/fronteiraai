@@ -1,15 +1,24 @@
 import { memo } from "react";
 import Image from "next/image";
-import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { formatUSD } from "@/src/domains/exchange";
 import { discountPercentage } from "@/utils/currency";
 import { resolveProductImage } from "@/utils/image";
-import { productPath } from "@/constants/routes";
 import { animations } from "@/styles/animations";
+import ProductLink from "@/components/product/ProductLink";
+import type { ProductListSource } from "@/utils/buyerEvents";
 
 type Props = {
   slug: string;
+  /** Mission 01 (C2) — id real do produto, quando o chamador tem (todos os
+   * grids têm). Vai como `product_id` no evento de clique. */
+  productId?: string;
+  /** Mission 01 (C2) — superfície de origem do clique (Home, busca,
+   * catálogo, relacionados, loja) e posição 1-based na lista. Opcionais: um
+   * chamador que não passe nada continua com o mesmo DOM — o único efeito é
+   * o metadado do evento. */
+  source?: ProductListSource;
+  position?: number;
   name: string;
   imageUrl: string | null;
   priceUSD?: number;
@@ -31,6 +40,9 @@ type Props = {
 
 function ProductCard({
   slug,
+  productId,
+  source,
+  position,
   name,
   imageUrl,
   priceUSD,
@@ -48,8 +60,12 @@ function ProductCard({
   const realImageUrl = resolveProductImage(imageUrl);
 
   return (
-    <Link
-      href={productPath(slug)}
+    <ProductLink
+      slug={slug}
+      productId={productId}
+      name={name}
+      source={source ?? "catalog"}
+      position={position ?? 1}
       className={`group flex flex-col overflow-hidden rounded-3xl border border-slate-800 bg-slate-900/60 ${animations.cardHover}`}
     >
       <div className="relative flex aspect-square w-full items-center justify-center overflow-hidden bg-slate-950">
@@ -125,7 +141,7 @@ function ProductCard({
           />
         </span>
       </div>
-    </Link>
+    </ProductLink>
   );
 }
 

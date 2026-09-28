@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
-import { SITE_URL } from "@/constants/routes";
+import { SITE_URL, productsPath } from "@/constants/routes";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import Breadcrumb from "@/components/ui/Breadcrumb";
@@ -266,7 +266,7 @@ export default async function LojaPublicaPage({ params }: { params: Params }) {
 
             {/* CTA compare */}
             <Link
-              href={`/products?store=${store.id}`}
+              href={productsPath({ store: store.slug })}
               className="flex items-center justify-center gap-2 w-full rounded-xl bg-blue-600 hover:bg-blue-500 px-4 py-3 text-sm font-bold text-white transition-colors"
             >
               <Package size={15} />

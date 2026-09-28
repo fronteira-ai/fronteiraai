@@ -8,6 +8,7 @@ import ProductHeader from "@/components/product/ProductHeader";
 import RelatedProducts from "@/components/product/RelatedProducts";
 import CompareSummary from "@/components/compare/CompareSummary";
 import CompareOfferCard from "@/components/compare/CompareOfferCard";
+import CompareViewTracker from "@/components/compare/CompareViewTracker";
 import BestDealCard from "@/components/product/BestDealCard";
 import ShouldIBuyNowCard from "@/components/product/ShouldIBuyNowCard";
 import TrustCard from "@/components/product/TrustCard";
@@ -73,6 +74,12 @@ export default async function ComparePage({ params }: Props) {
 
       <Navbar />
 
+      <CompareViewTracker
+        productId={product.id}
+        offerCount={offers.length}
+        storeCount={summary.storeCount}
+      />
+
       <div className="mx-auto max-w-5xl px-6 pt-32 pb-24">
 
         <Breadcrumb items={breadcrumbItems} />
@@ -136,6 +143,7 @@ export default async function ComparePage({ params }: Props) {
                 <CompareOfferCard
                   key={rankedOffer.offer.id}
                   rankedOffer={rankedOffer}
+                  productSlug={product.slug}
                 />
               ))}
             </div>

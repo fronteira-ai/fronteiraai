@@ -7,6 +7,7 @@ import SearchResults from "@/components/search/SearchResults";
 import SearchResultsSkeleton from "@/components/search/SearchResultsSkeleton";
 import SearchViewTracker from "@/components/search/SearchViewTracker";
 import { searchEverything } from "@/services/search.service";
+import { getPopularSearchSuggestions } from "@/services/search-suggestions.service";
 import { searchUrl } from "@/constants/routes";
 import { getCachedSearchIntelligenceBadges, getCachedSearchTrustBadges, getCachedSearchMoneyPresentation } from "./_cache";
 
@@ -16,6 +17,10 @@ type SearchParams = Promise<{ q?: string | string[] }>;
 // Supabase duas vezes dentro da mesma requisição (mesmo padrão de
 // app/product/[slug]/layout.tsx).
 const getCachedSearch = cache(searchEverything);
+
+/** Mission 01 (D): quantos termos reais viram chips de recuperação quando a
+ * busca não devolve nada. 4 caberia em uma linha no mobile com folga. */
+const ZERO_RESULT_SUGGESTIONS = 4;
 
 function firstValue(value: string | string[] | undefined): string {
   return Array.isArray(value) ? value[0] ?? "" : value ?? "";
@@ -65,12 +70,23 @@ async function SearchResultsAsync({ query }: { query: string }) {
     getCachedSearchTrustBadges(results.products),
     getCachedSearchMoneyPresentation(results.products),
   ]);
+
+  // Mission 01 (D): a leitura de sugestões acontece SÓ no caminho de
+  // zero-result — a busca que já devolveu resultado não paga por ela. Em
+  // erro o serviço devolve [] e o componente mostra apenas o CTA de
+  // catálogo (nunca um termo inventado).
+  const zeroResultSuggestions =
+    query && results.total === 0
+      ? await getPopularSearchSuggestions(ZERO_RESULT_SUGGESTIONS)
+      : [];
+
   return (
     <SearchResults
       results={results}
       belowAveragePriceBadges={belowAveragePriceBadges}
       trustBadges={trustBadges}
       moneyByProductId={moneyByProductId}
+      zeroResultSuggestions={zeroResultSuggestions}
     />
   );
 }

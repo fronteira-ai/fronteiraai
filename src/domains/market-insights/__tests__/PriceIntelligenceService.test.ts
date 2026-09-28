@@ -92,6 +92,11 @@ describe("PriceIntelligenceService", () => {
           priceUSD: o.priceUSD,
           inStock: true,
           available: true,
+          // P2 — as fixtures deste arquivo representam ofertas de lojas
+          // PÚBLICAS (todas têm storeId/storeSlug reais): a evidência
+          // positiva `storeActive: true` é exatamente o que
+          // `fetchOfferPrices` exige. Ausência de evidência não é público.
+          storeActive: true,
           stockQuantity: null,
           updatedAt: new Date().toISOString(),
           condition: null,
@@ -123,8 +128,10 @@ describe("PriceIntelligenceService", () => {
       findOffersByCanonicalProductIds: jest.fn().mockResolvedValue(new Map()),
       findOffersByCanonicalProductId: jest.fn().mockResolvedValue({
         items: [
-          { offerId: "1", productId: "p1", storeId: "s1", storeSlug: "s1", priceUSD: 100, inStock: true, available: true, stockQuantity: null, updatedAt: "", condition: null, warranty: null, productUrl: null },
-          { offerId: "2", productId: "p2", storeId: "s2", storeSlug: "s2", priceUSD: 10, inStock: false, available: true, stockQuantity: null, updatedAt: "", condition: null, warranty: null, productUrl: null },
+          // Duas lojas PÚBLICAS: a única diferença entre elas é o estoque
+          // (s2 está esgotada) — exatamente o que este teste mede.
+          { offerId: "1", productId: "p1", storeId: "s1", storeSlug: "s1", priceUSD: 100, inStock: true, available: true, storeActive: true, stockQuantity: null, updatedAt: "", condition: null, warranty: null, productUrl: null },
+          { offerId: "2", productId: "p2", storeId: "s2", storeSlug: "s2", priceUSD: 10, inStock: false, available: true, storeActive: true, stockQuantity: null, updatedAt: "", condition: null, warranty: null, productUrl: null },
         ],
         total: 2,
       }),
@@ -166,9 +173,14 @@ describe("PriceIntelligenceService", () => {
       reassignOffersByIds: jest.fn(), deactivateAndMerge: jest.fn(), reactivate: jest.fn(),
     } as unknown as ICanonicalCatalogRepository;
   }
+  // `storeActive: true` é o default porque TODAS as fixtures abaixo
+  // representam ofertas de lojas públicas: as variações que estes testes
+  // exercitam são `available` (arquivada) e `inStock` (esgotada), nunca a
+  // visibilidade da loja. O gate de loja ativa tem testes próprios logo
+  // abaixo, com evidência negativa/ausente explícita.
   const offer = (o: Record<string, unknown>) => ({
     offerId: "o", productId: "p", storeId: "s", storeSlug: "s", priceUSD: 100,
-    inStock: true, available: true, stockQuantity: null, updatedAt: "",
+    inStock: true, available: true, storeActive: true, stockQuantity: null, updatedAt: "",
     condition: null, warranty: null, productUrl: null, ...o,
   });
 
@@ -212,6 +224,39 @@ describe("PriceIntelligenceService", () => {
       offer({ offerId: "a1", storeId: "s1", storeSlug: "s1", available: false }),
       offer({ offerId: "a2", storeId: "s2", storeSlug: "s2", priceUSD: 200, available: false }),
     ]));
+    expect(await service.getStatistics("canonical-1")).toBeNull();
+    expect(await service.getSavingsOpportunity("canonical-1")).toBeNull();
+  });
+
+  // ── P2 Public Catalog Visibility — o gate de loja ativa ─────────────────
+  // Estes dois testes existem para provar que a correção das fixtures acima
+  // NÃO mascarou o gate: uma oferta de loja não-pública (ou sem evidência de
+  // loja ativa) continua fora do preço, mesmo com `available=true` e
+  // `inStock=true` e mesmo sendo a mais barata.
+  it("exclui oferta de loja NÃO pública (storeActive=false), mesmo sendo a mais barata", async () => {
+    const service = new PriceIntelligenceService(repoWith([
+      offer({ offerId: "loja-inativa", storeId: "s1", storeSlug: "s1", priceUSD: 50, storeActive: false }),
+      offer({ offerId: "loja-publica", storeId: "s2", storeSlug: "s2", priceUSD: 100 }),
+    ]));
+    const stats = await service.getStatistics("canonical-1");
+    expect(stats?.lowestPriceUSD).toBe(100);
+    expect(stats?.storeCount).toBe(1);
+
+    const savings = await service.getSavingsOpportunity("canonical-1");
+    expect(savings).toBeNull(); // 1 loja pública só → não há economia entre lojas
+  });
+
+  it("fail-closed: sem evidência de loja ativa (storeActive ausente) a oferta não forma preço", async () => {
+    // Objeto deliberadamente SEM `storeActive` — o único produtor real
+    // (`SupabaseCanonicalCatalogRepository.mapOfferRow`) só emite `true` com
+    // `stores.active === true`; ausência de evidência nunca concede
+    // visibilidade pública.
+    const semEvidencia = {
+      offerId: "sem-evidencia", productId: "p", storeId: "s1", storeSlug: "s1",
+      priceUSD: 10, inStock: true, available: true, stockQuantity: null,
+      updatedAt: "", condition: null, warranty: null, productUrl: null,
+    };
+    const service = new PriceIntelligenceService(repoWith([semEvidencia]));
     expect(await service.getStatistics("canonical-1")).toBeNull();
     expect(await service.getSavingsOpportunity("canonical-1")).toBeNull();
   });

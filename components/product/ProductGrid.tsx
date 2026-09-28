@@ -21,10 +21,13 @@ function ProductGrid({ products }: Props) {
 
   return (
     <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-      {products.map((product) => (
+      {products.map((product, index) => (
         <ProductCard
           key={product.id}
           slug={product.slug}
+          productId={product.id}
+          source="catalog"
+          position={index + 1}
           name={product.name}
           imageUrl={product.image_url}
           priceUSD={product.lowestPriceUSD ?? undefined}

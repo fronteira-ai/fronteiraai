@@ -4,9 +4,19 @@ export enum AnalyticsEventType {
   // Search
   SearchPerformed       = "SearchPerformed",
   SearchResultViewed    = "SearchResultViewed",
+  // Mission 01 (C1) — busca sem NENHUM resultado. Aditivo: sem ele, "termo
+  // ruim" e "falha de infraestrutura" são indistinguíveis em buyer_events,
+  // porque SearchPerformed é emitido nos dois casos.
+  SearchZeroResults     = "SearchZeroResults",
   // Products
   ProductImpression     = "ProductImpression",
   ProductClicked        = "ProductClicked",
+  // Mission 01 (C2) — clique em um produto a partir de uma LISTA (Home,
+  // /search, catálogo, relacionados). Aditivo e deliberadamente separado de
+  // `ProductClicked`, que é emitido como PAGE VIEW por ProductViewTracker e
+  // já é lido por contagem-por-tipo em FunnelService/MerchantAnalyticsService/
+  // OpportunityEngine — ver utils/buyerEvents.ts.
+  ProductClickedFromList = "ProductClickedFromList",
   ProductCompared       = "ProductCompared",
   // Merchant
   MerchantViewed        = "MerchantViewed",

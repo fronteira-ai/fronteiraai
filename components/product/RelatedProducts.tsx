@@ -19,10 +19,13 @@ function RelatedProducts({ products }: Props) {
       </h2>
 
       <div className="mt-6 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-        {products.map((product) => (
+        {products.map((product, index) => (
           <ProductCard
             key={product.id}
             slug={product.slug}
+            productId={product.id}
+            source="related"
+            position={index + 1}
             name={product.name}
             imageUrl={product.image_url}
           />

@@ -5,6 +5,8 @@ import StoreCard from "@/components/store/StoreCard";
 import CategoryCard from "@/components/ui/CategoryCard";
 import Chip from "@/components/ui/Chip";
 import EmptyState from "@/components/ui/EmptyState";
+import SearchZeroResultsTracker from "@/components/search/SearchZeroResultsTracker";
+import ZeroResultRecovery from "@/components/search/ZeroResultRecovery";
 import { SearchResponse } from "@/types/search";
 import type { SearchIntelligenceBadge, CompactTrustBadge } from "@/src/domains/buyer-intelligence";
 import type { MoneyPresentation } from "@/src/domains/exchange";
@@ -22,9 +24,18 @@ type Props = {
    * not a bug fix, and is deliberately out of scope for the green-baseline
    * recovery. Wiring it into ProductCard is the follow-up. */
   moneyByProductId?: Map<string, MoneyPresentation>;
+  /** Mission 01 (D) — termos REAIS de busca (buyer_events), resolvidos pela
+   * página SÓ no caminho de zero-result e usados como recuperação. Vazio é
+   * um estado válido: nesse caso só o CTA para o catálogo aparece. */
+  zeroResultSuggestions?: string[];
 };
 
-export default function SearchResults({ results, belowAveragePriceBadges, trustBadges }: Props) {
+export default function SearchResults({
+  results,
+  belowAveragePriceBadges,
+  trustBadges,
+  zeroResultSuggestions = [],
+}: Props) {
   const { query, products, stores, brands, categories, total, durationMs } = results;
 
   if (!query) {
@@ -39,11 +50,17 @@ export default function SearchResults({ results, belowAveragePriceBadges, trustB
 
   if (total === 0) {
     return (
-      <EmptyState
-        icon={SearchX}
-        title={`Nenhum resultado para "${query}"`}
-        description="Tente outro termo, verifique a ortografia ou pesquise por uma categoria."
-      />
+      <div className="flex flex-col gap-10">
+        {/* Mission 01 (C1): uma única emissão por busca sem resultado. */}
+        <SearchZeroResultsTracker query={query} resultCount={total} />
+
+        <EmptyState
+          icon={SearchX}
+          title={`Nenhum resultado para "${query}"`}
+          description="Não encontramos nada com esse termo. Você pode tentar uma busca parecida ou explorar o catálogo completo."
+          action={<ZeroResultRecovery suggestions={zeroResultSuggestions} />}
+        />
+      </div>
     );
   }
 
@@ -61,10 +78,13 @@ export default function SearchResults({ results, belowAveragePriceBadges, trustB
           </h2>
 
           <div className="mt-6 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-            {products.map((product) => (
+            {products.map((product, index) => (
               <ProductCard
                 key={product.id}
                 slug={product.slug}
+                productId={product.id}
+                source="search"
+                position={index + 1}
                 name={product.name}
                 imageUrl={product.image_url}
                 priceUSD={product.lowestPriceUSD ?? undefined}

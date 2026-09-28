@@ -35,6 +35,9 @@ export default async function Offers() {
           <Reveal key={product.id} direction="up" delay={index * 70}>
             <ProductCard
               slug={product.slug}
+              productId={product.id}
+              source="home"
+              position={index + 1}
               name={product.name}
               imageUrl={product.imageUrl}
               priceUSD={product.priceUSD}
