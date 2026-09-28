@@ -8,7 +8,7 @@ import { ConnectorDirectoryService } from "./connector-directory-service";
 import { Currency, CurrencyPair } from "@/src/domains/exchange";
 import type { MoneyPresentation, MoneySavingsPresentation } from "@/src/domains/exchange";
 import { ChangeType } from "@/src/domains/realtime-commerce";
-import { getStoreBySlug } from "@/services/store.service";
+import { getStoreBySlug, getStoresBySlugs } from "@/services/store.service";
 import { getCategories } from "@/services/category.service";
 
 // Release 1.9 — Program F — Wave 1 (Premium Home Experience). This is the
@@ -451,47 +451,95 @@ export interface FeaturedStoreHighlight {
 
 const FEATURED_STORES_LIMIT = 6;
 
+/** Mission 02B.2 — contagem de ofertas PÚBLICAS **por loja** em UMA consulta.
+ *
+ * Antes: `client.from("offers").select("id", { count: "exact", head: true })`
+ * rodava dentro do `Promise.all(top.map(...))` do chamador — uma consulta POR
+ * loja destaque (6 com o limite atual). Agora: uma única leitura de `offers`
+ * restrita às lojas pedidas, agrupada em memória.
+ *
+ * MESMO predicado (`.eq("available", true)`), MESMO número por loja — só muda
+ * quantas viagens ao banco acontecem.
+ *
+ * Nuance de falha, nomeada em vez de escondida: por ser uma consulta única,
+ * um erro de banco zera o `offerCount` de TODAS as lojas de uma vez, enquanto
+ * antes cada loja falhava independentemente. O valor de fallback é o mesmo
+ * (`count ?? 0` ⇒ `0`) e o contrato do DTO (`offerCount: number`) não muda. */
+async function countAvailableOffersByStoreIds(
+  client: SupabaseClient,
+  storeIds: string[]
+): Promise<Map<string, number>> {
+  const counts = new Map<string, number>();
+  const ids = [...new Set(storeIds)].filter((id): id is string => Boolean(id));
+  if (ids.length === 0) return counts;
+
+  const { data, error } = await client
+    .from("offers")
+    .select("store_id")
+    .in("store_id", ids)
+    .eq("available", true);
+
+  if (error) {
+    console.error("[home-premium-service.countAvailableOffersByStoreIds]", error.message);
+    return counts;
+  }
+
+  for (const row of (data ?? []) as { store_id: string | null }[]) {
+    if (!row.store_id) continue;
+    counts.set(row.store_id, (counts.get(row.store_id) ?? 0) + 1);
+  }
+
+  return counts;
+}
+
 export async function getFeaturedStores(client: SupabaseClient): Promise<FeaturedStoreHighlight[]> {
   const { priorityService } = createMarketplaceOperationsServices(client);
   const priorities = await priorityService.listAll();
 
   const top = [...priorities].sort((a, b) => b.score - a.score).slice(0, FEATURED_STORES_LIMIT);
+  if (top.length === 0) return [];
 
   const directory = new ConnectorDirectoryService(client);
   const connectorEntries = await directory.listAll();
   const connectorByStoreSlug = new Map(connectorEntries.map((e) => [e.storeSlug, e]));
 
-  const results = await Promise.all(
-    top.map(async (priority) => {
-      const store = await getStoreBySlug(priority.storeSlug);
-      // P2 Public Catalog Visibility: PUBLIC STORE = stores.active=true.
-      // getStoreBySlug já filtra, mas o null também pode significar loja
-      // removida — nunca vira card público.
-      if (!store || store.active !== true) return null;
-      const { count } = await client
-        .from("offers")
-        .select("id", { count: "exact", head: true })
-        .eq("store_id", priority.storeId)
-        .eq("available", true);
+  // Mission 02B.2 — este bloco era um N+1: uma consulta de `stores` e uma de
+  // `offers` POR loja destaque (2 × top.length = 12 com 6 lojas). Agora são
+  // DUAS consultas no total, independentes de N.
+  //
+  // A ordem continua sendo exatamente a de `top`: o resultado é montado com
+  // `.map` sobre ela (nenhum `sort` novo), e o `filter` final preserva a
+  // ordem relativa como antes.
+  const [storesBySlug, offerCountByStoreId] = await Promise.all([
+    getStoresBySlugs(top.map((p) => p.storeSlug)),
+    countAvailableOffersByStoreIds(client, top.map((p) => p.storeId)),
+  ]);
 
-      const connector = connectorByStoreSlug.get(priority.storeSlug);
+  const results = top.map((priority) => {
+    // P2 Public Catalog Visibility: PUBLIC STORE = stores.active=true.
+    // `getStoresBySlugs` já filtra por `active`, mas a checagem POSITIVA é
+    // preservada aqui exatamente como era com `getStoreBySlug` — loja
+    // ausente/removida/inativa nunca vira card público.
+    const store = storesBySlug.get(priority.storeSlug);
+    if (!store || store.active !== true) return null;
 
-      return {
-        slug: priority.storeSlug,
-        name: priority.storeName,
-        coverImage: store?.cover_image ?? null,
-        logoUrl: store?.logo_url ?? null,
-        isVerified: store?.is_verified ?? false,
-        offerCount: count ?? 0,
-        qualityScore: connector?.healthScore ?? null,
-        lastSyncAt: connector?.lastSyncAt ?? null,
-        // Release 1.9 — Program F — Wave 2 (v0 realignment): exposed here so
-        // StoreCarousel.tsx no longer needs its own getStoreBySlug() call per
-        // store just to read this one field (HOME_AUDIT_2026_07_06.md §2).
-        rating: store?.rating ?? 0,
-      };
-    })
-  );
+    const connector = connectorByStoreSlug.get(priority.storeSlug);
+
+    return {
+      slug: priority.storeSlug,
+      name: priority.storeName,
+      coverImage: store.cover_image ?? null,
+      logoUrl: store.logo_url ?? null,
+      isVerified: store.is_verified ?? false,
+      offerCount: offerCountByStoreId.get(priority.storeId) ?? 0,
+      qualityScore: connector?.healthScore ?? null,
+      lastSyncAt: connector?.lastSyncAt ?? null,
+      // Release 1.9 — Program F — Wave 2 (v0 realignment): exposed here so
+      // StoreCarousel.tsx no longer needs its own getStoreBySlug() call per
+      // store just to read this one field (HOME_AUDIT_2026_07_06.md §2).
+      rating: store.rating ?? 0,
+    };
+  });
 
   return results.filter((r): r is NonNullable<typeof r> => r !== null);
 }

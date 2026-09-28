@@ -22,35 +22,46 @@ export class ConnectorDirectoryService {
   constructor(private readonly client: SupabaseClient) {}
 
   /** Cheap overview — one health-service call, one merchant-lookup query,
-   * no certification/quality-score (see directory/types.ts doc comment). */
+   * no certification/quality-score (see directory/types.ts doc comment).
+   *
+   * Mission 02B.2 — o bloco final era um N+1: `connectorRepo.findByKey(m.id)`
+   * uma vez POR conector registrado (9 hoje), cada uma um `SELECT * FROM
+   * connectors WHERE connector_key = …`. Trocado por UMA chamada a
+   * `connectorRepo.list()` (método que JÁ existe no repositório, mesmo
+   * `select("*")`, mesma tabela) + um Map por `connectorKey` — sem
+   * infraestrutura nova e sem mudança de saída. */
   async listAll(): Promise<ConnectorDirectoryEntry[]> {
     const { connectorRepo, healthService } = createConnectorsServices(this.client);
     const metadata = connectorRegistry.listMetadata();
     if (metadata.length === 0) return [];
 
-    const [healthSummaries, merchantByStoreSlug] = await Promise.all([
+    const [healthSummaries, merchantByStoreSlug, persistedConnectors] = await Promise.all([
       healthService.getSummaries(),
       this.resolveMerchantsByStoreSlug(metadata.map((m) => m.storeSlug)),
+      connectorRepo.list(),
     ]);
 
-    return Promise.all(
-      metadata.map(async (m) => {
-        const persisted = await connectorRepo.findByKey(m.id);
-        const health = healthSummaries.find((h) => h.connectorKey === m.id);
+    // `list()` devolve todas as linhas de `connectors`; `findByKey(m.id)`
+    // devolvia exatamente a linha cujo `connector_key = m.id`. O Map
+    // reproduz a mesma consulta por chave, com uma viagem em vez de N.
+    const persistedByKey = new Map(persistedConnectors.map((c) => [c.connectorKey, c]));
 
-        return {
-          connectorId: m.id,
-          name: m.name,
-          version: m.version,
-          storeSlug: m.storeSlug,
-          merchantId: merchantByStoreSlug.get(m.storeSlug) ?? null,
-          capabilities: m.capabilities,
-          status: persisted?.status ?? null,
-          healthScore: health?.healthScore ?? 0,
-          lastSyncAt: health?.lastSyncAt ?? null,
-        };
-      })
-    );
+    return metadata.map((m) => {
+      const persisted = persistedByKey.get(m.id);
+      const health = healthSummaries.find((h) => h.connectorKey === m.id);
+
+      return {
+        connectorId: m.id,
+        name: m.name,
+        version: m.version,
+        storeSlug: m.storeSlug,
+        merchantId: merchantByStoreSlug.get(m.storeSlug) ?? null,
+        capabilities: m.capabilities,
+        status: persisted?.status ?? null,
+        healthScore: health?.healthScore ?? 0,
+        lastSyncAt: health?.lastSyncAt ?? null,
+      };
+    });
   }
 
   /** Expensive single-connector deep-dive — adds Certification + Quality

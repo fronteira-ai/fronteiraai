@@ -94,6 +94,11 @@ jest.mock("@/lib/realtime-commerce-factory", () => ({
 
 jest.mock("@/services/store.service", () => ({
   getStoreBySlug: mockGetStoreBySlug,
+  // Mission 02B.2 — `getFeaturedStores` passou a usar a leitura em lote. Este
+  // arquivo não exercita `getFeaturedStores`, mas o mock mantém o contrato do
+  // módulo completo (e o teste de dedup da 02B.1 continua sendo a rede de
+  // segurança daquela otimização).
+  getStoresBySlugs: jest.fn(async () => new Map()),
 }));
 
 // `lib/home-premium-service` importa estes dois no topo. Não são exercitados
