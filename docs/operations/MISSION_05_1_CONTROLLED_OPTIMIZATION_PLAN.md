@@ -2,8 +2,8 @@
 
 **Categoria**: `docs/operations/`
 **Pré-requisito**: Mission 05 (`fea765f`, branch `mission-05-performance-recovery`)
-**Estado**: **PLANO — NADA FOI APLICADO EM PRODUÇÃO.** Todas as medições desta página são **read-only** (`docker logs`, `docker inspect`, `psql` SELECT/`EXPLAIN`).
-**Aprovação necessária para**: (A) `CREATE INDEX`, (B) deploy do código da Mission 05, (C) qualquer alteração de pool/infra.
+**Estado**: **EXECUTADO.** O índice `price_history_recorded_at_idx` foi **aplicado em produção em 2026-09-30 20:49 UTC** (autorizado pelo owner) e o código foi **deployado** (`main` @ `277b44b`, deployment `dpl_6nm2RmFGigcATTwUfaBpTjUjGcnk` já servindo `www.fronteiraai.com`). Resultado, evidência e rollback em `docs/operations/MISSION_05_2_EXECUTION_REPORT.md`. **`PGRST_DB_POOL` NÃO foi alterado** (recomendação mantida: não aplicar).
+**Aprovação necessária para**: nada pendente desta missão. As medições desta página são **read-only** (`docker logs`, `docker inspect`, `psql` SELECT/`EXPLAIN`), exceto as duas mudanças aprovadas e registradas no relatório de execução.
 
 Escopo do incidente e causa raiz: `docs/operations/INCIDENT_2026-09-30_POSTGREST_POOL_EXHAUSTION.md`.
 

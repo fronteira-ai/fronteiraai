@@ -147,6 +147,8 @@ nenhuma leitura nem escrita.
 
 ## 6. Mudanças de banco/infra — PREPARADAS, NÃO APLICADAS
 
+> **ATUALIZAÇÃO (2026-09-30 20:49 UTC)**: o item **6.1 (índice)** foi **APLICADO E VALIDADO** com autorização do owner — ver `docs/operations/MISSION_05_2_EXECUTION_REPORT.md` (medido: Shape B de 88–139 ms para 0,26–0,93 ms; 800 → 2 buffers). O item **6.2 (`PGRST_DB_POOL`)** **continua NÃO aplicado** — recomendação mantida. O item 6.3 (rotação de log do Kong) segue pendente de aprovação.
+
 > Todas exigem aprovação explícita. Nada aqui foi executado. **Não** foram colocadas em
 > `supabase/migrations/` de propósito: o histórico remoto está dessincronizado (ver
 > `database/migrations/README.md`) e um `supabase db push` futuro varreria o arquivo junto
