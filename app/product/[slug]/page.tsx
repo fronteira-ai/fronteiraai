@@ -9,7 +9,6 @@ import ProductHeader from "@/components/product/ProductHeader";
 import ProductSpecifications from "@/components/product/ProductSpecifications";
 import ProductOffers from "@/components/product/ProductOffers";
 import PriceIntelligenceCard from "@/components/product/PriceIntelligenceCard";
-import { getProductPriceIntelligence } from "@/services/price-intelligence.service";
 import RelatedProducts from "@/components/product/RelatedProducts";
 import FavoriteButton from "@/components/product/FavoriteButton";
 import ShareButton from "@/components/product/ShareButton";
@@ -21,7 +20,7 @@ import ParaguAIAdvisor from "@/components/product/ParaguAIAdvisor";
 import RecommendationSummary from "@/components/product/RecommendationSummary";
 import { comparePath } from "@/constants/routes";
 import { ParaguAIAdvisorComposer, buildSpecificationEntries } from "@/src/domains/buyer-intelligence";
-import { getCachedProduct, getCachedOffers, getCachedRelatedProducts, getCachedIntelligence, getCachedBestDeal, getCachedPurchaseTiming, getCachedTrust, getCachedMoneyPresentation } from "./_cache";
+import { getCachedProduct, getCachedOffers, getCachedRelatedProducts, getCachedIntelligence, getCachedPriceIntelligence, getCachedBestDeal, getCachedPurchaseTiming, getCachedTrust, getCachedMoneyPresentation } from "./_cache";
 
 // Objetivo 2/3 — pure, stateless, zero I/O: instantiated directly, no
 // factory/client needed (unlike every other buyer-intelligence composer).
@@ -38,9 +37,14 @@ export default async function ProductPage({ params }: { params: Params }) {
     notFound();
   }
 
-  const priceIntelligence = await getProductPriceIntelligence(product.id);
-
-  const [offers, relatedProducts, intelligence] = await Promise.all([
+  // Mission 05 (2026-09-30 incident): the price-history read used to be a
+  // standalone `await` BEFORE this batch, so it serialized the whole render
+  // instead of running alongside the other reads — and it was the one read on
+  // this page with no `cache()` wrapper at all. Same four values, same
+  // rendered output; it is now part of the batch and goes through
+  // `getCachedPriceIntelligence` like every other read here.
+  const [priceIntelligence, offers, relatedProducts, intelligence] = await Promise.all([
+    getCachedPriceIntelligence(product.id),
     getCachedOffers(product.id),
     getCachedRelatedProducts(product),
     getCachedIntelligence(product.id),

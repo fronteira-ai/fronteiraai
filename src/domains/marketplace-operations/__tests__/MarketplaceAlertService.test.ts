@@ -3,7 +3,6 @@ import {
   MarketplaceAlertStatus,
   MarketplaceAlertType,
   MarketplaceAlertSeverity,
-  type MarketplaceAlertSubjectType,
 } from "../types/enums";
 import type { IMarketplaceAlertRepository } from "../repositories/IMarketplaceAlertRepository";
 import type { MarketplaceAlert, AlertRuleResult } from "../types/alerts.types";
@@ -39,21 +38,13 @@ function makeAlert(overrides: Partial<MarketplaceAlert> = {}): MarketplaceAlert 
 class FakeAlertRepository implements IMarketplaceAlertRepository {
   public created: AlertRuleResult[] = [];
   public existing: MarketplaceAlert[] = [];
+  public listOpenCalls: MarketplaceAlertType[][] = [];
 
-  async findOpenByKey(
-    alertType: MarketplaceAlertType,
-    subjectType: MarketplaceAlertSubjectType | null,
-    subjectId: string | null
-  ) {
+  async listOpen(alertTypes: MarketplaceAlertType[]) {
+    this.listOpenCalls.push(alertTypes);
     const OPEN_STATUSES: MarketplaceAlertStatus[] = [MarketplaceAlertStatus.Pending, MarketplaceAlertStatus.Acknowledged];
-    return (
-      this.existing.find(
-        (a) =>
-          a.alertType === alertType &&
-          a.subjectType === subjectType &&
-          a.subjectId === subjectId &&
-          OPEN_STATUSES.includes(a.status)
-      ) ?? null
+    return this.existing.filter(
+      (a) => alertTypes.includes(a.alertType) && OPEN_STATUSES.includes(a.status)
     );
   }
 
@@ -103,6 +94,64 @@ describe("MarketplaceAlertService.sync", () => {
     const created = await service.sync([makeResult()]);
 
     expect(created).toHaveLength(1);
+  });
+
+  // Mission 05 regression (2026-09-30 incident). The dedupe used to be one
+  // repository read per candidate, so a sweep whose rule produced one
+  // candidate per coverage gap issued ~400 sequential queries against
+  // `marketplace_alerts` in a single cron run — inside the window where the
+  // PostgREST pool was exhausted (PGRST003/504). The batched read must stay
+  // bounded by the number of DISTINCT alert types, never by backlog size.
+  it("reads open alerts in ONE batched query per distinct type, not one per candidate", async () => {
+    const repo = new FakeAlertRepository();
+    const service = new MarketplaceAlertService(repo);
+
+    const backfill = Array.from({ length: 200 }, (_, i) =>
+      makeResult({ alertType: MarketplaceAlertType.LowCoverage, subjectType: "brand", subjectId: `brand-${i}` })
+    );
+
+    const created = await service.sync(backfill);
+
+    expect(created).toHaveLength(200);
+    expect(repo.listOpenCalls).toHaveLength(1);
+    expect(repo.listOpenCalls[0]).toEqual([MarketplaceAlertType.LowCoverage]);
+  });
+
+  it("reads open alerts once for the whole sweep, however many types it mixes", async () => {
+    const repo = new FakeAlertRepository();
+    const service = new MarketplaceAlertService(repo);
+
+    const results = [
+      makeResult({ alertType: MarketplaceAlertType.LowCoverage, subjectId: "b1", subjectType: "brand" }),
+      makeResult({ alertType: MarketplaceAlertType.LowCoverage, subjectId: "b2", subjectType: "brand" }),
+      makeResult({ alertType: MarketplaceAlertType.LowFreshness, subjectId: null, subjectType: "marketplace" }),
+      makeResult({ alertType: MarketplaceAlertType.LowFreshness, subjectId: null, subjectType: "marketplace" }),
+    ];
+
+    await service.sync(results);
+
+    expect(repo.listOpenCalls).toHaveLength(1);
+    expect(repo.listOpenCalls[0].sort()).toEqual(
+      [MarketplaceAlertType.LowCoverage, MarketplaceAlertType.LowFreshness].sort()
+    );
+  });
+
+  it("does not duplicate an identical candidate repeated in the same sweep", async () => {
+    const repo = new FakeAlertRepository();
+    const service = new MarketplaceAlertService(repo);
+
+    const created = await service.sync([makeResult(), makeResult()]);
+
+    expect(created).toHaveLength(1);
+    expect(repo.created).toHaveLength(1);
+  });
+
+  it("does nothing (no reads, no writes) for an empty sweep", async () => {
+    const repo = new FakeAlertRepository();
+    const service = new MarketplaceAlertService(repo);
+
+    expect(await service.sync([])).toEqual([]);
+    expect(repo.listOpenCalls).toHaveLength(0);
   });
 });
 

@@ -1,6 +1,7 @@
 import { cache } from "react";
 import { getProductBySlug, getRelatedProducts } from "@/services/product.service";
 import { getOffersByProduct } from "@/services/offer.service";
+import { getProductPriceIntelligence } from "@/services/price-intelligence.service";
 import { getSupabaseServiceClient } from "@/lib/supabase/service";
 import { createBuyerIntelligenceServices } from "@/lib/buyer-intelligence-factory";
 import { createExchangeServices } from "@/lib/exchange-factory";
@@ -10,6 +11,23 @@ import type { MoneyPresentation, MoneySavingsPresentation } from "@/src/domains/
 export const getCachedProduct = cache(getProductBySlug);
 export const getCachedOffers = cache(getOffersByProduct);
 export const getCachedRelatedProducts = cache(getRelatedProducts);
+
+// Mission 05 (2026-09-30 incident). `/product/[slug]` was the only reader of
+// `price_history` in the whole codebase that bypassed this module: the page
+// called `getProductPriceIntelligence()` directly, so that query ran on every
+// render of every product page. In production `price_history` is by far the
+// largest consumer of database time (50.5 h cumulative vs 7.2 h for every
+// other table combined), and during the incident an anonymous crawl of ~440
+// product pages drove it past the `anon` role's 3 s `statement_timeout` —
+// filling the fixed 10-connection PostgREST pool and failing unrelated
+// requests with PGRST003/504.
+//
+// `cache()` here is per-request memoization, exactly like its siblings above:
+// it removes duplicate reads inside one render, it does NOT make the query
+// free across renders. Cross-request caching (ISR / `unstable_cache`) would
+// change price freshness semantics, so it is proposed in the incident report
+// instead of being assumed here.
+export const getCachedPriceIntelligence = cache(getProductPriceIntelligence);
 
 // Release 2.0 — Wave 1 (Quick Wins). Service role client (same pattern as
 // stores-public.service.ts): reads across canonical-catalog/market-insights/

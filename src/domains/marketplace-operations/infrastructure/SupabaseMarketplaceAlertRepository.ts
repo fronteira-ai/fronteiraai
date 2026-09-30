@@ -39,22 +39,16 @@ function toDomain(row: AlertRow): MarketplaceAlert {
 export class SupabaseMarketplaceAlertRepository implements IMarketplaceAlertRepository {
   constructor(private readonly client: SupabaseClient) {}
 
-  async findOpenByKey(
-    alertType: MarketplaceAlertType,
-    subjectType: MarketplaceAlertSubjectType | null,
-    subjectId: string | null
-  ): Promise<MarketplaceAlert | null> {
-    let query = this.client
+  async listOpen(alertTypes: MarketplaceAlertType[]): Promise<MarketplaceAlert[]> {
+    if (alertTypes.length === 0) return [];
+
+    const { data } = await this.client
       .from("marketplace_alerts")
       .select("*")
-      .eq("alert_type", alertType)
+      .in("alert_type", alertTypes)
       .in("status", [MarketplaceAlertStatus.Pending, MarketplaceAlertStatus.Acknowledged]);
 
-    query = subjectId ? query.eq("subject_id", subjectId) : query.is("subject_id", null);
-    query = subjectType ? query.eq("subject_type", subjectType) : query.is("subject_type", null);
-
-    const { data } = await query.maybeSingle();
-    return data ? toDomain(data as AlertRow) : null;
+    return ((data ?? []) as AlertRow[]).map(toDomain);
   }
 
   async create(input: AlertRuleResult): Promise<MarketplaceAlert | null> {
