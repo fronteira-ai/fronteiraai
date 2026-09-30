@@ -2,6 +2,20 @@
 
 Reconstruído a partir do histórico real de commits (`git log`) e do estado atual do código. Formato: data, commit, o que mudou de fato (verificado no diff/estado resultante, não só na mensagem).
 
+## 2026-09-30 (validação) — MISSION 05.3: VALIDAÇÃO PÓS-INCIDENTE (somente leitura)
+
+**Objetivo**: validar estabilidade após a correção, **sem nenhuma alteração** de código, banco ou infraestrutura. Janela observada: 21:09–21:15 UTC (mudança aplicada às 20:49 UTC).
+
+- **1+2. PGRST003 / 57014: zero novos.** Totais seguem **23 / 124** (idênticos ao baseline), **0 desde a mudança**; os únicos timestamps de erro nas últimas 26 h continuam sendo 52×07:53 + 4×07:54 (o incidente original). Nenhum evento novo.
+- **3. Kong: sem regressão.** **0 respostas 5xx** e **0 linhas de erro/upstream** depois de 20:49 UTC, com **5.224 requisições** processadas no período (o gateway está recebendo carga real).
+- **4. Índice em uso.** `price_history_recorded_at_idx` com **228 scans** desde a criação, plano `Index Scan Backward` reconfirmado (**0,512 ms**). **Sem regressão nas rotas vizinhas**: a forma *canonical-catalog* segue usando `idx_offers_canonical_product` + `price_history_offer_recorded_idx` (**0,665–0,682 ms**, 11 buffers) — forçando a ausência de índices a mesma consulta custaria **98,1 ms**; a forma *por produto* segue em 0,63–0,72 ms.
+- **5. Fix 1 (402 → 1): PENDENTE_JANELA.** O sweep só roda no cron diário; nenhum ciclo ocorreu depois do deploy e disparar o endpoint à mão seria mutação não autorizada (não feito). Evidência indireta: regressão automatizada (200 candidatos ⇒ 1 leitura), 626 alertas existentes sem nenhum novo, e nenhuma linha nova de `marketplace_alerts` no log do PostgREST. Comandos de validação e critério de falha no relatório.
+- **6. Recursos sem regressão.** Kong **436,6 MiB / 512 MiB (85,3%)** — segue no teto histórico, pré-existente; PostgREST 234 MiB/512; PostgreSQL 361 MiB/3 GiB; **13 conexões de 100** (1 ativa); cache hit **100%**; disco 24%; log do Kong em **2,8 GB** (sem rotação). `PGRST_DB_POOL` e timeouts **inalterados**.
+- **INCIDENT RECURRENCE: não, até agora** — com a ressalva explícita de que a janela de pico (07:53–07:54 UTC) **ainda não foi atravessada**; a validação definitiva roda em 2026-10-01 ~07:54 UTC com o bloco de comandos do relatório.
+- **7. Preview Vercel diagnosticado (não corrigido)**: `npx vercel env ls` confirma que as **5 variáveis existem apenas no escopo Production**; `lib/env.ts` exige no build `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` e (em produção) `NEXT_PUBLIC_SITE_URL`. Impacto: nenhum PR gera preview e não há ambiente isolado de revisão; Production não é afetado. Proposta: (passo 1) adicionar as 3 variáveis **públicas** ao escopo Preview; (passo 2) `SUPABASE_SERVICE_ROLE_KEY`/`CRON_SECRET` em Preview **somente** com Deployment Protection ligada — sem isso, um preview público exporia superfícies SSR que ignoram RLS; (passo 3) backend de staging dedicado, que hoje não existe.
+- **Novo risco identificado (não bloqueante)**: alguma consulta recorrente percorre o novo índice **inteiro** (~72.651 entradas por scan, ~3×/min), 100% servido por buffer (`blks_read ≈ 0`) — sem impacto de latência medido, mas é trabalho desperdiçado que escala com o crescimento da tabela. O caller não ficou identificado nesta janela; as formas visíveis no Kong foram medidas e **não** são a causa.
+- Relatório completo: `docs/operations/MISSION_05_3_POST_INCIDENT_VALIDATION.md`. Nenhuma mutação realizada; nenhum arquivo de aplicação alterado.
+
 ## 2026-09-30 (continuação) — MISSION 05.2: EXECUÇÃO CONTROLADA EM PRODUÇÃO
 
 **Objetivo**: aplicar as duas mudanças aprovadas pelo owner — (A) deploy do branch `mission-05-performance-recovery` em `main` e (B) `CREATE INDEX CONCURRENTLY price_history_recorded_at_idx` — com baseline antes, validação depois e rollback documentado. Escopo estrito: **somente** essas duas; `PGRST_DB_POOL` e timeouts **não** alterados; containers **não** reiniciados.
