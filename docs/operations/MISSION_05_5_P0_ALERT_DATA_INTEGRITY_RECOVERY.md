@@ -231,7 +231,81 @@ WHERE a.created_at >= TIMESTAMPTZ '2026-10-01 00:00:00+00'
 
 ---
 
-## 3. FASE 3 — P1 (apenas documentação)
+## 2.7 EXECUÇÃO DO DELETE (aprovado pelo CTO em 2026-10-08)
+
+**Escopo aprovado**: as **2.680 linhas CONFIRMED_SPURIOUS** apresentadas em §2.1, com backup
+prévio e verificação transacional. Executado **exatamente** esse escopo.
+
+### 2.7.1 Contexto descoberto na hora (e por que o escopo não foi ampliado)
+
+Entre a classificação forense (07/Out) e a execução, **a varredura diária rodou mais uma vez**
+(2026-10-08 07:54–07:55 UTC, porque o P0 **ainda não está em produção**) e criou **+503 linhas**
+da mesma classe. O estado no momento da execução era:
+
+| Métrica | Valor |
+|---|---|
+| TOTAL | 4.719 (era 4.216) |
+| CONFIRMED_SPURIOUS | **3.183** (era 2.680) |
+| AMBIGUOUS | 910 (inalterado) |
+| LEGITIMATE (pré-01/Out) | 626 (inalterado) |
+| DISTINCT_KEYS | 1.536 (inalterado) |
+
+**Decisão**: apagar apenas as 2.680 aprovadas, delimitando a janela em `[2026-10-01,
+2026-10-08)` para que as 503 novas **não** fossem atingidas sem aprovação. As 503 ficam
+registradas como delta aberto (§2.8) — nenhuma autorização foi estendida por analogia, pela
+mesma razão que o enunciado dá para as 3.590 ("a estimativa anterior NÃO é autorização").
+
+### 2.7.2 Comando executado (idêntico ao §2.4 + limite superior de janela)
+
+```sql
+DELETE FROM marketplace_alerts a
+ WHERE a.created_at >= TIMESTAMPTZ '2026-10-01 00:00:00+00'
+   AND a.created_at <  TIMESTAMPTZ '2026-10-08 00:00:00+00'   -- exclui o ciclo de 08/Out
+   AND EXISTS (SELECT 1 FROM marketplace_alerts b
+     WHERE b.alert_type = a.alert_type
+       AND b.subject_type IS NOT DISTINCT FROM a.subject_type
+       AND b.subject_id   IS NOT DISTINCT FROM a.subject_id
+       AND b.created_at < a.created_at);
+```
+Executado **dentro de transação** com verificação antes do `COMMIT` (guardas `\if :verified` /
+`\else ROLLBACK`). Saída literal:
+
+```
+DELETE 2680
+ post_total | post_keys | post_pre_window | post_oct8_left | post_spurious_left
+       2039 |      1536 |             626 |            503 |                503
+CHECKS PASSED -> COMMIT
+COMMIT
+ final_total | final_keys | final_pre_window | final_oct8_left
+        2039 |       1536 |              626 |             503
+```
+
+| Verificação | Antes | Depois | Significado |
+|---|---|---|---|
+| Total | 4.719 | **2.039** | = 4.719 − 2.680 exatas |
+| `DISTINCT_KEYS` | 1.536 | **1.536** | **nenhuma chave perdeu sua última linha** |
+| Linhas pré-01/Out | 626 | **626** | conjunto legítimo intocado |
+| Linhas de 08/Out | 503 | **503** | fora do escopo aprovado, preservadas |
+
+**Nota de execução (transparência)**: a primeira tentativa rodou o DELETE correto (o `DELETE`
+teria afetado exatamente 2.680), mas **a expressão de verificação estava errada** — `count(*)`
+sem `FROM`, que em PostgreSQL agrega sobre a linha implícita e devolveu `1 = 2039 → false`.
+O guarda disparou `ROLLBACK` e **nada foi alterado** (`final_total` continuou 4.719). A
+expressão foi corrigida para subconsultas escalares (`(SELECT count(*) FROM …)`) e a execução
+foi repetida. O incidente ficou contido justamente pelo desenho fail-closed exigido no plano.
+
+### 2.8 Delta aberto: as 503 linhas de 2026-10-08
+
+- Mesma classe (duplicatas de chave existente), criadas pelo mesmo defeito, no ciclo de
+  08/Out — e **cobertas pelo mesmo backup verificado** de §2.5 (o export integral foi feito
+  antes do DELETE e contém todas as 4.719 linhas).
+- Predicado idêntico, com a janela em `[2026-10-08, ∞)`: hoje selecionaria exatamente 503.
+- **Recomendação**: não apagar agora. (a) O P0 corrige a causa — depois do deploy, nenhuma
+  duplicata nova é criada; (b) uma única limpeza de fecho (`[2026-10-01, ∞)`) resolve as 503 e
+  qualquer resíduo de um ciclo intermediário, com a mesma verificação transacional. Ampliar a
+  janela exige **nova aprovação explícita** (as 503 não foram apresentadas como candidatas no
+  pedido aprovado).
+
 
 ### 3.1 P1_BEFORE_AFTER (reproduzido em produção, 2026-10-07)
 
