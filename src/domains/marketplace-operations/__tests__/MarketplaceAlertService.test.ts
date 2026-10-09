@@ -136,6 +136,68 @@ describe("MarketplaceAlertService.sync", () => {
     );
   });
 
+  // Mission 05.5 — P0 regression. In production the repository returned only
+  // the first 1000 open alerts (PostgREST cap), so a complete database looked
+  // incomplete to this method and every sweep re-created ~500 alerts. These
+  // tests pin the contract the fix depends on: a COMPLETE existing set means
+  // zero INSERTs, at production scale.
+  it("creates nothing when the COMPLETE existing set covers every candidate (production-scale)", async () => {
+    const repo = new FakeAlertRepository();
+    const service = new MarketplaceAlertService(repo);
+
+    // 4.216 open alerts exist (the real figure measured on 2026-10-07)…
+    const existing = Array.from({ length: 4216 }, (_, i) =>
+      makeAlert({
+        id: `existing-${i}`,
+        alertType: MarketplaceAlertType.LowCoverage,
+        subjectType: "brand",
+        subjectId: i < 500 ? `brand-${i}` : `unrelated-brand-${i}`,
+        status: MarketplaceAlertStatus.Pending,
+      })
+    );
+    repo.existing.push(...existing);
+
+    // …and the sweep proposes 500 candidates that are all already in that set.
+    const candidates = Array.from({ length: 500 }, (_, i) =>
+      makeResult({ alertType: MarketplaceAlertType.LowCoverage, subjectType: "brand", subjectId: `brand-${i}` })
+    );
+
+    const created = await service.sync(candidates);
+
+    expect(created).toHaveLength(0);
+    expect(repo.created).toHaveLength(0); // no duplicate INSERT
+    expect(repo.listOpenCalls).toHaveLength(1); // still one batched read
+  });
+
+  it("creates only for candidates genuinely absent from a large existing set", async () => {
+    const repo = new FakeAlertRepository();
+    const service = new MarketplaceAlertService(repo);
+
+    repo.existing.push(
+      ...Array.from({ length: 4216 }, (_, i) =>
+        makeAlert({
+          id: `existing-${i}`,
+          alertType: MarketplaceAlertType.LowCoverage,
+          subjectType: "brand",
+          subjectId: `brand-${i}`,
+          status: MarketplaceAlertStatus.Pending,
+        })
+      )
+    );
+
+    const candidates = [
+      makeResult({ alertType: MarketplaceAlertType.LowCoverage, subjectType: "brand", subjectId: "brand-0" }),
+      makeResult({ alertType: MarketplaceAlertType.LowCoverage, subjectType: "brand", subjectId: "brand-999" }),
+      makeResult({ alertType: MarketplaceAlertType.LowCoverage, subjectType: "brand", subjectId: "brand-new" }),
+    ];
+
+    const created = await service.sync(candidates);
+
+    expect(created).toHaveLength(1);
+    expect(repo.created).toHaveLength(1);
+    expect(repo.created[0].subjectId).toBe("brand-new");
+  });
+
   it("does not duplicate an identical candidate repeated in the same sweep", async () => {
     const repo = new FakeAlertRepository();
     const service = new MarketplaceAlertService(repo);
