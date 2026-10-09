@@ -29,11 +29,18 @@ export async function getProductPriceIntelligence(productId: string): Promise<Pr
   // pública não pode formar inteligência de preço do consumidor, mesmo que a
   // oferta atual já esteja oculta em outras superfícies.
   //
-  // `stores!inner(active)` + `.eq("offers.stores.active", true)` resolvem isso
-  // ESTRUTURALMENTE no banco: o caminho do filtro espelha a cadeia de embeds
-  // (`price_history` -> `offers` -> `stores`) e o `!inner` faz o filtro valer
-  // para a linha de `price_history` (não apenas para o embed). Nada é filtrado
-  // em JavaScript depois da agregação.
+  // Mission 05.6 — offers-first. A consulta era UMA só, com embeds
+  // (`price_history` -> `offers!inner` -> `stores!inner`) e `order` na tabela
+  // pai. O PostgREST renderiza isso como `INNER JOIN LATERAL ... ORDER BY
+  // price_history.recorded_at`, e o planner NÃO consegue empurrar o filtro
+  // para dentro do LATERAL: ele percorre as 72.651 linhas de `price_history`
+  // em ordem e executa uma sondagem lateral por linha (72.651 Memoize) para
+  // devolver o histórico de UM produto — medido em produção: 1.039,8 ms e
+  // 207.235 buffers. Agora são dois passos, ambos filtrando primeiro: resolve
+  // as ofertas públicas do produto e lê o histórico delas. Medido: 0,351 ms e
+  // 9 buffers. O contrato de visibilidade não mudou de lugar conceitualmente —
+  // ele continua sendo resolvido no SQL, agora pelo lado de `offers` — e
+  // NADA é filtrado em JavaScript depois da agregação.
   //
   // SEMÂNTICA DE `available` (preservada de propósito): o card NÃO exige
   // `offers.available = true`. `available=false` é oferta ARQUIVADA e não
@@ -41,11 +48,30 @@ export async function getProductPriceIntelligence(productId: string): Promise<Pr
   // OBSERVADOS — inclusive de uma oferta que hoje está arquivada ou esgotada
   // numa loja que continua ativa. A exigência deste incidente é sobre loja não
   // pública; mudar também `available` aqui inventaria uma regra nova.
+  const { data: offerRows, error: offerError } = await supabase
+    .from("offers")
+    .select("id, stores!inner(active)")
+    .eq("product_id", productId)
+    .eq("stores.active", true);
+
+  if (offerError) {
+    console.error("[price-intelligence] offers query error:", offerError.message);
+    return { result: computePriceIntelligence([]), series: [] };
+  }
+
+  const offerIds = ((offerRows ?? []) as unknown as { id: string }[]).map((row) => row.id);
+
+  // Sem oferta pública não existe histórico público. É o mesmo resultado do
+  // INNER join anterior devolvendo zero linhas — sem pagar a varredura
+  // ordenada completa para descobrir isso.
+  if (offerIds.length === 0) {
+    return { result: computePriceIntelligence([]), series: [] };
+  }
+
   const { data, error } = await supabase
     .from("price_history")
-    .select("price_usd, recorded_at, offers!inner(product_id, stores!inner(active))")
-    .eq("offers.product_id", productId)
-    .eq("offers.stores.active", true)
+    .select("price_usd, recorded_at")
+    .in("offer_id", offerIds)
     .order("recorded_at", { ascending: true })
     .limit(MAX_HISTORY_ROWS);
 

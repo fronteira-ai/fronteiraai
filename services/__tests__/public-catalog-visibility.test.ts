@@ -1028,37 +1028,66 @@ describe("P2 — FIX 2: volatilidade/purchase timing só com PUBLIC OFFERS", () 
 // FIX 3 — histórico público de preço (/product/[slug] — PriceIntelligenceCard)
 // ─────────────────────────────────────────────────────────────────────────────
 describe("P2 — FIX 3: histórico de preço consumer exige loja ativa (no SQL)", () => {
-  it("a leitura é INNER em stores(active) e filtra por offers.stores.active — sem filtro em JS após agregar", async () => {
+  it("Mission 05.6 — offers-first: resolve as ofertas públicas, depois lê o histórico delas (sem embed)", async () => {
     const chains = routeFrom({
+      offers: { data: [{ id: "o1" }] },
       price_history: { data: [{ price_usd: 100, recorded_at: "2026-09-01T00:00:00Z" }] },
     });
 
     const result = await getProductPriceIntelligence("p1");
 
-    const calls = callsOf(chains.price_history);
-    const selectArg = String(calls.find(([method]) => method === "select")?.[1][0]);
-    // Cadeia estrutural: price_history -> offers!inner -> stores!inner(active).
-    expect(selectArg).toContain("offers!inner(");
-    expect(selectArg).toContain("stores!inner(active)");
-    // O filtro espelha o caminho de embeds e vale para a linha de price_history.
-    expect(calls).toContainEqual(["eq", ["offers.product_id", "p1"]]);
-    expect(calls).toContainEqual(["eq", ["offers.stores.active", true]]);
+    // Passo 1 — a visibilidade continua resolvida no SQL, agora do lado de offers.
+    const offerCalls = callsOf(chains.offers);
+    const offerSelect = String(offerCalls.find(([m]) => m === "select")?.[1][0]);
+    expect(offerSelect).toContain("stores!inner(active)");
+    expect(offerCalls).toContainEqual(["eq", ["product_id", "p1"]]);
+    expect(offerCalls).toContainEqual(["eq", ["stores.active", true]]);
+
+    // Passo 2 — o embed que gerava o LATERAL sobre price_history não existe mais.
+    const historyCalls = callsOf(chains.price_history);
+    const historySelect = String(historyCalls.find(([m]) => m === "select")?.[1][0]);
+    expect(historySelect).not.toContain("offers!inner");
+    expect(historyCalls).toContainEqual(["in", ["offer_id", ["o1"]]]);
+    expect(historyCalls).toContainEqual(["order", ["recorded_at", { ascending: true }]]);
+    expect(historyCalls).toContainEqual(["limit", [3000]]);
+
     // A agregação só recebe os pontos que o banco já devolveu filtrados.
     expect(result.series).toEqual([{ recordedAt: "2026-09-01T00:00:00Z", priceUSD: 100 }]);
   });
 
-  it("histórico de loja não pública não forma série pública (o banco não devolve as linhas excluídas)", async () => {
-    // Sem linha de loja ativa, o INNER join não devolve nada — o card recebe
-    // série vazia em vez de uma estatística contaminada por loja inativa.
-    routeFrom({ price_history: { data: [] } });
+  it("Mission 05.6 — sem oferta pública a leitura para em offers (não varre price_history)", async () => {
+    const chains = routeFrom({ offers: { data: [] } });
+
+    const result = await getProductPriceIntelligence("p1");
+
+    expect(result.series).toEqual([]);
+    // Prova do ganho: nenhuma consulta ordenada a price_history foi emitida.
+    expect(chainsFor("price_history")).toHaveLength(0);
+    expect(chains.offers).toBeDefined();
+  });
+
+  it("Mission 05.6 — todas as ofertas públicas do produto entram no IN (mesmo conjunto de ofertas)", async () => {
+    routeFrom({
+      offers: { data: [{ id: "o1" }, { id: "o2" }, { id: "o3" }] },
+      price_history: { data: [] },
+    });
+
+    await getProductPriceIntelligence("p-multi");
+
+    const historyCall = chainsFor("price_history")[0];
+    expect(callsOf(historyCall)).toContainEqual(["in", ["offer_id", ["o1", "o2", "o3"]]]);
+  });
+
+  it("erro na consulta de ofertas continua degradando para série vazia (não lança)", async () => {
+    routeFrom({ offers: { data: null, error: { message: "boom" } } });
 
     const result = await getProductPriceIntelligence("p1");
 
     expect(result.series).toEqual([]);
   });
 
-  it("erro de query continua degradando para série vazia (não lança)", async () => {
-    routeFrom({ price_history: { data: null, error: { message: "boom" } } });
+  it("erro de query do histórico continua degradando para série vazia (não lança)", async () => {
+    routeFrom({ offers: { data: [{ id: "o1" }] }, price_history: { data: null, error: { message: "boom" } } });
 
     const result = await getProductPriceIntelligence("p1");
 
