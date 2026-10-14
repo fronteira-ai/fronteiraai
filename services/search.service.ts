@@ -155,7 +155,16 @@ async function fetchOrderedProducts(pattern: string, escapedTerm: string): Promi
     }
     // Se a reordenação falhar (select com erro), cai para o caminho legado.
   } else if (rpcError) {
-    console.error("search_products_global (RPC não disponível?):", rpcError.message);
+    // Mission 05.17: `code` é o que identifica a causa — `PGRST202` significa
+    // "função ausente do schema cache do PostgREST" (assinatura/exposição),
+    // `57014` significa timeout, `PGRST205` relação ausente. Só com `message`
+    // o diagnóstico é impossível (foi o que aconteceu na 05.16).
+    console.error("search_products_global (RPC não disponível?):", {
+      message: rpcError.message,
+      code: rpcError.code,
+      details: rpcError.details,
+      hint: rpcError.hint,
+    });
   }
 
   // ── Caminho legado (fallback): mesmo contrato de antes, porém o sort usa a

@@ -92,7 +92,18 @@ export async function getStoresRanking(limit = 30): Promise<StorePublicData[]> {
     .order("rating", { ascending: false })
     .limit(limit);
 
-  if (storeError) console.error("[stores-public] store query:", storeError.message);
+  if (storeError) {
+    // Mission 05.17: registrar o erro COMPLETO. Antes só `message` era logado, o
+    // que tornou impossível distinguir um 404 de PostgREST (PGRST205/PGRST202,
+    // que trazem `code`/`details`/`hint`) de um 404 de borda — foi exatamente a
+    // lacuna que travou a investigação do P2 na 05.16.
+    console.error("[stores-public] store query falhou:", {
+      message: storeError.message,
+      code: storeError.code,
+      details: storeError.details,
+      hint: storeError.hint,
+    });
+  }
   if (!storeData?.length) return [];
   const stores = storeData as Store[];
   const storeIds = stores.map((s) => s.id);
