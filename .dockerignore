@@ -1,0 +1,44 @@
+# ParaguAI — contexto de build do frontend self-hosted (Mission 05.14)
+#
+# SEGURANÇA (o motivo mais importante deste arquivo): sem ele, `COPY . .` do
+# Dockerfile copiaria os arquivos `.env*` do working tree para dentro da imagem
+# — incluindo `.env.local` e `.env.local.legacy-rollback`, que contêm a
+# `NEXT_PUBLIC_SUPABASE_ANON_KEY` e a **`SUPABASE_SERVICE_ROLE_KEY`**. Segredo
+# dentro de layer de imagem é vazamento permanente (fica no cache do builder e
+# em qualquer `docker save`). Os segredos entram em RUNTIME via `env_file`,
+# nunca no build.
+.env
+.env.*
+!.env.example
+!.env.selfhosted.example
+
+# Dependências e artefatos de build (o build acontece dentro da imagem)
+node_modules
+.next
+out
+tsconfig.tsbuildinfo
+
+# Git e artefatos locais
+.git
+.gitignore
+.gitattributes
+
+# Banco (migrations/seed não vão para a imagem do frontend)
+supabase
+database
+
+# Infra e documentação não são necessários em runtime
+infra
+docs
+*.md
+!README.md
+CHANGELOG.md
+RELEASE_NOTES.md
+ROADMAP.md
+VERSION.md
+reasonix.toml
+
+# Logs e temporários
+*.log
+.DS_Store
+Thumbs.db

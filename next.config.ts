@@ -16,7 +16,23 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
+  // Mission 05.14 — execução self-hosted (VPS Fluence). `standalone` gera
+  // `.next/standalone/server.js` com o node_modules mínimo, que é o que a
+  // imagem Docker roda. Em Vercel a opção é inofensiva (o builder da Vercel
+  // não a utiliza).
+  output: "standalone",
+
   images: {
+    // Mission 05.14 — `sharp` NÃO é dependência do projeto. No self-hosted o
+    // otimizador do `next/image` exige `sharp`; sem ele as requisições de
+    // imagem devolveriam 500. Esta chave é ligada por VARIÁVEL DE AMBIENTE,
+    // definida apenas no Dockerfile/compose do VPS: as imagens passam a ser
+    // servidas direto do Storage (Caddy → Supabase Storage), sem custo de CPU
+    // de otimização nos 4 vCPU que o PostgreSQL também usa. Em Vercel a
+    // variável não existe ⇒ a otimização continua exatamente como hoje.
+    // Caminho de otimização futuro (aprovação à parte): custom loader
+    // apontando para o `imgproxy` que já roda no stack.
+    unoptimized: process.env.SELF_HOSTED_IMAGES_UNOPTIMIZED === "1",
     remotePatterns: [
       // Supabase Storage — catálogo de imagens
       {

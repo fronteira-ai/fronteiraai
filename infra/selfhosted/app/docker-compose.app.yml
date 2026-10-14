@@ -1,0 +1,63 @@
+# ParaguAI — frontend Next.js ISOLADO (Mission 05.14)
+#
+# Deliberadamente um compose SEPARADO do stack Supabase
+# (infra/selfhosted/docker-compose.override.yml). A migração não deve tocar em
+# nada que já está saudável (db/rest/kong/auth/storage/imgproxy/meta/studio).
+#
+# Subir (Etapa A, SOMENTE com autorização explícita do proprietário):
+#   cd /opt/paraguai
+#   sudo docker compose -f infra/selfhosted/app/docker-compose.app.yml build
+#   sudo docker compose -f infra/selfhosted/app/docker-compose.app.yml up -d
+#
+# NÃO publicar porta no host além do loopback: quem termina TLS é o Caddy.
+
+services:
+  paraguai-web:
+    build:
+      context: ../../..            # raiz do repositório do app
+      dockerfile: Dockerfile
+      args:
+        # NEXT_PUBLIC_* precisam existir no BUILD (são inlined no bundle).
+        # Valores vêm do arquivo de ambiente do host — nunca do Git.
+        NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL}
+        NEXT_PUBLIC_SUPABASE_ANON_KEY: ${NEXT_PUBLIC_SUPABASE_ANON_KEY}
+        NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:-https://www.fronteiraai.com}
+    image: paraguai-web:latest
+    container_name: paraguai-web
+    restart: unless-stopped
+    env_file:
+      # Custódia: root:root 0600 (só o USUÁRIO de execução lê em runtime via
+      # docker). Nunca versionar — `.env*` está no .dockerignore e no .gitignore.
+      - /etc/paraguai/app.env
+    ports:
+      - "127.0.0.1:3100:3100"      # Studio usa 127.0.0.1:3000 — sem conflito
+    volumes:
+      # Cache ISR/data persistente: sem isto, cada restart (e cada redeploy)
+      # perde o cache e dispara uma rajada de regenerações contra o banco.
+      - /srv/paraguai/isr-cache:/app/.next/cache
+    # `security_opt`/`read_only` ficam de fora de propósito nesta primeira
+    # rodada: endurecer depois de o serviço estar comprovadamente de pé.
+    deploy:
+      resources:
+        limits:
+          # Medido na Mission 05.13: 5,5 GB de RAM disponíveis no host.
+          # 1 GB é folga para SSR; o pico do BUILD é separado (etapa `build`).
+          memory: 1G
+          cpus: "2.0"
+        reservations:
+          memory: 256M
+    healthcheck:
+      # `/robots.txt` é rota ESTÁTICA do build (sem banco, sem SSR) — o
+      # healthcheck não deve consumir CPU nem conexão do PostgREST.
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:3100/robots.txt"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 25s
+    logging:
+      driver: json-file
+      options:
+        # O Kong acumulou 4,3 GB sem rotação nesta mesma máquina — não repetir
+        # o erro com o frontend.
+        max-size: "50m"
+        max-file: "5"
