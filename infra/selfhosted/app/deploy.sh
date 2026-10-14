@@ -97,10 +97,23 @@ cd "$APP_DIR"
 # 0) o compose precisa ser válido ANTES de gastar build + restart
 compose config --quiet || die "compose inválido — corrija antes de tentar o deploy"
 
-# 1) versão identificável: checkout tem de estar limpo
-SHA=$(git rev-parse --short HEAD 2>/dev/null || echo "")
-[ -n "$SHA" ] || die "não foi possível determinar o commit (git rev-parse falhou)"
-DIRTY=$(git status --porcelain 2>/dev/null | wc -l | tr -d ' ')
+# 1) versão identificável
+# /opt/paraguai-app é um CHECKOUT DE CONTEÚDO (extraído de `git archive`), não um
+# repositório: **não existe .git lá**. Descoberto na Fase B — com o código anterior
+# este script MORRERIA no VPS ("não foi possível determinar o commit"), e o deploy
+# versionado nunca aconteceria. Fonte de verdade: `.source-commit`, gravado na
+# transferência com o `git rev-parse` da máquina que publica. Quando existe .git
+# (checkout de desenvolvedor), o git continua tendo precedência.
+GIT_OK=0
+if git rev-parse --short HEAD >/dev/null 2>&1; then
+  GIT_OK=1
+  SHA=$(git rev-parse --short HEAD)
+else
+  SHA=$(tr -d '[:space:]' < "$APP_DIR/.source-commit" 2>/dev/null || echo "")
+fi
+[ -n "$SHA" ] || die "sem .git e sem $APP_DIR/.source-commit — impossível versionar o deploy"
+DIRTY=0
+[ "$GIT_OK" = "1" ] && DIRTY=$(git status --porcelain 2>/dev/null | wc -l | tr -d ' ')
 if [ "$DIRTY" != "0" ]; then
   [ "$FORCE" = "1" ] || die "checkout sujo ($DIRTY arquivo(s)) — a imagem não corresponderia ao commit $SHA. Use --force apenas em ensaio."
   log "AVISO: checkout sujo e --force informado: o binário NÃO corresponde a $SHA"
