@@ -25,17 +25,22 @@ FROM node:22-alpine AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
-# NEXT_PUBLIC_* são "inlined" no bundle do cliente em tempo de BUILD: precisam
-# existir aqui. Os demais segredos NÃO são necessários para o build e não devem
-# ser passados (ver .dockerignore). Valores reais vêm do env do build no VPS.
-ARG NEXT_PUBLIC_SUPABASE_URL
-ARG NEXT_PUBLIC_SUPABASE_ANON_KEY
-ARG NEXT_PUBLIC_SITE_URL
-ENV NEXT_PUBLIC_SUPABASE_URL=$NEXT_PUBLIC_SUPABASE_URL \
-    NEXT_PUBLIC_SUPABASE_ANON_KEY=$NEXT_PUBLIC_SUPABASE_ANON_KEY \
-    NEXT_PUBLIC_SITE_URL=$NEXT_PUBLIC_SITE_URL \
-    NEXT_TELEMETRY_DISABLED=1
-RUN npm run build
+# Mission 05.16 — CORREÇÃO medida em execução real no VPS: o build precisa das
+# variáveis de ambiente COMPLETAS, inclusive da `SUPABASE_SERVICE_ROLE_KEY`.
+# Motivo: `/` é prerenderizada (ISR `revalidate = 60`) e o caminho de dados da
+# home usa o client de service role; sem a chave, o prerender falha com
+# "NEXT_PUBLIC_SUPABASE_URL e SUPABASE_SERVICE_ROLE_KEY são obrigatórios para
+# operações administrativas" — a MESMA classe de falha que quebrou os Preview
+# builds na Vercel (Mission 05.3).
+#
+# As variáveis entram por BUILD SECRET do BuildKit, não por ARG/ENV: segredo em
+# ARG fica registrado em `docker history` e em camada; build secret não fica no
+# histórico nem na imagem final. O arquivo montado é o MESMO
+# /etc/paraguai/app.env (root:root 0600) usado em runtime — um único lugar de
+# custódia, nada duplicado no Git.
+RUN --mount=type=secret,id=app_env,target=/tmp/app.env \
+    set -a && . /tmp/app.env && set +a && \
+    NEXT_TELEMETRY_DISABLED=1 npm run build
 
 # ── Estágio 3: runtime (mínimo, não-root) ───────────────────────────────────
 FROM node:22-alpine AS runner

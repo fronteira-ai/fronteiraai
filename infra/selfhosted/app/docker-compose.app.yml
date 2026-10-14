@@ -16,12 +16,11 @@ services:
     build:
       context: ../../..            # raiz do repositório do app
       dockerfile: Dockerfile
-      args:
-        # NEXT_PUBLIC_* precisam existir no BUILD (são inlined no bundle).
-        # Valores vêm do arquivo de ambiente do host — nunca do Git.
-        NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL}
-        NEXT_PUBLIC_SUPABASE_ANON_KEY: ${NEXT_PUBLIC_SUPABASE_ANON_KEY}
-        NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:-https://www.fronteiraai.com}
+      secrets:
+        # Mission 05.16: o build precisa do ambiente completo (inclusive a
+        # service-role key) porque `/` é prerenderizada. Build secret do
+        # BuildKit = não aparece em `docker history` nem em camada.
+        - app_env
     image: paraguai-web:latest
     container_name: paraguai-web
     restart: unless-stopped
@@ -61,3 +60,10 @@ services:
         # o erro com o frontend.
         max-size: "50m"
         max-file: "5"
+
+# Mission 05.16 — o arquivo de ambiente é montado como BUILD SECRET (ver
+# build.secrets acima). O mesmo arquivo é usado em runtime pelo `env_file`, de
+# modo que existe UM único lugar de custódia (root:root 0600, fora do Git).
+secrets:
+  app_env:
+    file: /etc/paraguai/app.env
