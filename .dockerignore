@@ -7,10 +7,12 @@
 # dentro de layer de imagem é vazamento permanente (fica no cache do builder e
 # em qualquer `docker save`). Os segredos entram em RUNTIME via `env_file`,
 # nunca no build.
+#
+# NENHUM `.env*` entra no contexto — nem os `.example`. Eles são inúteis para o
+# build (o Next não os carrega) e manter a regra absoluta evita que alguém
+# preencha um `.example` com valor real algum dia.
 .env
 .env.*
-!.env.example
-!.env.selfhosted.example
 
 # Dependências e artefatos de build (o build acontece dentro da imagem)
 node_modules
