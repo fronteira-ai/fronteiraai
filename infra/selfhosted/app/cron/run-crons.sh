@@ -11,8 +11,15 @@
 # A versão anterior comparava `date -u +%M` com padrões sem zero à esquerda
 # (`case "$MIN" in 0|5|10|...)`). `%M` devolve DOIS dígitos ("00", "05"), então
 # os minutos 00 e 05 — justamente os de câmbio */5 — nunca casavam e o refresh
-# de câmbio era silenciosamente pulado 2×/hora. Agora a comparação é numérica
-# (`10#`) com aritmética modular, que é imune a zero à esquerda.
+# de câmbio era silenciosamente pulado 2×/hora.
+#
+# ── CORREÇÃO DA PRÓPRIA CORREÇÃO (Mission 05.20, Fase A.2) ───────────────────
+# A primeira correção usou `$((10#$(date -u +%M)))`, que é **bash-only**: o VPS
+# roda dash em /bin/sh e o script morria em runtime com
+# `arithmetic expression: expecting EOF: "10#55"` — ou seja, NENHUM cron rodaria.
+# Também não serve `$((08))`: em POSIX zero à esquerda é OCTAL, e 08/09 são
+# erros. A forma portável é remover o zero textualmente (abaixo) e comparar com
+# aritmética modular sobre um valor já sem zero à esquerda.
 #
 # ── CADÊNCIA PRESERVADA (mesma dos agendadores antigos) ───────────────────────
 #   exchange/refresh                        */5     (GHA high-frequency-crons)
@@ -63,8 +70,8 @@ call() { # nome, path
   return 0
 }
 
-MIN=$((10#$(date -u +%M)))
-HOUR=$((10#$(date -u +%H)))
+MIN=$(date -u +%M); MIN=${MIN#0}
+HOUR=$(date -u +%H); HOUR=${HOUR#0}
 
 if [ "$MODE" = "all" ]; then
   call exchange-refresh  /api/cron/exchange/refresh

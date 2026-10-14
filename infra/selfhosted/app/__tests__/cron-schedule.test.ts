@@ -74,16 +74,20 @@ describe("plano de agendamento dos crons (Mission 05.19)", () => {
     expect(runCrons).toMatch(/HOUR" -eq 7.*marketplace-operations\/snapshot/); // diário 07:00
   });
 
-  it("usa aritmética numérica (imune a zero à esquerda) — bug corrigido na 05.19", () => {
+  it("usa remoção portável do zero à esquerda (dash-safe) — 05.19 corrigida na 05.20", () => {
     // Só o CÓDIGO interessa aqui: o comentário do script cita o padrão antigo de
     // propósito (documenta o bug), e um assert ingênuo o acusaria como violação.
     const codeOnly = runCrons
       .split("\n")
       .filter((line) => !line.trim().startsWith("#"))
       .join("\n");
-    expect(codeOnly).toContain("10#$(date -u +%M)");
+    expect(codeOnly).toMatch(/MIN=\$\{MIN#0\}/);
+    expect(codeOnly).toMatch(/HOUR=\$\{HOUR#0\}/);
     expect(codeOnly).toMatch(/MIN % 5/);
     expect(codeOnly).toMatch(/MIN % 15/);
+    // `10#` existe em bash mas NÃO em dash (/bin/sh do Debian): descobrir isso em
+    // produção custou o script inteiro. Nunca mais.
+    expect(codeOnly).not.toMatch(/10#/);
     expect(codeOnly).not.toMatch(/case "\$MIN" in/);
     expect(codeOnly).not.toMatch(/\|\s*5\s*\|/);
   });
