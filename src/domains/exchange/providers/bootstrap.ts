@@ -1,6 +1,7 @@
 import { exchangeProviderRegistry } from "./ExchangeProviderRegistry";
 import { ExchangeRateApiProvider } from "./ExchangeRateApiProvider";
 import { OpenExchangeRatesProvider } from "./OpenExchangeRatesProvider";
+import { KeylessExchangeRateProvider } from "./KeylessExchangeRateProvider";
 
 // Idempotent by construction (checks has() first) — safe to call defensively
 // from the factory on every request, same spirit as bootstrapConnectors()
@@ -15,5 +16,13 @@ export function bootstrapExchangeProviders(): void {
   }
   if (!exchangeProviderRegistry.has("open-exchange-rates")) {
     exchangeProviderRegistry.register(new OpenExchangeRatesProvider());
+  }
+  // Mission 05.19 — terceiro provider, SEM CHAVE. Fica por último (priority 3):
+  // enquanto nenhuma credencial existir, os dois primeiros falham no `refresh()`
+  // e o failover chega neste, dando câmbio funcional sem NENHUMA configuração
+  // nova. Se uma chave for definida depois, o provider pago volta a preceder sem
+  // alteração de código.
+  if (!exchangeProviderRegistry.has("keyless-open-er-api")) {
+    exchangeProviderRegistry.register(new KeylessExchangeRateProvider());
   }
 }
