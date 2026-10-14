@@ -1,0 +1,21 @@
+[Unit]
+# ParaguAI — disparo self-hosted dos crons do frontend (Mission 05.18)
+# Instalação (NÃO executada nesta missão):
+#   sudo install -m 0644 infra/selfhosted/app/cron/paraguai-crons.{service,timer} /etc/systemd/system/
+#   sudo systemctl daemon-reload && sudo systemctl enable --now paraguai-crons.timer
+# Remoção: sudo systemctl disable --now paraguai-crons.timer && sudo rm /etc/systemd/system/paraguai-crons.{service,timer}
+Description=ParaguAI — crons do frontend (self-hosted)
+Documentation=file:/opt/paraguai-app/docs/operations/MISSION_05_18_VPS_PRODUCTION_READINESS.md
+After=docker.service network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+# root é necessário apenas porque /etc/paraguai/app.env é 0600 root:root
+User=root
+ExecStart=/opt/paraguai-app/infra/selfhosted/app/cron/run-crons.sh due
+TimeoutStartSec=300
+# não competir com o build/deploy
+Nice=10
+IOSchedulingClass=best-effort
+IOSchedulingPriority=6

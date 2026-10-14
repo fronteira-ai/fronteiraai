@@ -21,7 +21,7 @@ services:
         # service-role key) porque `/` é prerenderizada. Build secret do
         # BuildKit = não aparece em `docker history` nem em camada.
         - app_env
-    image: paraguai-web:latest
+    image: ${APP_IMAGE:-paraguai-web:latest}
     container_name: paraguai-web
     restart: unless-stopped
     env_file:

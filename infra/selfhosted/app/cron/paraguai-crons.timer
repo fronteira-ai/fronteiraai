@@ -1,0 +1,15 @@
+[Unit]
+# ParaguAI — timer dos crons do frontend (Mission 05.18)
+# Cadência de 5 min no TIMER; QUAIS endpoints rodam a cada disparo é decidido
+# dentro de run-crons.sh (evita N units e mantém a regra em um único lugar).
+Description=ParaguAI — dispara os crons do frontend a cada 5 minutos
+
+[Timer]
+OnCalendar=*:0/5
+AccuracySec=30s
+# sobrevive a reboot sem execução imediata surpresa
+Persistent=false
+Unit=paraguai-crons.service
+
+[Install]
+WantedBy=timers.target
