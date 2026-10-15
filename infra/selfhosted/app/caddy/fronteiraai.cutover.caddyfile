@@ -1,0 +1,29 @@
+# Mission 05.27 — bloco público do Caddy para fronteiraai.com / www.fronteiraai.com
+#
+# VALIDADO com `caddy validate --adapter caddyfile` em Caddy **v2.11.4** (exit=0).
+#
+# ⚠️ NÃO usar `max_conns` no reverse_proxy: este build o REJEITA
+#    ("unrecognized subdirective max_conns"). A proposta da Mission 05.24 §5
+#    estava errada exatamente nesse ponto — corrigida aqui.
+#    `health_uri` e `fail_duration` SÃO aceitos por este build (validado).
+#
+# ADITIVO: não toca no bloco existente de `api.fronteiraai.com` (Caddy → Kong).
+# Aplicar acrescentando este bloco ao /etc/caddy/Caddyfile e, neste host,
+# `systemctl restart caddy` (o reload foi neutralizado por política do host).
+#
+# O bloqueio de /api/cron/* na borda NÃO afeta o timer do câmbio: o
+# run-crons.sh chama http://127.0.0.1:3100 (loopback), nunca através do Caddy.
+
+fronteiraai.com, www.fronteiraai.com {
+	encode zstd gzip
+
+	# Crons são disparados por loopback: negar na borda é defesa em profundidade.
+	# 404 em vez de 403 para não revelar que a rota existe.
+	@cron path /api/cron/*
+	respond @cron 404
+
+	reverse_proxy 127.0.0.1:3100 {
+		health_uri /robots.txt
+		fail_duration 30s
+	}
+}
