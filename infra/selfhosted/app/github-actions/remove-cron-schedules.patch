@@ -1,0 +1,16 @@
+--- a/.github/workflows/high-frequency-crons.yml
++++ b/.github/workflows/high-frequency-crons.yml
+@@ -23,9 +23,10 @@
+ name: High-Frequency Cron Triggers
+ 
+ on:
+-  schedule:
+-    - cron: "*/5 * * * *"
+-    - cron: "*/15 * * * *"
++  # Mission 05.30 — agendamentos antigos REMOVIDOS (item 6). Os crons passam a
++  # rodar no VPS (paraguai-crons.timer + allowlist). Manter os dois agendadores
++  # ativos criaria risco de execução duplicada se este workflow algum dia
++  # alcançar o app. O disparo manual é preservado para diagnóstico.
+   workflow_dispatch:
+ 
+ # Mission Ω-Canonical Rollout — restores RC-3's fix (vercel.json had
